@@ -19,7 +19,7 @@ let package = Package(
         // RevenueCat SDK for Subscription & Paywall management
         .package(url: "https://github.com/RevenueCat/purchases-ios.git", from: "5.0.0"),
         // Supabase SDK for Edge Functions & Auth
-        .package(url: "https://github.com/supabase/supabase-swift.git", from: "2.0.0")
+        .package(url: "https://github.com/supabase/supabase-swift.git", "2.0.0"..<"2.25.0")
     ],
     targets: [
         .target(
