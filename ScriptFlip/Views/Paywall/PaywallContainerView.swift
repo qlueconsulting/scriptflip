@@ -2,12 +2,14 @@ import SwiftUI
 import RevenueCat
 import RevenueCatUI
 
-/// Container view displaying RevenueCat's standard PaywallView or custom fallback UI.
+@MainActor
 public struct PaywallContainerView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var subscriptionManager = SubscriptionManager.shared
+    @State private var subscriptionManager: SubscriptionManager
     
-    public init() {}
+    public init(subscriptionManager: SubscriptionManager? = nil) {
+        _subscriptionManager = State(wrappedValue: subscriptionManager ?? SubscriptionManager.shared)
+    }
     
     public var body: some View {
         NavigationStack {

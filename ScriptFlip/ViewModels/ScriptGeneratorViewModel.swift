@@ -37,12 +37,12 @@ public final class ScriptGeneratorViewModel {
 
     public init(
         apiService: ScriptAPIServiceProtocol = ScriptAPIService(),
-        usageTracker: UsageTracker = .shared,
-        subscriptionManager: SubscriptionManager = .shared
+        usageTracker: UsageTracker = UsageTracker.shared,
+        subscriptionManager: SubscriptionManager? = nil
     ) {
         self.apiService = apiService
         self.usageTracker = usageTracker
-        self.subscriptionManager = subscriptionManager
+        self.subscriptionManager = subscriptionManager ?? SubscriptionManager.shared
         refreshUsage()
     }
     

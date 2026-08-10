@@ -1,13 +1,19 @@
 import SwiftUI
 
-/// Main input view allowing users to enter YouTube/Podcast URLs or raw text, pick style, and generate scripts.
+@MainActor
 public struct ScriptGeneratorView: View {
-    @State private var viewModel = ScriptGeneratorViewModel()
-    @State private var subscriptionManager = SubscriptionManager.shared
+    @State private var viewModel: ScriptGeneratorViewModel
+    @State private var subscriptionManager: SubscriptionManager
     @State private var activePrompterScript: Script? = nil
     @State private var showErrorAlert: Bool = false
     
-    public init() {}
+    public init(
+        viewModel: ScriptGeneratorViewModel? = nil,
+        subscriptionManager: SubscriptionManager? = nil
+    ) {
+        _viewModel = State(wrappedValue: viewModel ?? ScriptGeneratorViewModel())
+        _subscriptionManager = State(wrappedValue: subscriptionManager ?? SubscriptionManager.shared)
+    }
     
     public var body: some View {
         NavigationStack {

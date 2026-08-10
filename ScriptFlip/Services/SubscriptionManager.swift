@@ -22,7 +22,7 @@ public final class SubscriptionManager {
     }
     
     /// Configure RevenueCat SDK with Public API Key.
-    public static func configure(apiKey: String) {
+    public nonisolated static func configure(apiKey: String) {
         Purchases.logLevel = .debug
         Purchases.configure(withAPIKey: apiKey)
     }
