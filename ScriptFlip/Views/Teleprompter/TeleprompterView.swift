@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// High-contrast, full-screen Teleprompter view with scrolling text and controls.
+@MainActor
 public struct TeleprompterView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var viewModel: TeleprompterViewModel
