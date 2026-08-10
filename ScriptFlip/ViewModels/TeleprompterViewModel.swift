@@ -13,7 +13,7 @@ public final class TeleprompterViewModel {
     public var isMirrored: Bool = false
     public var scrollOffset: Double = 0.0
     
-    private var timer: Timer? = nil
+    private nonisolated(unsafe) var timer: Timer? = nil
     
     public init(script: Script) {
         self.script = script
@@ -37,7 +37,7 @@ public final class TeleprompterViewModel {
     private func startTimer() {
         stopTimer()
         timer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
                 guard let self = self, self.isPlaying else { return }
                 // Increment scroll offset according to speed
                 self.scrollOffset += (self.scrollSpeed * 0.05)
