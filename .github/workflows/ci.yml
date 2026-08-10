@@ -20,9 +20,12 @@ jobs:
           sudo xcode-select -s /Applications/Xcode_16.app || true
           xcodebuild -version
 
-      - name: Build & Test via xcodebuild (iOS Simulator)
+      - name: List Available Simulators
+        run: xcrun simctl list devices available
+
+      - name: Build via xcodebuild (iOS Simulator)
         run: |
           xcodebuild build-for-testing \
             -scheme ScriptFlip \
-            -destination 'generic/platform=iOS Simulator' \
-            -quiet || swift test
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -quiet
