@@ -1,14 +1,10 @@
 name: Build and Test
-<<<<<<< HEAD
 
-=======
->>>>>>> 555dded92b76dc239b3242cdfa9c6fe7aa763e57
 on:
   push:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
-<<<<<<< HEAD
 
 jobs:
   build-and-test:
@@ -30,20 +26,3 @@ jobs:
             -scheme ScriptFlip \
             -destination 'generic/platform=iOS Simulator' \
             -quiet || swift test
-=======
-jobs:
-  build-and-test:
-    name: Build & Test (macOS)
-    runs-on: macos-15
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Set up Swift / Xcode
-        run: |
-          swift --version
-          xcodebuild -version
-      - name: Resolve SPM Dependencies
-        run: swift package resolve
-      - name: Run Swift Tests
-        run: swift test
->>>>>>> 555dded92b76dc239b3242cdfa9c6fe7aa763e57
