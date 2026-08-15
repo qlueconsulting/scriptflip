@@ -26,7 +26,8 @@ let package = Package(
                 .product(name: "RevenueCat", package: "purchases-ios"),
                 .product(name: "RevenueCatUI", package: "purchases-ios")
             ],
-            path: "ScriptFlip"
+            path: "ScriptFlip",
+            exclude: ["Info.plist"]
         ),
         .testTarget(
             name: "ScriptFlipTests",

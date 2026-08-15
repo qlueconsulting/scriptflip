@@ -29,6 +29,26 @@
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       shouldUseLaunchSchemeArgsEnv = "YES">
       <Testables>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "060606060606060606060630"
+               BuildableName = "ScriptFlipTests.xctest"
+               BlueprintName = "ScriptFlipTests"
+               ReferencedContainer = "container:ScriptFlip.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "060606060606060606060640"
+               BuildableName = "ScriptFlipUITests.xctest"
+               BlueprintName = "ScriptFlipUITests"
+               ReferencedContainer = "container:ScriptFlip.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction

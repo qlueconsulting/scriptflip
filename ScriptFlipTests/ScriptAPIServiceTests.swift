@@ -3,7 +3,7 @@ import XCTest
 
 /// Custom Mock URLProtocol to intercept URLSession requests during unit testing.
 final class MockURLProtocol: URLProtocol {
-    public static var requestHandler: ((URLRequest) throws -> (HTTPURLResponse, Data?))?
+    nonisolated(unsafe) public static var requestHandler: (@Sendable (URLRequest) throws -> (HTTPURLResponse, Data?))?
 
     override class func canInit(with request: URLRequest) -> Bool {
         return true

@@ -26,7 +26,27 @@
 		010101010101010101010111 /* TeleprompterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020202020202020202020211 /* TeleprompterView.swift */; };
 		010101010101010101010120 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 030303030303030303030301 /* RevenueCat */; };
 		010101010101010101010121 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 030303030303030303030302 /* RevenueCatUI */; };
+		010101010101010101010130 /* ScriptAPIServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020202020202020202020230 /* ScriptAPIServiceTests.swift */; };
+		010101010101010101010131 /* ScriptFlipTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020202020202020202020231 /* ScriptFlipTests.swift */; };
+		010101010101010101010140 /* ScriptFlipUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020202020202020202020240 /* ScriptFlipUITests.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		0D0D0D0D0D0D0D0D0D0D0D30 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0A0A0A0A0A0A0A0A0A0A0A00 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 060606060606060606060600;
+			remoteInfo = ScriptFlip;
+		};
+		0D0D0D0D0D0D0D0D0D0D0D40 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0A0A0A0A0A0A0A0A0A0A0A00 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 060606060606060606060600;
+			remoteInfo = ScriptFlip;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		020202020202020202020200 /* ScriptFlip.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ScriptFlip.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -48,6 +68,12 @@
 		020202020202020202020210 /* ScriptResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptResultsView.swift; sourceTree = "<group>"; };
 		020202020202020202020211 /* TeleprompterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeleprompterView.swift; sourceTree = "<group>"; };
 		020202020202020202020212 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		020202020202020202020220 /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
+		020202020202020202020230 /* ScriptAPIServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptAPIServiceTests.swift; sourceTree = "<group>"; };
+		020202020202020202020231 /* ScriptFlipTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptFlipTests.swift; sourceTree = "<group>"; };
+		020202020202020202020232 /* ScriptFlipTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ScriptFlipTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		020202020202020202020240 /* ScriptFlipUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptFlipUITests.swift; sourceTree = "<group>"; };
+		020202020202020202020241 /* ScriptFlipUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ScriptFlipUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -60,6 +86,20 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		040404040404040404040430 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		040404040404040404040440 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -67,6 +107,9 @@
 			isa = PBXGroup;
 			children = (
 				050505050505050505050501 /* ScriptFlip */,
+				050505050505050505050530 /* ScriptFlipTests */,
+				050505050505050505050540 /* ScriptFlipUITests */,
+				020202020202020202020220 /* Config.xcconfig */,
 				050505050505050505050509 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -136,10 +179,29 @@
 			path = Views;
 			sourceTree = "<group>";
 		};
+		050505050505050505050530 /* ScriptFlipTests */ = {
+			isa = PBXGroup;
+			children = (
+				020202020202020202020230 /* ScriptAPIServiceTests.swift */,
+				020202020202020202020231 /* ScriptFlipTests.swift */,
+			);
+			path = ScriptFlipTests;
+			sourceTree = "<group>";
+		};
+		050505050505050505050540 /* ScriptFlipUITests */ = {
+			isa = PBXGroup;
+			children = (
+				020202020202020202020240 /* ScriptFlipUITests.swift */,
+			);
+			path = ScriptFlipUITests;
+			sourceTree = "<group>";
+		};
 		050505050505050505050509 /* Products */ = {
 			isa = PBXGroup;
 			children = (
 				020202020202020202020200 /* ScriptFlip.app */,
+				020202020202020202020232 /* ScriptFlipTests.xctest */,
+				020202020202020202020241 /* ScriptFlipUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -168,6 +230,40 @@
 			productReference = 020202020202020202020200 /* ScriptFlip.app */;
 			productType = "com.apple.product-type.application";
 		};
+		060606060606060606060630 /* ScriptFlipTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 070707070707070707070730 /* Build configuration list for PBXNativeTarget "ScriptFlipTests" */;
+			buildPhases = (
+				080808080808080808080830 /* Sources */,
+				040404040404040404040430 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				0E0E0E0E0E0E0E0E0E0E0E30 /* PBXTargetDependency */,
+			);
+			name = ScriptFlipTests;
+			productName = ScriptFlipTests;
+			productReference = 020202020202020202020232 /* ScriptFlipTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		060606060606060606060640 /* ScriptFlipUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 070707070707070707070740 /* Build configuration list for PBXNativeTarget "ScriptFlipUITests" */;
+			buildPhases = (
+				080808080808080808080840 /* Sources */,
+				040404040404040404040440 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				0E0E0E0E0E0E0E0E0E0E0E40 /* PBXTargetDependency */,
+			);
+			name = ScriptFlipUITests;
+			productName = ScriptFlipUITests;
+			productReference = 020202020202020202020241 /* ScriptFlipUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -182,6 +278,14 @@
 						CreatedOnToolsVersion = 15.4;
 						DevelopmentTeam = MS5Y8632VD;
 						ProvisioningStyle = Manual;
+					};
+					060606060606060606060630 = {
+						CreatedOnToolsVersion = 15.4;
+						TestTargetID = 060606060606060606060600;
+					};
+					060606060606060606060640 = {
+						CreatedOnToolsVersion = 15.4;
+						TestTargetID = 060606060606060606060600;
 					};
 				};
 			};
@@ -202,6 +306,8 @@
 			projectRoot = "";
 			targets = (
 				060606060606060606060600 /* ScriptFlip */,
+				060606060606060606060630 /* ScriptFlipTests */,
+				060606060606060606060640 /* ScriptFlipUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -241,11 +347,42 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		080808080808080808080830 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				010101010101010101010130 /* ScriptAPIServiceTests.swift in Sources */,
+				010101010101010101010131 /* ScriptFlipTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		080808080808080808080840 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				010101010101010101010140 /* ScriptFlipUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		0E0E0E0E0E0E0E0E0E0E0E30 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 060606060606060606060600 /* ScriptFlip */;
+			targetProxy = 0D0D0D0D0D0D0D0D0D0D0D30 /* PBXContainerItemProxy */;
+		};
+		0E0E0E0E0E0E0E0E0E0E0E40 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 060606060606060606060600 /* ScriptFlip */;
+			targetProxy = 0D0D0D0D0D0D0D0D0D0D0D40 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		0C0C0C0C0C0C0C0C0C0C0C01 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 020202020202020202020220 /* Config.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -277,6 +414,7 @@
 		};
 		0C0C0C0C0C0C0C0C0C0C0C02 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 020202020202020202020220 /* Config.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -302,6 +440,7 @@
 		};
 		0C0C0C0C0C0C0C0C0C0C0C03 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 020202020202020202020220 /* Config.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "Apple Development";
@@ -327,6 +466,7 @@
 		};
 		0C0C0C0C0C0C0C0C0C0C0C04 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 020202020202020202020220 /* Config.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "Apple Distribution";
@@ -350,6 +490,76 @@
 			};
 			name = Release;
 		};
+		0C0C0C0C0C0C0C0C0C0C0C31 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.qlueconsulting.scriptflip.ScriptFlipTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ScriptFlip.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/ScriptFlip";
+			};
+			name = Debug;
+		};
+		0C0C0C0C0C0C0C0C0C0C0C32 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.qlueconsulting.scriptflip.ScriptFlipTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ScriptFlip.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/ScriptFlip";
+			};
+			name = Release;
+		};
+		0C0C0C0C0C0C0C0C0C0C0C41 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.qlueconsulting.scriptflip.ScriptFlipUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = ScriptFlip;
+			};
+			name = Debug;
+		};
+		0C0C0C0C0C0C0C0C0C0C0C42 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.qlueconsulting.scriptflip.ScriptFlipUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = ScriptFlip;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -367,6 +577,24 @@
 			buildConfigurations = (
 				0C0C0C0C0C0C0C0C0C0C0C01 /* Debug */,
 				0C0C0C0C0C0C0C0C0C0C0C02 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		070707070707070707070730 /* Build configuration list for PBXNativeTarget "ScriptFlipTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0C0C0C0C0C0C0C0C0C0C0C31 /* Debug */,
+				0C0C0C0C0C0C0C0C0C0C0C32 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		070707070707070707070740 /* Build configuration list for PBXNativeTarget "ScriptFlipUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0C0C0C0C0C0C0C0C0C0C0C41 /* Debug */,
+				0C0C0C0C0C0C0C0C0C0C0C42 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -399,4 +627,4 @@
 
 	};
 	rootObject = 0A0A0A0A0A0A0A0A0A0A0A00 /* Project object */;
-}
+}

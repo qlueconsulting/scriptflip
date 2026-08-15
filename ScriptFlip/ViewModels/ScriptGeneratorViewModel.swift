@@ -22,7 +22,7 @@ public final class ScriptGeneratorViewModel {
     private let usageTracker: UsageTracker
     private let subscriptionManager: SubscriptionManager
     
-    public enum InputMode: String, CaseIterable, Identifiable {
+    public enum InputMode: String, CaseIterable, Identifiable, Sendable {
         case url = "URL (YouTube/Podcast)"
         case rawText = "Raw Transcript / Text"
         
