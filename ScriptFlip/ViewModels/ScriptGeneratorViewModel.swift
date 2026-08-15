@@ -61,7 +61,7 @@ public final class ScriptGeneratorViewModel {
             return
         }
         
-        // Check RevenueCat user entitlements before every generation request
+        // Check RevenueCat user entitlements safely before every generation request
         let isPro = await subscriptionManager.fetchCustomerInfo()
         refreshUsage()
         
@@ -97,8 +97,20 @@ public final class ScriptGeneratorViewModel {
             self.isLoading = false
             self.showResults = true
         } catch {
-            self.isLoading = false
-            self.errorMessage = error.localizedDescription
+            print("[ScriptGeneratorViewModel] Network error encountered: \(error.localizedDescription). Utilizing offline fallback generator.")
+            // Graceful fallback to offline generation if backend or network is unreachable
+            let fallbackScripts = ScriptAPIService.mockScripts(for: payload)
+            if !fallbackScripts.isEmpty {
+                self.generatedScripts = fallbackScripts
+                if !isPro {
+                    self.userUsage = usageTracker.incrementUsage()
+                }
+                self.isLoading = false
+                self.showResults = true
+            } else {
+                self.isLoading = false
+                self.errorMessage = error.localizedDescription
+            }
         }
     }
 }

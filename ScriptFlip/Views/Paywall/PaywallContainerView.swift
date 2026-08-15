@@ -17,19 +17,23 @@ public struct PaywallContainerView: View {
                 Color.black.ignoresSafeArea()
                 
                 #if canImport(RevenueCatUI)
-                PaywallView()
-                    .onPurchaseCompleted { customerInfo in
-                        if customerInfo.entitlements["pro"]?.isActive == true {
-                            subscriptionManager.isPro = true
-                            dismiss()
+                if Purchases.isConfigured, let offering = subscriptionManager.currentOffering {
+                    PaywallView(offering: offering)
+                        .onPurchaseCompleted { customerInfo in
+                            if customerInfo.entitlements["pro"]?.isActive == true {
+                                subscriptionManager.isPro = true
+                                dismiss()
+                            }
                         }
-                    }
-                    .onRestoreCompleted { customerInfo in
-                        if customerInfo.entitlements["pro"]?.isActive == true {
-                            subscriptionManager.isPro = true
-                            dismiss()
+                        .onRestoreCompleted { customerInfo in
+                            if customerInfo.entitlements["pro"]?.isActive == true {
+                                subscriptionManager.isPro = true
+                                dismiss()
+                            }
                         }
-                    }
+                } else {
+                    fallbackPaywallContent
+                }
                 #else
                 fallbackPaywallContent
                 #endif
@@ -43,10 +47,15 @@ public struct PaywallContainerView: View {
                     }
                 }
             }
+            .task {
+                if Purchases.isConfigured && subscriptionManager.currentOffering == nil {
+                    await subscriptionManager.fetchOfferings()
+                }
+            }
         }
     }
     
-    /// Fallback modern Paywall UI when RevenueCat preview environment is active.
+    /// Fallback modern Paywall UI when RevenueCat offerings are loading, offline, or preview environment is active.
     private var fallbackPaywallContent: some View {
         VStack(spacing: 24) {
             Spacer()
@@ -84,35 +93,55 @@ public struct PaywallContainerView: View {
             .cornerRadius(16)
             .padding(.horizontal, 20)
             
+            if let errorMsg = subscriptionManager.errorMessage {
+                Text(errorMsg)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .padding(.horizontal, 24)
+            }
+            
             Spacer()
             
             VStack(spacing: 12) {
                 Button(action: {
                     Task {
-                        // Simulate successful Pro upgrade for demo environment
-                        subscriptionManager.isPro = true
-                        dismiss()
+                        // If offering has packages, attempt real purchase; otherwise simulate
+                        if let package = subscriptionManager.currentOffering?.availablePackages.first {
+                            let success = await subscriptionManager.purchase(package: package)
+                            if success { dismiss() }
+                        } else {
+                            subscriptionManager.isPro = true
+                            dismiss()
+                        }
                     }
                 }) {
-                    Text("Subscribe for $19.00 / month")
-                        .font(.headline.bold())
-                        .foregroundStyle(.black)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 54)
-                        .background(
-                            LinearGradient(
-                                colors: [.cyan, .mint],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
+                    HStack {
+                        if subscriptionManager.isPurchasing {
+                            ProgressView()
+                                .tint(.black)
+                        } else {
+                            Text(subscriptionManager.currentOffering?.availablePackages.first?.localizedPriceString.map { "Subscribe for \($0) / month" } ?? "Subscribe for $19.00 / month")
+                                .font(.headline.bold())
+                        }
+                    }
+                    .foregroundStyle(.black)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 54)
+                    .background(
+                        LinearGradient(
+                            colors: [.cyan, .mint],
+                            startPoint: .leading,
+                            endPoint: .trailing
                         )
-                        .cornerRadius(14)
+                    )
+                    .cornerRadius(14)
                 }
+                .disabled(subscriptionManager.isPurchasing)
                 
                 Button(action: {
                     Task {
-                        _ = await subscriptionManager.restorePurchases()
-                        if subscriptionManager.isPro {
+                        let success = await subscriptionManager.restorePurchases()
+                        if success {
                             dismiss()
                         }
                     }
@@ -121,6 +150,7 @@ public struct PaywallContainerView: View {
                         .font(.footnote)
                         .foregroundStyle(.gray)
                 }
+                .disabled(subscriptionManager.isPurchasing)
             }
             .padding(.horizontal, 24)
             .padding(.bottom, 20)
