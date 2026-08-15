@@ -26,7 +26,6 @@
 		010101010101010101010111 /* TeleprompterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020202020202020202020211 /* TeleprompterView.swift */; };
 		010101010101010101010120 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 030303030303030303030301 /* RevenueCat */; };
 		010101010101010101010121 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 030303030303030303030302 /* RevenueCatUI */; };
-		010101010101010101010122 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 030303030303030303030303 /* Supabase */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -58,7 +57,6 @@
 			files = (
 				010101010101010101010120 /* RevenueCat in Frameworks */,
 				010101010101010101010121 /* RevenueCatUI in Frameworks */,
-				010101010101010101010122 /* Supabase in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -165,7 +163,6 @@
 			packageProductDependencies = (
 				030303030303030303030301 /* RevenueCat */,
 				030303030303030303030302 /* RevenueCatUI */,
-				030303030303030303030303 /* Supabase */,
 			);
 			productName = ScriptFlip;
 			productReference = 020202020202020202020200 /* ScriptFlip.app */;
@@ -199,7 +196,6 @@
 			mainGroup = 050505050505050505050500;
 			packageReferences = (
 				0B0B0B0B0B0B0B0B0B0B0B01 /* XCRemoteSwiftPackageReference "purchases-ios" */,
-				0B0B0B0B0B0B0B0B0B0B0B02 /* XCRemoteSwiftPackageReference "supabase-swift" */,
 			);
 			productRefGroup = 050505050505050505050509 /* Products */;
 			projectDirPath = "";
@@ -386,15 +382,6 @@
 				minimumVersion = 5.0.0;
 			};
 		};
-		0B0B0B0B0B0B0B0B0B0B0B02 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/supabase/supabase-swift.git";
-			requirement = {
-				kind = range;
-				minimumVersion = 2.0.0;
-				maximumVersion = 2.25.0;
-			};
-		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -408,13 +395,8 @@
 			package = 0B0B0B0B0B0B0B0B0B0B0B01 /* XCRemoteSwiftPackageReference "purchases-ios" */;
 			productName = RevenueCatUI;
 		};
-		030303030303030303030303 /* Supabase */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 0B0B0B0B0B0B0B0B0B0B0B02 /* XCRemoteSwiftPackageReference "supabase-swift" */;
-			productName = Supabase;
-		};
 /* End XCSwiftPackageProductDependency section */
 
 	};
 	rootObject = 0A0A0A0A0A0A0A0A0A0A0A00 /* Project object */;
-}
+}\n

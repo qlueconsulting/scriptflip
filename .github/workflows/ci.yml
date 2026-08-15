@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-and-test:
-    name: Build & Test (iOS Simulator)
+    name: Build (iOS Simulator)
     runs-on: macos-14
 
     steps:
@@ -20,12 +20,10 @@ jobs:
           sudo xcode-select -s /Applications/Xcode_15.4.app
           xcodebuild -version
 
-      - name: List Available Simulators
-        run: xcrun simctl list devices available
-
       - name: Build via xcodebuild (iOS Simulator)
         run: |
-          xcodebuild build-for-testing \
+          xcodebuild build \
+            -project ScriptFlip.xcodeproj \
             -scheme ScriptFlip \
             -destination 'platform=iOS Simulator,name=iPhone 15' \
             -quiet

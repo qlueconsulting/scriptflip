@@ -17,19 +17,14 @@ let package = Package(
     ],
     dependencies: [
         // RevenueCat SDK for Subscription & Paywall management
-        .package(url: "https://github.com/RevenueCat/purchases-ios.git", from: "5.0.0"),
-        // Supabase SDK for Edge Functions & Auth
-        .package(url: "https://github.com/supabase/supabase-swift.git", "2.0.0"..<"2.25.0"),
-        // XCTestDynamicOverlay pinned to pre-Swift 6 version
-        .package(url: "https://github.com/pointfreeco/xctest-dynamic-overlay.git", "1.2.0"..<"1.4.0")
+        .package(url: "https://github.com/RevenueCat/purchases-ios.git", from: "5.0.0")
     ],
     targets: [
         .target(
             name: "ScriptFlip",
             dependencies: [
                 .product(name: "RevenueCat", package: "purchases-ios"),
-                .product(name: "RevenueCatUI", package: "purchases-ios"),
-                .product(name: "Supabase", package: "supabase-swift")
+                .product(name: "RevenueCatUI", package: "purchases-ios")
             ],
             path: "ScriptFlip"
         ),
