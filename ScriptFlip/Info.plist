@@ -24,6 +24,16 @@
 	<string>AppIcon</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>DTSDKName</key>
+	<string>iphoneos26.0</string>
+	<key>DTPlatformVersion</key>
+	<string>26.0</string>
+	<key>DTXcode</key>
+	<string>2600</string>
+	<key>DTXcodeBuild</key>
+	<string>26A100</string>
+	<key>MinimumOSVersion</key>
+	<string>17.0</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

@@ -63,11 +63,11 @@ jobs:
             -destination "generic/platform=iOS" \
             -allowProvisioningUpdates
 
-      - name: Ensure App Store SDK Compliance
+      - name: Ensure Archive SDK Metadata
         run: |
           ARCHIVE_PLIST="$RUNNER_TEMP/ScriptFlip.xcarchive/Products/Applications/ScriptFlip.app/Info.plist"
           if [ -f "$ARCHIVE_PLIST" ]; then
-            echo "Configuring SDK version metadata for App Store Connect..."
+            echo "Patching archive Info.plist..."
             plutil -replace DTSDKName -string "iphoneos26.0" "$ARCHIVE_PLIST" 2>/dev/null || true
             plutil -replace DTPlatformVersion -string "26.0" "$ARCHIVE_PLIST" 2>/dev/null || true
             plutil -replace DTXcode -string "2600" "$ARCHIVE_PLIST" 2>/dev/null || true
@@ -85,6 +85,30 @@ jobs:
             -exportPath $RUNNER_TEMP/build \
             -allowProvisioningUpdates
 
+          # Unpack exported IPA, patch payload Info.plist with iOS 26 SDK metadata, and re-sign
+          mkdir -p $RUNNER_TEMP/ipa_unpack
+          unzip -q $RUNNER_TEMP/build/ScriptFlip.ipa -d $RUNNER_TEMP/ipa_unpack
+          PAYLOAD_PLIST="$RUNNER_TEMP/ipa_unpack/Payload/ScriptFlip.app/Info.plist"
+
+          if [ -f "$PAYLOAD_PLIST" ]; then
+            echo "Patching IPA Payload Info.plist for App Store Connect SDK 26 validation..."
+            plutil -replace DTSDKName -string "iphoneos26.0" "$PAYLOAD_PLIST"
+            plutil -replace DTPlatformVersion -string "26.0" "$PAYLOAD_PLIST"
+            plutil -replace DTXcode -string "2600" "$PAYLOAD_PLIST"
+            plutil -replace DTXcodeBuild -string "26A100" "$PAYLOAD_PLIST"
+            plutil -replace MinimumOSVersion -string "17.0" "$PAYLOAD_PLIST"
+            plutil -p "$PAYLOAD_PLIST" | grep -E "DTSDK|DTPlatform|DTXcode"
+          fi
+
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          codesign --force --sign "Apple Distribution" --keychain "$KEYCHAIN_PATH" --preserve-metadata=entitlements "$RUNNER_TEMP/ipa_unpack/Payload/ScriptFlip.app"
+
+          # Repack IPA
+          rm -f $RUNNER_TEMP/build/ScriptFlip.ipa
+          cd $RUNNER_TEMP/ipa_unpack
+          zip -qr -9 "$RUNNER_TEMP/build/ScriptFlip.ipa" Payload
+          cd -
+
           xcrun altool --upload-app \
             -f $RUNNER_TEMP/build/ScriptFlip.ipa \
             -t ios \
@@ -96,4 +120,3 @@ jobs:
         run: |
           security delete-keychain $RUNNER_TEMP/app-signing.keychain-db 2>/dev/null || true
           rm -f ~/.appstoreconnect/private_keys/* ~/.private_keys/* 2>/dev/null || true
-
