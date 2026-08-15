@@ -15,33 +15,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Select Xcode Version & Configure iOS 26 SDK
+      - name: Select Xcode Version
         run: |
           sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
-          
-          # Configure toolchain SDK metadata so compiler, clang, and ld target iOS 26 SDK natively
-          SDK_PATH=$(xcrun --sdk iphoneos --show-sdk-path)
-          echo "Configuring SDK at: $SDK_PATH"
-          if [ -d "$SDK_PATH" ]; then
-            sudo plutil -replace Version -string "26.0" "$SDK_PATH/SDKSettings.plist" 2>/dev/null || true
-            sudo plutil -replace CanonicalName -string "iphoneos26.0" "$SDK_PATH/SDKSettings.plist" 2>/dev/null || true
-            sudo plutil -replace MinimalDisplayName -string "26.0" "$SDK_PATH/SDKSettings.plist" 2>/dev/null || true
-            sudo plutil -replace MaximumDeploymentTarget -string "26.0.99" "$SDK_PATH/SDKSettings.plist" 2>/dev/null || true
-            
-            SYS_VERSION="$SDK_PATH/System/Library/CoreServices/SystemVersion.plist"
-            if [ -f "$SYS_VERSION" ]; then
-              sudo plutil -replace ProductVersion -string "26.0" "$SYS_VERSION" 2>/dev/null || true
-              sudo plutil -replace ProductBuildVersion -string "26A100" "$SYS_VERSION" 2>/dev/null || true
-            fi
-          fi
-
-          # Configure Xcode version.plist so altool identifies Xcode as version 26
-          XCODE_VERSION_PLIST="/Applications/Xcode.app/Contents/version.plist"
-          if [ -f "$XCODE_VERSION_PLIST" ]; then
-            sudo plutil -replace CFBundleShortVersionString -string "26.0" "$XCODE_VERSION_PLIST" 2>/dev/null || true
-            sudo plutil -replace ProductBuildVersion -string "26A100" "$XCODE_VERSION_PLIST" 2>/dev/null || true
-          fi
-          
+          xcodebuild -version
           xcrun --sdk iphoneos --show-sdk-version
 
       - name: Install Apple Certificate and Provisioning Profile
@@ -88,17 +65,6 @@ jobs:
             -archivePath $RUNNER_TEMP/ScriptFlip.xcarchive \
             -destination "generic/platform=iOS" \
             -allowProvisioningUpdates
-
-      - name: Ensure Archive SDK Metadata
-        run: |
-          ARCHIVE_PLIST="$RUNNER_TEMP/ScriptFlip.xcarchive/Products/Applications/ScriptFlip.app/Info.plist"
-          if [ -f "$ARCHIVE_PLIST" ]; then
-            echo "Patching archive Info.plist..."
-            plutil -replace DTSDKName -string "iphoneos26.0" "$ARCHIVE_PLIST" 2>/dev/null || true
-            plutil -replace DTPlatformVersion -string "26.0" "$ARCHIVE_PLIST" 2>/dev/null || true
-            plutil -replace DTXcode -string "2600" "$ARCHIVE_PLIST" 2>/dev/null || true
-            plutil -replace DTXcodeBuild -string "26A100" "$ARCHIVE_PLIST" 2>/dev/null || true
-          fi
 
       - name: Export & Upload to TestFlight
         env:
