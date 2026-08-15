@@ -7,93 +7,93 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		010101010101010101010101 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020202020202020202020201 /* AppDelegate.swift */; };
-		010101010101010101010102 /* Environment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020202020202020202020202 /* Environment.swift */; };
-		010101010101010101010103 /* ScriptFlipApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020202020202020202020203 /* ScriptFlipApp.swift */; };
-		010101010101010101010104 /* GenerationRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020202020202020202020204 /* GenerationRequest.swift */; };
-		010101010101010101010105 /* Script.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020202020202020202020205 /* Script.swift */; };
-		010101010101010101010106 /* ScriptStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020202020202020202020206 /* ScriptStyle.swift */; };
-		010101010101010101010107 /* UserUsage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020202020202020202020207 /* UserUsage.swift */; };
-		010101010101010101010108 /* ScriptAPIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020202020202020202020208 /* ScriptAPIService.swift */; };
-		010101010101010101010109 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020202020202020202020209 /* SubscriptionManager.swift */; };
-		01010101010101010101010A /* UsageTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02020202020202020202020A /* UsageTracker.swift */; };
-		01010101010101010101010B /* ScriptGeneratorViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02020202020202020202020B /* ScriptGeneratorViewModel.swift */; };
-		01010101010101010101010C /* TeleprompterViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02020202020202020202020C /* TeleprompterViewModel.swift */; };
-		01010101010101010101010D /* ScriptGeneratorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02020202020202020202020D /* ScriptGeneratorView.swift */; };
-		01010101010101010101010E /* PaywallContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02020202020202020202020E /* PaywallContainerView.swift */; };
-		01010101010101010101010F /* ScriptCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02020202020202020202020F /* ScriptCardView.swift */; };
-		010101010101010101010110 /* ScriptResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020202020202020202020210 /* ScriptResultsView.swift */; };
-		010101010101010101010111 /* TeleprompterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020202020202020202020211 /* TeleprompterView.swift */; };
-		010101010101010101010120 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 030303030303030303030301 /* RevenueCat */; };
-		010101010101010101010121 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 030303030303030303030302 /* RevenueCatUI */; };
-		010101010101010101010130 /* ScriptAPIServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020202020202020202020230 /* ScriptAPIServiceTests.swift */; };
-		010101010101010101010131 /* ScriptFlipTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020202020202020202020231 /* ScriptFlipTests.swift */; };
-		010101010101010101010140 /* ScriptFlipUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020202020202020202020240 /* ScriptFlipUITests.swift */; };
+		1101 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2101 /* AppDelegate.swift */; };
+		1102 /* Environment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2102 /* Environment.swift */; };
+		1103 /* ScriptFlipApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2103 /* ScriptFlipApp.swift */; };
+		1104 /* GenerationRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2104 /* GenerationRequest.swift */; };
+		1105 /* Script.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2105 /* Script.swift */; };
+		1106 /* ScriptStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2106 /* ScriptStyle.swift */; };
+		1107 /* UserUsage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2107 /* UserUsage.swift */; };
+		1108 /* ScriptAPIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2108 /* ScriptAPIService.swift */; };
+		1109 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2109 /* SubscriptionManager.swift */; };
+		110A /* UsageTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210A /* UsageTracker.swift */; };
+		110B /* ScriptGeneratorViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210B /* ScriptGeneratorViewModel.swift */; };
+		110C /* TeleprompterViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210C /* TeleprompterViewModel.swift */; };
+		110D /* ScriptGeneratorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210D /* ScriptGeneratorView.swift */; };
+		110E /* PaywallContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210E /* PaywallContainerView.swift */; };
+		110F /* ScriptCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210F /* ScriptCardView.swift */; };
+		1110 /* ScriptResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2110 /* ScriptResultsView.swift */; };
+		1111 /* TeleprompterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2111 /* TeleprompterView.swift */; };
+		1120 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 3101 /* RevenueCat */; };
+		1121 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 3102 /* RevenueCatUI */; };
+		1130 /* ScriptAPIServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2130 /* ScriptAPIServiceTests.swift */; };
+		1131 /* ScriptFlipTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2131 /* ScriptFlipTests.swift */; };
+		1140 /* ScriptFlipUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2140 /* ScriptFlipUITests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		0D0D0D0D0D0D0D0D0D0D0D30 /* PBXContainerItemProxy */ = {
+		4101 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = 0A0A0A0A0A0A0A0A0A0A0A00 /* Project object */;
+			containerPortal = 0A01 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 060606060606060606060600;
+			remoteGlobalIDString = 6101;
 			remoteInfo = ScriptFlip;
 		};
-		0D0D0D0D0D0D0D0D0D0D0D40 /* PBXContainerItemProxy */ = {
+		4102 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = 0A0A0A0A0A0A0A0A0A0A0A00 /* Project object */;
+			containerPortal = 0A01 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 060606060606060606060600;
+			remoteGlobalIDString = 6101;
 			remoteInfo = ScriptFlip;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		020202020202020202020200 /* ScriptFlip.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ScriptFlip.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		020202020202020202020201 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		020202020202020202020202 /* Environment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Environment.swift; sourceTree = "<group>"; };
-		020202020202020202020203 /* ScriptFlipApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptFlipApp.swift; sourceTree = "<group>"; };
-		020202020202020202020204 /* GenerationRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenerationRequest.swift; sourceTree = "<group>"; };
-		020202020202020202020205 /* Script.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Script.swift; sourceTree = "<group>"; };
-		020202020202020202020206 /* ScriptStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptStyle.swift; sourceTree = "<group>"; };
-		020202020202020202020207 /* UserUsage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserUsage.swift; sourceTree = "<group>"; };
-		020202020202020202020208 /* ScriptAPIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptAPIService.swift; sourceTree = "<group>"; };
-		020202020202020202020209 /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
-		02020202020202020202020A /* UsageTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageTracker.swift; sourceTree = "<group>"; };
-		02020202020202020202020B /* ScriptGeneratorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptGeneratorViewModel.swift; sourceTree = "<group>"; };
-		02020202020202020202020C /* TeleprompterViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeleprompterViewModel.swift; sourceTree = "<group>"; };
-		02020202020202020202020D /* ScriptGeneratorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptGeneratorView.swift; sourceTree = "<group>"; };
-		02020202020202020202020E /* PaywallContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallContainerView.swift; sourceTree = "<group>"; };
-		02020202020202020202020F /* ScriptCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptCardView.swift; sourceTree = "<group>"; };
-		020202020202020202020210 /* ScriptResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptResultsView.swift; sourceTree = "<group>"; };
-		020202020202020202020211 /* TeleprompterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeleprompterView.swift; sourceTree = "<group>"; };
-		020202020202020202020212 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		020202020202020202020220 /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
-		020202020202020202020230 /* ScriptAPIServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptAPIServiceTests.swift; sourceTree = "<group>"; };
-		020202020202020202020231 /* ScriptFlipTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptFlipTests.swift; sourceTree = "<group>"; };
-		020202020202020202020232 /* ScriptFlipTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ScriptFlipTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		020202020202020202020240 /* ScriptFlipUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptFlipUITests.swift; sourceTree = "<group>"; };
-		020202020202020202020241 /* ScriptFlipUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ScriptFlipUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		2001 /* ScriptFlip.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ScriptFlip.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2002 /* ScriptFlipTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ScriptFlipTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		2003 /* ScriptFlipUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ScriptFlipUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		2101 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		2102 /* Environment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Environment.swift; sourceTree = "<group>"; };
+		2103 /* ScriptFlipApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptFlipApp.swift; sourceTree = "<group>"; };
+		2104 /* GenerationRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenerationRequest.swift; sourceTree = "<group>"; };
+		2105 /* Script.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Script.swift; sourceTree = "<group>"; };
+		2106 /* ScriptStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptStyle.swift; sourceTree = "<group>"; };
+		2107 /* UserUsage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserUsage.swift; sourceTree = "<group>"; };
+		2108 /* ScriptAPIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptAPIService.swift; sourceTree = "<group>"; };
+		2109 /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
+		210A /* UsageTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageTracker.swift; sourceTree = "<group>"; };
+		210B /* ScriptGeneratorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptGeneratorViewModel.swift; sourceTree = "<group>"; };
+		210C /* TeleprompterViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeleprompterViewModel.swift; sourceTree = "<group>"; };
+		210D /* ScriptGeneratorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptGeneratorView.swift; sourceTree = "<group>"; };
+		210E /* PaywallContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallContainerView.swift; sourceTree = "<group>"; };
+		210F /* ScriptCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptCardView.swift; sourceTree = "<group>"; };
+		2110 /* ScriptResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptResultsView.swift; sourceTree = "<group>"; };
+		2111 /* TeleprompterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeleprompterView.swift; sourceTree = "<group>"; };
+		2112 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		2120 /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
+		2130 /* ScriptAPIServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptAPIServiceTests.swift; sourceTree = "<group>"; };
+		2131 /* ScriptFlipTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptFlipTests.swift; sourceTree = "<group>"; };
+		2140 /* ScriptFlipUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptFlipUITests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		040404040404040404040400 /* Frameworks */ = {
+		5101 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				010101010101010101010120 /* RevenueCat in Frameworks */,
-				010101010101010101010121 /* RevenueCatUI in Frameworks */,
+				1120 /* RevenueCat in Frameworks */,
+				1121 /* RevenueCatUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		040404040404040404040430 /* Frameworks */ = {
+		5102 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		040404040404040404040440 /* Frameworks */ = {
+		5103 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -103,105 +103,137 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		050505050505050505050500 = {
+		0500 = {
 			isa = PBXGroup;
 			children = (
-				050505050505050505050501 /* ScriptFlip */,
-				050505050505050505050530 /* ScriptFlipTests */,
-				050505050505050505050540 /* ScriptFlipUITests */,
-				020202020202020202020220 /* Config.xcconfig */,
-				050505050505050505050509 /* Products */,
+				2120 /* Config.xcconfig */,
+				0501 /* ScriptFlip */,
+				0507 /* ScriptFlipTests */,
+				0508 /* ScriptFlipUITests */,
+				0509 /* Products */,
 			);
 			sourceTree = "<group>";
 		};
-		050505050505050505050501 /* ScriptFlip */ = {
+		0501 /* ScriptFlip */ = {
 			isa = PBXGroup;
 			children = (
-				050505050505050505050502 /* App */,
-				050505050505050505050503 /* Models */,
-				050505050505050505050504 /* Services */,
-				050505050505050505050505 /* ViewModels */,
-				050505050505050505050506 /* Views */,
-				020202020202020202020212 /* Info.plist */,
+				0502 /* App */,
+				0503 /* Models */,
+				0504 /* Services */,
+				0505 /* ViewModels */,
+				0506 /* Views */,
+				2112 /* Info.plist */,
 			);
 			path = ScriptFlip;
 			sourceTree = "<group>";
 		};
-		050505050505050505050502 /* App */ = {
+		0502 /* App */ = {
 			isa = PBXGroup;
 			children = (
-				020202020202020202020201 /* AppDelegate.swift */,
-				020202020202020202020202 /* Environment.swift */,
-				020202020202020202020203 /* ScriptFlipApp.swift */,
+				2101 /* AppDelegate.swift */,
+				2102 /* Environment.swift */,
+				2103 /* ScriptFlipApp.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
 		};
-		050505050505050505050503 /* Models */ = {
+		0503 /* Models */ = {
 			isa = PBXGroup;
 			children = (
-				020202020202020202020204 /* GenerationRequest.swift */,
-				020202020202020202020205 /* Script.swift */,
-				020202020202020202020206 /* ScriptStyle.swift */,
-				020202020202020202020207 /* UserUsage.swift */,
+				2104 /* GenerationRequest.swift */,
+				2105 /* Script.swift */,
+				2106 /* ScriptStyle.swift */,
+				2107 /* UserUsage.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
 		};
-		050505050505050505050504 /* Services */ = {
+		0504 /* Services */ = {
 			isa = PBXGroup;
 			children = (
-				020202020202020202020208 /* ScriptAPIService.swift */,
-				020202020202020202020209 /* SubscriptionManager.swift */,
-				02020202020202020202020A /* UsageTracker.swift */,
+				2108 /* ScriptAPIService.swift */,
+				2109 /* SubscriptionManager.swift */,
+				210A /* UsageTracker.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
 		};
-		050505050505050505050505 /* ViewModels */ = {
+		0505 /* ViewModels */ = {
 			isa = PBXGroup;
 			children = (
-				02020202020202020202020B /* ScriptGeneratorViewModel.swift */,
-				02020202020202020202020C /* TeleprompterViewModel.swift */,
+				210B /* ScriptGeneratorViewModel.swift */,
+				210C /* TeleprompterViewModel.swift */,
 			);
 			path = ViewModels;
 			sourceTree = "<group>";
 		};
-		050505050505050505050506 /* Views */ = {
+		0506 /* Views */ = {
 			isa = PBXGroup;
 			children = (
-				02020202020202020202020D /* ScriptGeneratorView.swift */,
-				02020202020202020202020E /* PaywallContainerView.swift */,
-				02020202020202020202020F /* ScriptCardView.swift */,
-				020202020202020202020210 /* ScriptResultsView.swift */,
-				020202020202020202020211 /* TeleprompterView.swift */,
+				050A /* Generator */,
+				050B /* Paywall */,
+				050C /* Results */,
+				050D /* Teleprompter */,
 			);
 			path = Views;
 			sourceTree = "<group>";
 		};
-		050505050505050505050530 /* ScriptFlipTests */ = {
+		050A /* Generator */ = {
 			isa = PBXGroup;
 			children = (
-				020202020202020202020230 /* ScriptAPIServiceTests.swift */,
-				020202020202020202020231 /* ScriptFlipTests.swift */,
+				210D /* ScriptGeneratorView.swift */,
+			);
+			path = Generator;
+			sourceTree = "<group>";
+		};
+		050B /* Paywall */ = {
+			isa = PBXGroup;
+			children = (
+				210E /* PaywallContainerView.swift */,
+			);
+			path = Paywall;
+			sourceTree = "<group>";
+		};
+		050C /* Results */ = {
+			isa = PBXGroup;
+			children = (
+				210F /* ScriptCardView.swift */,
+				2110 /* ScriptResultsView.swift */,
+			);
+			path = Results;
+			sourceTree = "<group>";
+		};
+		050D /* Teleprompter */ = {
+			isa = PBXGroup;
+			children = (
+				2111 /* TeleprompterView.swift */,
+			);
+			path = Teleprompter;
+			sourceTree = "<group>";
+		};
+		0507 /* ScriptFlipTests */ = {
+			isa = PBXGroup;
+			children = (
+				2130 /* ScriptAPIServiceTests.swift */,
+				2131 /* ScriptFlipTests.swift */,
 			);
 			path = ScriptFlipTests;
 			sourceTree = "<group>";
 		};
-		050505050505050505050540 /* ScriptFlipUITests */ = {
+		0508 /* ScriptFlipUITests */ = {
 			isa = PBXGroup;
 			children = (
-				020202020202020202020240 /* ScriptFlipUITests.swift */,
+				2140 /* ScriptFlipUITests.swift */,
 			);
 			path = ScriptFlipUITests;
 			sourceTree = "<group>";
 		};
-		050505050505050505050509 /* Products */ = {
+		0509 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				020202020202020202020200 /* ScriptFlip.app */,
-				020202020202020202020232 /* ScriptFlipTests.xctest */,
-				020202020202020202020241 /* ScriptFlipUITests.xctest */,
+				2001 /* ScriptFlip.app */,
+				2002 /* ScriptFlipTests.xctest */,
+				2003 /* ScriptFlipUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -209,13 +241,13 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		060606060606060606060600 /* ScriptFlip */ = {
+		6101 /* ScriptFlip */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 070707070707070707070700 /* Build configuration list for PBXNativeTarget "ScriptFlip" */;
+			buildConfigurationList = 7101 /* Build configuration list for PBXNativeTarget "ScriptFlip" */;
 			buildPhases = (
-				080808080808080808080800 /* Sources */,
-				040404040404040404040400 /* Frameworks */,
-				090909090909090909090900 /* Resources */,
+				8101 /* Sources */,
+				5101 /* Frameworks */,
+				9101 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -223,73 +255,75 @@
 			);
 			name = ScriptFlip;
 			packageProductDependencies = (
-				030303030303030303030301 /* RevenueCat */,
-				030303030303030303030302 /* RevenueCatUI */,
+				3101 /* RevenueCat */,
+				3102 /* RevenueCatUI */,
 			);
 			productName = ScriptFlip;
-			productReference = 020202020202020202020200 /* ScriptFlip.app */;
+			productReference = 2001 /* ScriptFlip.app */;
 			productType = "com.apple.product-type.application";
 		};
-		060606060606060606060630 /* ScriptFlipTests */ = {
+		6102 /* ScriptFlipTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 070707070707070707070730 /* Build configuration list for PBXNativeTarget "ScriptFlipTests" */;
+			buildConfigurationList = 7102 /* Build configuration list for PBXNativeTarget "ScriptFlipTests" */;
 			buildPhases = (
-				080808080808080808080830 /* Sources */,
-				040404040404040404040430 /* Frameworks */,
+				8102 /* Sources */,
+				5102 /* Frameworks */,
+				9102 /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				0E0E0E0E0E0E0E0E0E0E0E30 /* PBXTargetDependency */,
+				4201 /* PBXTargetDependency */,
 			);
 			name = ScriptFlipTests;
 			productName = ScriptFlipTests;
-			productReference = 020202020202020202020232 /* ScriptFlipTests.xctest */;
+			productReference = 2002 /* ScriptFlipTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		060606060606060606060640 /* ScriptFlipUITests */ = {
+		6103 /* ScriptFlipUITests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 070707070707070707070740 /* Build configuration list for PBXNativeTarget "ScriptFlipUITests" */;
+			buildConfigurationList = 7103 /* Build configuration list for PBXNativeTarget "ScriptFlipUITests" */;
 			buildPhases = (
-				080808080808080808080840 /* Sources */,
-				040404040404040404040440 /* Frameworks */,
+				8103 /* Sources */,
+				5103 /* Frameworks */,
+				9103 /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				0E0E0E0E0E0E0E0E0E0E0E40 /* PBXTargetDependency */,
+				4202 /* PBXTargetDependency */,
 			);
 			name = ScriptFlipUITests;
 			productName = ScriptFlipUITests;
-			productReference = 020202020202020202020241 /* ScriptFlipUITests.xctest */;
+			productReference = 2003 /* ScriptFlipUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		0A0A0A0A0A0A0A0A0A0A0A00 /* Project object */ = {
+		0A01 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1540;
 				LastUpgradeCheck = 1540;
 				TargetAttributes = {
-					060606060606060606060600 = {
+					6101 = {
 						CreatedOnToolsVersion = 15.4;
 						DevelopmentTeam = MS5Y8632VD;
 						ProvisioningStyle = Manual;
 					};
-					060606060606060606060630 = {
+					6102 = {
 						CreatedOnToolsVersion = 15.4;
-						TestTargetID = 060606060606060606060600;
+						TestTargetID = 6101;
 					};
-					060606060606060606060640 = {
+					6103 = {
 						CreatedOnToolsVersion = 15.4;
-						TestTargetID = 060606060606060606060600;
+						TestTargetID = 6101;
 					};
 				};
 			};
-			buildConfigurationList = 070707070707070707070701 /* Build configuration list for PBXProject "ScriptFlip" */;
+			buildConfigurationList = 7100 /* Build configuration list for PBXProject "ScriptFlip" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -297,23 +331,37 @@
 				en,
 				Base,
 			);
-			mainGroup = 050505050505050505050500;
+			mainGroup = 0500;
 			packageReferences = (
-				0B0B0B0B0B0B0B0B0B0B0B01 /* XCRemoteSwiftPackageReference "purchases-ios" */,
+				3001 /* XCRemoteSwiftPackageReference "purchases-ios" */,
 			);
-			productRefGroup = 050505050505050505050509 /* Products */;
+			productRefGroup = 0509 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				060606060606060606060600 /* ScriptFlip */,
-				060606060606060606060630 /* ScriptFlipTests */,
-				060606060606060606060640 /* ScriptFlipUITests */,
+				6101 /* ScriptFlip */,
+				6102 /* ScriptFlipTests */,
+				6103 /* ScriptFlipUITests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		090909090909090909090900 /* Resources */ = {
+		9101 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9102 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9103 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -323,66 +371,66 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		080808080808080808080800 /* Sources */ = {
+		8101 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				010101010101010101010101 /* AppDelegate.swift in Sources */,
-				010101010101010101010102 /* Environment.swift in Sources */,
-				010101010101010101010103 /* ScriptFlipApp.swift in Sources */,
-				010101010101010101010104 /* GenerationRequest.swift in Sources */,
-				010101010101010101010105 /* Script.swift in Sources */,
-				010101010101010101010106 /* ScriptStyle.swift in Sources */,
-				010101010101010101010107 /* UserUsage.swift in Sources */,
-				010101010101010101010108 /* ScriptAPIService.swift in Sources */,
-				010101010101010101010109 /* SubscriptionManager.swift in Sources */,
-				01010101010101010101010A /* UsageTracker.swift in Sources */,
-				01010101010101010101010B /* ScriptGeneratorViewModel.swift in Sources */,
-				01010101010101010101010C /* TeleprompterViewModel.swift in Sources */,
-				01010101010101010101010D /* ScriptGeneratorView.swift in Sources */,
-				01010101010101010101010E /* PaywallContainerView.swift in Sources */,
-				01010101010101010101010F /* ScriptCardView.swift in Sources */,
-				010101010101010101010110 /* ScriptResultsView.swift in Sources */,
-				010101010101010101010111 /* TeleprompterView.swift in Sources */,
+				1101 /* AppDelegate.swift in Sources */,
+				1102 /* Environment.swift in Sources */,
+				1103 /* ScriptFlipApp.swift in Sources */,
+				1104 /* GenerationRequest.swift in Sources */,
+				1105 /* Script.swift in Sources */,
+				1106 /* ScriptStyle.swift in Sources */,
+				1107 /* UserUsage.swift in Sources */,
+				1108 /* ScriptAPIService.swift in Sources */,
+				1109 /* SubscriptionManager.swift in Sources */,
+				110A /* UsageTracker.swift in Sources */,
+				110B /* ScriptGeneratorViewModel.swift in Sources */,
+				110C /* TeleprompterViewModel.swift in Sources */,
+				110D /* ScriptGeneratorView.swift in Sources */,
+				110E /* PaywallContainerView.swift in Sources */,
+				110F /* ScriptCardView.swift in Sources */,
+				1110 /* ScriptResultsView.swift in Sources */,
+				1111 /* TeleprompterView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		080808080808080808080830 /* Sources */ = {
+		8102 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				010101010101010101010130 /* ScriptAPIServiceTests.swift in Sources */,
-				010101010101010101010131 /* ScriptFlipTests.swift in Sources */,
+				1130 /* ScriptAPIServiceTests.swift in Sources */,
+				1131 /* ScriptFlipTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		080808080808080808080840 /* Sources */ = {
+		8103 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				010101010101010101010140 /* ScriptFlipUITests.swift in Sources */,
+				1140 /* ScriptFlipUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		0E0E0E0E0E0E0E0E0E0E0E30 /* PBXTargetDependency */ = {
+		4201 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 060606060606060606060600 /* ScriptFlip */;
-			targetProxy = 0D0D0D0D0D0D0D0D0D0D0D30 /* PBXContainerItemProxy */;
+			target = 6101 /* ScriptFlip */;
+			targetProxy = 4101 /* PBXContainerItemProxy */;
 		};
-		0E0E0E0E0E0E0E0E0E0E0E40 /* PBXTargetDependency */ = {
+		4202 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 060606060606060606060600 /* ScriptFlip */;
-			targetProxy = 0D0D0D0D0D0D0D0D0D0D0D40 /* PBXContainerItemProxy */;
+			target = 6101 /* ScriptFlip */;
+			targetProxy = 4102 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
-		0C0C0C0C0C0C0C0C0C0C0C01 /* Debug */ = {
+		7001 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 020202020202020202020220 /* Config.xcconfig */;
+			baseConfigurationReference = 2120 /* Config.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -412,9 +460,9 @@
 			};
 			name = Debug;
 		};
-		0C0C0C0C0C0C0C0C0C0C0C02 /* Release */ = {
+		7002 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 020202020202020202020220 /* Config.xcconfig */;
+			baseConfigurationReference = 2120 /* Config.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -438,9 +486,9 @@
 			};
 			name = Release;
 		};
-		0C0C0C0C0C0C0C0C0C0C0C03 /* Debug */ = {
+		7003 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 020202020202020202020220 /* Config.xcconfig */;
+			baseConfigurationReference = 2120 /* Config.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "Apple Development";
@@ -464,9 +512,9 @@
 			};
 			name = Debug;
 		};
-		0C0C0C0C0C0C0C0C0C0C0C04 /* Release */ = {
+		7004 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 020202020202020202020220 /* Config.xcconfig */;
+			baseConfigurationReference = 2120 /* Config.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "Apple Distribution";
@@ -490,70 +538,62 @@
 			};
 			name = Release;
 		};
-		0C0C0C0C0C0C0C0C0C0C0C31 /* Debug */ = {
+		7005 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.qlueconsulting.scriptflip.ScriptFlipTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ScriptFlip.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/ScriptFlip";
 			};
 			name = Debug;
 		};
-		0C0C0C0C0C0C0C0C0C0C0C32 /* Release */ = {
+		7006 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.qlueconsulting.scriptflip.ScriptFlipTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ScriptFlip.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/ScriptFlip";
 			};
 			name = Release;
 		};
-		0C0C0C0C0C0C0C0C0C0C0C41 /* Debug */ = {
+		7007 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.qlueconsulting.scriptflip.ScriptFlipUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_TARGET_NAME = ScriptFlip;
 			};
 			name = Debug;
 		};
-		0C0C0C0C0C0C0C0C0C0C0C42 /* Release */ = {
+		7008 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.qlueconsulting.scriptflip.ScriptFlipUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_TARGET_NAME = ScriptFlip;
@@ -563,38 +603,38 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		070707070707070707070700 /* Build configuration list for PBXNativeTarget "ScriptFlip" */ = {
+		7100 /* Build configuration list for PBXProject "ScriptFlip" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				0C0C0C0C0C0C0C0C0C0C0C03 /* Debug */,
-				0C0C0C0C0C0C0C0C0C0C0C04 /* Release */,
+				7001 /* Debug */,
+				7002 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		070707070707070707070701 /* Build configuration list for PBXProject "ScriptFlip" */ = {
+		7101 /* Build configuration list for PBXNativeTarget "ScriptFlip" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				0C0C0C0C0C0C0C0C0C0C0C01 /* Debug */,
-				0C0C0C0C0C0C0C0C0C0C0C02 /* Release */,
+				7003 /* Debug */,
+				7004 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		070707070707070707070730 /* Build configuration list for PBXNativeTarget "ScriptFlipTests" */ = {
+		7102 /* Build configuration list for PBXNativeTarget "ScriptFlipTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				0C0C0C0C0C0C0C0C0C0C0C31 /* Debug */,
-				0C0C0C0C0C0C0C0C0C0C0C32 /* Release */,
+				7005 /* Debug */,
+				7006 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		070707070707070707070740 /* Build configuration list for PBXNativeTarget "ScriptFlipUITests" */ = {
+		7103 /* Build configuration list for PBXNativeTarget "ScriptFlipUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				0C0C0C0C0C0C0C0C0C0C0C41 /* Debug */,
-				0C0C0C0C0C0C0C0C0C0C0C42 /* Release */,
+				7007 /* Debug */,
+				7008 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -602,7 +642,7 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		0B0B0B0B0B0B0B0B0B0B0B01 /* XCRemoteSwiftPackageReference "purchases-ios" */ = {
+		3001 /* XCRemoteSwiftPackageReference "purchases-ios" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/RevenueCat/purchases-ios.git";
 			requirement = {
@@ -613,18 +653,18 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		030303030303030303030301 /* RevenueCat */ = {
+		3101 /* RevenueCat */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 0B0B0B0B0B0B0B0B0B0B0B01 /* XCRemoteSwiftPackageReference "purchases-ios" */;
+			package = 3001 /* XCRemoteSwiftPackageReference "purchases-ios" */;
 			productName = RevenueCat;
 		};
-		030303030303030303030302 /* RevenueCatUI */ = {
+		3102 /* RevenueCatUI */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 0B0B0B0B0B0B0B0B0B0B0B01 /* XCRemoteSwiftPackageReference "purchases-ios" */;
+			package = 3001 /* XCRemoteSwiftPackageReference "purchases-ios" */;
 			productName = RevenueCatUI;
 		};
 /* End XCSwiftPackageProductDependency section */
 
 	};
-	rootObject = 0A0A0A0A0A0A0A0A0A0A0A00 /* Project object */;
-}
+	rootObject = 0A01 /* Project object */;
+}

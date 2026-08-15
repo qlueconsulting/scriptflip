@@ -15,7 +15,7 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "060606060606060606060600"
+               BlueprintIdentifier = "6101"
                BuildableName = "ScriptFlip.app"
                BlueprintName = "ScriptFlip"
                ReferencedContainer = "container:ScriptFlip.xcodeproj">
@@ -33,7 +33,7 @@
             skipped = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "060606060606060606060630"
+               BlueprintIdentifier = "6102"
                BuildableName = "ScriptFlipTests.xctest"
                BlueprintName = "ScriptFlipTests"
                ReferencedContainer = "container:ScriptFlip.xcodeproj">
@@ -43,7 +43,7 @@
             skipped = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "060606060606060606060640"
+               BlueprintIdentifier = "6103"
                BuildableName = "ScriptFlipUITests.xctest"
                BlueprintName = "ScriptFlipUITests"
                ReferencedContainer = "container:ScriptFlip.xcodeproj">
@@ -65,7 +65,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "060606060606060606060600"
+            BlueprintIdentifier = "6101"
             BuildableName = "ScriptFlip.app"
             BlueprintName = "ScriptFlip"
             ReferencedContainer = "container:ScriptFlip.xcodeproj">
@@ -82,7 +82,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "060606060606060606060600"
+            BlueprintIdentifier = "6101"
             BuildableName = "ScriptFlip.app"
             BlueprintName = "ScriptFlip"
             ReferencedContainer = "container:ScriptFlip.xcodeproj">
