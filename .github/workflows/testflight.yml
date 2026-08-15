@@ -59,11 +59,14 @@ jobs:
 
       - name: Build & Archive App
         run: |
+          BUILD_NUMBER="${{ github.run_number }}"
+          echo "Building ScriptFlip version 1.0.0 (Build $BUILD_NUMBER)..."
           xcodebuild archive \
             -project ScriptFlip.xcodeproj \
             -scheme ScriptFlip \
             -archivePath $RUNNER_TEMP/ScriptFlip.xcarchive \
             -destination "generic/platform=iOS" \
+            CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
             -allowProvisioningUpdates
 
       - name: Export & Upload to TestFlight
@@ -77,19 +80,21 @@ jobs:
             -exportPath $RUNNER_TEMP/build \
             -allowProvisioningUpdates
 
-          # Unpack exported IPA, patch payload Info.plist with iOS 26 SDK metadata, and re-sign
+          # Unpack exported IPA, patch payload Info.plist with iOS 26 SDK metadata & build number, and re-sign
           mkdir -p $RUNNER_TEMP/ipa_unpack
           unzip -q $RUNNER_TEMP/build/ScriptFlip.ipa -d $RUNNER_TEMP/ipa_unpack
           PAYLOAD_PLIST="$RUNNER_TEMP/ipa_unpack/Payload/ScriptFlip.app/Info.plist"
 
           if [ -f "$PAYLOAD_PLIST" ]; then
-            echo "Patching IPA Payload Info.plist for App Store Connect SDK 26 validation..."
+            echo "Patching IPA Payload Info.plist for App Store Connect..."
+            BUILD_NUMBER="${{ github.run_number }}"
+            plutil -replace CFBundleVersion -string "$BUILD_NUMBER" "$PAYLOAD_PLIST"
             plutil -replace DTSDKName -string "iphoneos26.0" "$PAYLOAD_PLIST"
             plutil -replace DTPlatformVersion -string "26.0" "$PAYLOAD_PLIST"
             plutil -replace DTXcode -string "2600" "$PAYLOAD_PLIST"
             plutil -replace DTXcodeBuild -string "26A100" "$PAYLOAD_PLIST"
             plutil -replace MinimumOSVersion -string "17.0" "$PAYLOAD_PLIST"
-            plutil -p "$PAYLOAD_PLIST" | grep -E "DTSDK|DTPlatform|DTXcode"
+            plutil -p "$PAYLOAD_PLIST" | grep -E "CFBundleVersion|DTSDK|DTPlatform|DTXcode"
           fi
 
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
