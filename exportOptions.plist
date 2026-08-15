@@ -4,8 +4,15 @@
 <dict>
     <key>method</key>
     <string>app-store-connect</string>
+    <key>teamID</key>
+    <string>MS5Y8632VD</string>
     <key>signingStyle</key>
     <string>manual</string>
+    <key>provisioningProfiles</key>
+    <dict>
+        <key>com.qlueconsulting.scriptflip</key>
+        <string>ScriptFlip_AppStore_Profile</string>
+    </dict>
     <key>stripSwiftSymbols</key>
     <true/>
     <key>uploadSymbols</key>

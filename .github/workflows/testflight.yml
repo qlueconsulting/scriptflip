@@ -54,6 +54,7 @@ jobs:
       - name: Build & Archive App
         run: |
           xcodebuild archive \
+            -project ScriptFlip.xcodeproj \
             -scheme ScriptFlip \
             -archivePath $RUNNER_TEMP/ScriptFlip.xcarchive \
             -destination "generic/platform=iOS" \
