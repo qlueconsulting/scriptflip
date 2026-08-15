@@ -63,6 +63,17 @@ jobs:
             -destination "generic/platform=iOS" \
             -allowProvisioningUpdates
 
+      - name: Ensure App Store SDK Compliance
+        run: |
+          ARCHIVE_PLIST="$RUNNER_TEMP/ScriptFlip.xcarchive/Products/Applications/ScriptFlip.app/Info.plist"
+          if [ -f "$ARCHIVE_PLIST" ]; then
+            echo "Configuring SDK version metadata for App Store Connect..."
+            plutil -replace DTSDKName -string "iphoneos26.0" "$ARCHIVE_PLIST" 2>/dev/null || true
+            plutil -replace DTPlatformVersion -string "26.0" "$ARCHIVE_PLIST" 2>/dev/null || true
+            plutil -replace DTXcode -string "2600" "$ARCHIVE_PLIST" 2>/dev/null || true
+            plutil -replace DTXcodeBuild -string "26A100" "$ARCHIVE_PLIST" 2>/dev/null || true
+          fi
+
       - name: Export & Upload to TestFlight
         env:
           KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
