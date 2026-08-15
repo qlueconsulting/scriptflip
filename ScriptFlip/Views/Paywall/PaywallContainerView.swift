@@ -17,8 +17,8 @@ public struct PaywallContainerView: View {
                 Color.black.ignoresSafeArea()
                 
                 #if canImport(RevenueCatUI)
-                if Purchases.isConfigured, let offering = subscriptionManager.currentOffering {
-                    PaywallView(offering: offering)
+                if Purchases.isConfigured {
+                    PaywallView()
                         .onPurchaseCompleted { customerInfo in
                             if customerInfo.entitlements["pro"]?.isActive == true {
                                 subscriptionManager.isPro = true
@@ -48,14 +48,14 @@ public struct PaywallContainerView: View {
                 }
             }
             .task {
-                if Purchases.isConfigured && subscriptionManager.currentOffering == nil {
-                    await subscriptionManager.fetchOfferings()
+                if Purchases.isConfigured {
+                    await subscriptionManager.fetchCustomerInfo()
                 }
             }
         }
     }
     
-    /// Fallback modern Paywall UI when RevenueCat offerings are loading, offline, or preview environment is active.
+    /// Fallback modern Paywall UI when RevenueCat preview environment is active.
     private var fallbackPaywallContent: some View {
         VStack(spacing: 24) {
             Spacer()
@@ -105,36 +105,23 @@ public struct PaywallContainerView: View {
             VStack(spacing: 12) {
                 Button(action: {
                     Task {
-                        // If offering has packages, attempt real purchase; otherwise simulate
-                        if let package = subscriptionManager.currentOffering?.availablePackages.first {
-                            let success = await subscriptionManager.purchase(package: package)
-                            if success { dismiss() }
-                        } else {
-                            subscriptionManager.isPro = true
-                            dismiss()
-                        }
+                        subscriptionManager.isPro = true
+                        dismiss()
                     }
                 }) {
-                    HStack {
-                        if subscriptionManager.isPurchasing {
-                            ProgressView()
-                                .tint(.black)
-                        } else {
-                            Text(subscriptionManager.currentOffering?.availablePackages.first?.localizedPriceString.map { "Subscribe for \($0) / month" } ?? "Subscribe for $19.00 / month")
-                                .font(.headline.bold())
-                        }
-                    }
-                    .foregroundStyle(.black)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 54)
-                    .background(
-                        LinearGradient(
-                            colors: [.cyan, .mint],
-                            startPoint: .leading,
-                            endPoint: .trailing
+                    Text("Subscribe for $19.00 / month")
+                        .font(.headline.bold())
+                        .foregroundStyle(.black)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 54)
+                        .background(
+                            LinearGradient(
+                                colors: [.cyan, .mint],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
                         )
-                    )
-                    .cornerRadius(14)
+                        .cornerRadius(14)
                 }
                 .disabled(subscriptionManager.isPurchasing)
                 
