@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1113 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2113 /* Assets.xcassets */; };
 		1101 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2101 /* AppDelegate.swift */; };
 		1102 /* Environment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2102 /* Environment.swift */; };
 		1103 /* ScriptFlipApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2103 /* ScriptFlipApp.swift */; };
@@ -70,6 +71,7 @@
 		2110 /* ScriptResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptResultsView.swift; sourceTree = "<group>"; };
 		2111 /* TeleprompterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeleprompterView.swift; sourceTree = "<group>"; };
 		2112 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		2113 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		2120 /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
 		2130 /* ScriptAPIServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptAPIServiceTests.swift; sourceTree = "<group>"; };
 		2131 /* ScriptFlipTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptFlipTests.swift; sourceTree = "<group>"; };
@@ -123,6 +125,7 @@
 				0505 /* ViewModels */,
 				0506 /* Views */,
 				2112 /* Info.plist */,
+				2113 /* Assets.xcassets */,
 			);
 			path = ScriptFlip;
 			sourceTree = "<group>";
@@ -351,6 +354,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1113 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
