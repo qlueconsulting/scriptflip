@@ -15,18 +15,18 @@ public final class SubscriptionManager {
     public var errorMessage: String? = nil
     
     private init() {
-        // Zero async operations or singleton calls in init
+        // Zero async operations or eager SDK calls in init
     }
     
-    /// Configure RevenueCat SDK safely with Public API Key.
-    public nonisolated static func configure(apiKey: String) {
+    /// Lazily configure RevenueCat SDK safely on demand without blocking app launch.
+    public nonisolated static func ensureConfigured() {
+        let apiKey = AppEnvironment.revenueCatAPIKey
         guard !apiKey.isEmpty else {
             print("[SubscriptionManager] Warning: RevenueCat API Key is empty. Skipping configuration.")
             return
         }
         
         guard !Purchases.isConfigured else {
-            print("[SubscriptionManager] RevenueCat is already configured.")
             return
         }
         
@@ -34,11 +34,21 @@ public final class SubscriptionManager {
         Purchases.configure(withAPIKey: apiKey)
     }
     
-    /// Check customer entitlements and active Pro status before every generation request.
+    /// Configure RevenueCat SDK safely with Public API Key.
+    public nonisolated static func configure(apiKey: String) {
+        guard !apiKey.isEmpty else { return }
+        guard !Purchases.isConfigured else { return }
+        Purchases.logLevel = .warn
+        Purchases.configure(withAPIKey: apiKey)
+    }
+    
+    /// Check customer entitlements and active Pro status on demand.
     @discardableResult
     public func fetchCustomerInfo() async -> Bool {
+        Self.ensureConfigured()
+        
         guard Purchases.isConfigured else {
-            print("[SubscriptionManager] Purchases not configured yet. Returning fallback entitlement status.")
+            print("[SubscriptionManager] Purchases not configured. Returning fallback entitlement status.")
             #if DEBUG
             self.isPro = UserDefaults.standard.bool(forKey: "DEBUG_SIMULATE_PRO")
             #endif
@@ -59,8 +69,10 @@ public final class SubscriptionManager {
         }
     }
     
-    /// Fetch active RevenueCat offerings safely without throwing or asserting.
+    /// Fetch active RevenueCat offerings safely on demand without throwing or asserting.
     public func fetchOfferings() async {
+        Self.ensureConfigured()
+        
         guard Purchases.isConfigured else {
             print("[SubscriptionManager] Purchases not configured yet. Skipping fetchOfferings.")
             self.currentOffering = nil
@@ -78,6 +90,8 @@ public final class SubscriptionManager {
     
     /// Purchase a package via RevenueCat safely with optional binding.
     public func purchase(package: Package) async -> Bool {
+        Self.ensureConfigured()
+        
         guard Purchases.isConfigured else {
             self.errorMessage = "In-App Purchases are currently initializing. Please try again in a moment."
             return false
@@ -99,8 +113,10 @@ public final class SubscriptionManager {
         return false
     }
     
-    /// Restore user purchases safely.
+    /// Restore user purchases safely on demand.
     public func restorePurchases() async -> Bool {
+        Self.ensureConfigured()
+        
         guard Purchases.isConfigured else {
             self.errorMessage = "In-App Purchases are currently initializing. Please try again in a moment."
             return false

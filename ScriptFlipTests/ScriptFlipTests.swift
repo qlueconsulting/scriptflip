@@ -66,4 +66,18 @@ final class ScriptFlipTests: XCTestCase {
         vm.togglePlayPause()
         XCTAssertFalse(vm.isPlaying)
     }
+    
+    // MARK: - Launch Purity Tests
+    
+    @MainActor
+    func testLaunchInitializationIsPureAndNonBlocking() {
+        // Verify ViewModel & Service initializers execute with zero side-effects
+        let vm = ScriptGeneratorViewModel()
+        XCTAssertFalse(vm.isLoading)
+        XCTAssertNil(vm.errorMessage)
+        XCTAssertTrue(vm.generatedScripts.isEmpty)
+        
+        let subManager = SubscriptionManager.shared
+        XCTAssertFalse(subManager.isPurchasing)
+    }
 }

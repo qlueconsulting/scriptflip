@@ -97,6 +97,9 @@ public struct ScriptGeneratorView: View {
             .fullScreenCover(item: $activePrompterScript) { script in
                 TeleprompterView(script: script)
             }
+            .onAppear {
+                viewModel.refreshUsage()
+            }
         }
     }
     

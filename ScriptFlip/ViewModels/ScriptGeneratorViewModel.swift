@@ -43,11 +43,16 @@ public final class ScriptGeneratorViewModel {
         self.apiService = apiService
         self.usageTracker = usageTracker
         self.subscriptionManager = subscriptionManager ?? SubscriptionManager.shared
-        refreshUsage()
+        // Zero eager disk I/O or background operations in init
     }
     
     public func refreshUsage() {
-        self.userUsage = usageTracker.getUsage()
+        do {
+            self.userUsage = usageTracker.getUsage()
+        } catch {
+            print("[ScriptGeneratorViewModel] Warning during usage refresh: \(error.localizedDescription)")
+            self.userUsage = UserUsage()
+        }
     }
     
     public var canGenerateFree: Bool {

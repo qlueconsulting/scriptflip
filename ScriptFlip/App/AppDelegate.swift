@@ -1,15 +1,12 @@
 import UIKit
-import RevenueCat
 
-/// Custom AppDelegate for initializing RevenueCat and App Services.
+/// Custom AppDelegate ensuring 100% synchronous, pure launch lifecycle.
 public class AppDelegate: NSObject, UIApplicationDelegate {
     public func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
-        // Initialize RevenueCat SDK with API key loaded from AppEnvironment
-        SubscriptionManager.configure(apiKey: AppEnvironment.revenueCatAPIKey)
-        
+        // Zero eager SDK initializations or background tasks during application launch
         return true
     }
 }
