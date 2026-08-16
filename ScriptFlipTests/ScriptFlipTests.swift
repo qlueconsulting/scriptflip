@@ -60,7 +60,7 @@ final class ScriptFlipTests: XCTestCase {
         XCTAssertEqual(script.targetPlatform, .universal)
         XCTAssertEqual(script.targetPlatform.rawValue, "Universal (TikTok, Reels, Shorts)")
         XCTAssertEqual(script.targetPlatform.iconName, "sparkles.rectangle.stack.fill")
-        XCTAssertEqual(script.title, "Universal Script: Casual Angle")
+        XCTAssertEqual(script.title, "Universal Script: \(ScriptStyle.casual.rawValue) Angle")
         XCTAssertEqual(script.sections.count, 3)
     }
     
