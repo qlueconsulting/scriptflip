@@ -6,8 +6,10 @@ struct ScriptFlipApp: App {
     
     var body: some Scene {
         WindowGroup {
-            ScriptGeneratorView()
-                .preferredColorScheme(.dark)
+            SplashScreenView {
+                ScriptGeneratorView()
+            }
+            .preferredColorScheme(.dark)
         }
     }
 }

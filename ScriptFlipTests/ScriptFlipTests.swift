@@ -225,6 +225,93 @@ final class ScriptFlipTests: XCTestCase {
         XCTAssertTrue(vm.showMissingCaptionsAlert)
         XCTAssertEqual(vm.errorMessage, "No captions found for this YouTube video. Please paste the transcript or summary text manually.")
     }
+    
+    // MARK: - HistoryManager & Universal Script DTO Tests
+    
+    func testHistoryManagerStrictCapAtFive() {
+        let history = HistoryManager(userDefaults: UserDefaults(suiteName: "test_history_suite") ?? .standard)
+        history.clearHistory()
+        
+        for i in 1...8 {
+            let script = Script(
+                title: "Script Test \(i)",
+                style: .casual,
+                sections: [
+                    ScriptSection(timeRange: "0:00 - 0:03", sectionType: .hook, spokenText: "Hook \(i)", visualCue: "Cue \(i)"),
+                    ScriptSection(timeRange: "0:03 - 0:25", sectionType: .body, spokenText: "Body \(i)", visualCue: "Cue \(i)"),
+                    ScriptSection(timeRange: "0:25 - 0:30", sectionType: .callToAction, spokenText: "CTA \(i)", visualCue: "Cue \(i)")
+                ],
+                keyTakeaway: "Tip \(i)"
+            )
+            history.addScript(script)
+        }
+        
+        let saved = history.getHistory()
+        XCTAssertEqual(saved.count, 5, "History must strictly cap at 5 items")
+        XCTAssertEqual(saved.first?.title, "Script Test 8", "Newest item must be first in history (FIFO drop oldest)")
+        XCTAssertEqual(saved.last?.title, "Script Test 4", "Oldest item retained should be Script Test 4")
+        
+        history.clearHistory()
+        XCTAssertTrue(history.getHistory().isEmpty)
+    }
+    
+    func testUniversalScriptResponseJSONDecoding() throws {
+        let json = """
+        {
+          "script": {
+            "title": "3 Habits That Skyrocketed My Focus",
+            "hook": "Stop waking up and checking your phone immediately.",
+            "body": "Your brain is in theta state. When you scroll social media, you flood it with dopamine debt. Instead, drink 16oz water and get 5 mins morning sunlight.",
+            "callToAction": "Save this video and try it tomorrow morning!",
+            "estimatedDuration": "35s",
+            "visualCues": ["Close-up phone with notifications", "Drinking tall glass of water", "Sunlight window smile"]
+          },
+          "activeModel": "claude-sonnet-4-6"
+        }
+        """.data(using: .utf8)!
+        
+        let decoded = try JSONDecoder().decode(GenerationResponse.self, from: json)
+        XCTAssertNotNil(decoded.script)
+        XCTAssertEqual(decoded.script?.title, "3 Habits That Skyrocketed My Focus")
+        XCTAssertEqual(decoded.script?.hook, "Stop waking up and checking your phone immediately.")
+        XCTAssertEqual(decoded.script?.estimatedDuration, "35s")
+        XCTAssertEqual(decoded.script?.visualCues?.count, 3)
+        
+        guard let dto = decoded.script else {
+            XCTFail("Expected non-nil script DTO")
+            return
+        }
+        let script = Script(dto: dto, index: 1, style: .educational)
+        XCTAssertEqual(script.title, "3 Habits That Skyrocketed My Focus")
+        XCTAssertEqual(script.sections.count, 3)
+        XCTAssertEqual(script.sections[0].spokenText, "Stop waking up and checking your phone immediately.")
+        XCTAssertEqual(script.sections[0].visualCue, "Close-up phone with notifications")
+    }
+    
+    @MainActor
+    func testTeleprompterViewModelControlsRange() {
+        let script = Script(
+            title: "Controls Test",
+            style: .casual,
+            sections: [
+                ScriptSection(timeRange: "0:00 - 0:03", sectionType: .hook, spokenText: "Test hook", visualCue: "Test cue")
+            ],
+            keyTakeaway: "Takeaway"
+        )
+        let vm = TeleprompterViewModel(script: script)
+        
+        XCTAssertEqual(vm.scrollSpeed, 35)
+        XCTAssertEqual(vm.fontSize, 32)
+        
+        vm.scrollSpeed = 50
+        vm.fontSize = 40
+        XCTAssertEqual(vm.scrollSpeed, 50)
+        XCTAssertEqual(vm.fontSize, 40)
+        
+        vm.resetPrompter()
+        XCTAssertFalse(vm.isPlaying)
+        XCTAssertEqual(vm.scrollOffset, 0)
+    }
 }
 
 

@@ -27,6 +27,10 @@
 		1111 /* TeleprompterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2111 /* TeleprompterView.swift */; };
 		1114 /* NetworkDiagnosticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2114 /* NetworkDiagnosticsView.swift */; };
 		1115 /* DebugLogService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2115 /* DebugLogService.swift */; };
+		1116 /* HistoryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2116 /* HistoryManager.swift */; };
+		1117 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2117 /* HistoryView.swift */; };
+		1118 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2118 /* AboutView.swift */; };
+		1119 /* SplashScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2119 /* SplashScreenView.swift */; };
 		1120 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 3101 /* RevenueCat */; };
 		1121 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 3102 /* RevenueCatUI */; };
 		1130 /* ScriptAPIServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2130 /* ScriptAPIServiceTests.swift */; };
@@ -74,6 +78,10 @@
 		2111 /* TeleprompterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeleprompterView.swift; sourceTree = "<group>"; };
 		2114 /* NetworkDiagnosticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkDiagnosticsView.swift; sourceTree = "<group>"; };
 		2115 /* DebugLogService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugLogService.swift; sourceTree = "<group>"; };
+		2116 /* HistoryManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryManager.swift; sourceTree = "<group>"; };
+		2117 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
+		2118 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
+		2119 /* SplashScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashScreenView.swift; sourceTree = "<group>"; };
 		2112 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		2113 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		2120 /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
@@ -162,6 +170,7 @@
 				2109 /* SubscriptionManager.swift */,
 				210A /* UsageTracker.swift */,
 				2115 /* DebugLogService.swift */,
+				2116 /* HistoryManager.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -183,6 +192,9 @@
 				050C /* Results */,
 				050D /* Teleprompter */,
 				050E /* Diagnostics */,
+				050F /* History */,
+				0510 /* About */,
+				0511 /* Splash */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -226,6 +238,30 @@
 				2111 /* TeleprompterView.swift */,
 			);
 			path = Teleprompter;
+			sourceTree = "<group>";
+		};
+		050F /* History */ = {
+			isa = PBXGroup;
+			children = (
+				2117 /* HistoryView.swift */,
+			);
+			path = History;
+			sourceTree = "<group>";
+		};
+		0510 /* About */ = {
+			isa = PBXGroup;
+			children = (
+				2118 /* AboutView.swift */,
+			);
+			path = About;
+			sourceTree = "<group>";
+		};
+		0511 /* Splash */ = {
+			isa = PBXGroup;
+			children = (
+				2119 /* SplashScreenView.swift */,
+			);
+			path = Splash;
 			sourceTree = "<group>";
 		};
 		0507 /* ScriptFlipTests */ = {
@@ -412,6 +448,10 @@
 				1111 /* TeleprompterView.swift in Sources */,
 				1114 /* NetworkDiagnosticsView.swift in Sources */,
 				1115 /* DebugLogService.swift in Sources */,
+				1116 /* HistoryManager.swift in Sources */,
+				1117 /* HistoryView.swift in Sources */,
+				1118 /* AboutView.swift in Sources */,
+				1119 /* SplashScreenView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

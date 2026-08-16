@@ -1,11 +1,12 @@
 import SwiftUI
 
-/// Component card displaying individual generated script with sections, cues, copy, and teleprompter launch.
+/// Component card displaying individual generated script with sections, cues, copy, save to history, and teleprompter launch.
 public struct ScriptCardView: View {
     public let script: Script
     public let onLaunchPrompter: (Script) -> Void
     
     @State private var isCopied: Bool = false
+    @State private var isSavedToHistory: Bool = false
     @State private var showShareSheet: Bool = false
     
     public init(script: Script, onLaunchPrompter: @escaping (Script) -> Void) {
@@ -111,47 +112,18 @@ public struct ScriptCardView: View {
             .cornerRadius(10)
             
             // Actions Toolbar
-            HStack(spacing: 12) {
-                // Copy to Clipboard
-                Button(action: {
-                    UIPasteboard.general.string = script.fullSpokenText
-                    isCopied = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                        isCopied = false
-                    }
-                }) {
-                    HStack(spacing: 6) {
-                        Image(systemName: isCopied ? "checkmark" : "doc.on.doc")
-                        Text(isCopied ? "Copied!" : "Copy")
-                    }
-                    .font(.subheadline.bold())
-                    .foregroundStyle(isCopied ? .green : .white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 42)
-                    .background(Color.white.opacity(0.1))
-                    .cornerRadius(10)
-                }
-                
-                // Share Sheet
-                Button(action: { showShareSheet = true }) {
-                    Image(systemName: "square.and.arrow.up")
-                        .font(.subheadline.bold())
-                        .foregroundStyle(.white)
-                        .frame(width: 44, height: 42)
-                        .background(Color.white.opacity(0.1))
-                        .cornerRadius(10)
-                }
-                
-                // Launch Teleprompter
+            VStack(spacing: 10) {
+                // Primary Launch Teleprompter Button
                 Button(action: { onLaunchPrompter(script) }) {
-                    HStack(spacing: 6) {
+                    HStack(spacing: 8) {
                         Image(systemName: "play.tv.fill")
-                        Text("Prompter")
+                            .font(.headline)
+                        Text("Open in Teleprompter")
+                            .font(.headline.bold())
                     }
-                    .font(.subheadline.bold())
                     .foregroundStyle(.black)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 42)
+                    .frame(height: 48)
                     .background(
                         LinearGradient(
                             colors: [.cyan, .mint],
@@ -159,7 +131,61 @@ public struct ScriptCardView: View {
                             endPoint: .trailing
                         )
                     )
-                    .cornerRadius(10)
+                    .cornerRadius(12)
+                    .shadow(color: Color.cyan.opacity(0.3), radius: 8, y: 3)
+                }
+                
+                // Secondary Action Row: Copy, Save to History, Share
+                HStack(spacing: 10) {
+                    // Copy to Clipboard
+                    Button(action: {
+                        UIPasteboard.general.string = script.fullSpokenText
+                        isCopied = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                            isCopied = false
+                        }
+                    }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: isCopied ? "checkmark" : "doc.on.doc")
+                            Text(isCopied ? "Copied!" : "Copy Script")
+                        }
+                        .font(.subheadline.bold())
+                        .foregroundStyle(isCopied ? .green : .white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 40)
+                        .background(Color.white.opacity(0.08))
+                        .cornerRadius(10)
+                    }
+                    
+                    // Save to History Button
+                    Button(action: {
+                        HistoryManager.shared.addScript(script)
+                        isSavedToHistory = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                            isSavedToHistory = false
+                        }
+                    }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: isSavedToHistory ? "checkmark.circle.fill" : "bookmark.fill")
+                            Text(isSavedToHistory ? "Saved" : "Save")
+                        }
+                        .font(.subheadline.bold())
+                        .foregroundStyle(isSavedToHistory ? .cyan : .white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 40)
+                        .background(isSavedToHistory ? Color.cyan.opacity(0.15) : Color.white.opacity(0.08))
+                        .cornerRadius(10)
+                    }
+                    
+                    // Share Sheet
+                    Button(action: { showShareSheet = true }) {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.subheadline.bold())
+                            .foregroundStyle(.white)
+                            .frame(width: 44, height: 40)
+                            .background(Color.white.opacity(0.08))
+                            .cornerRadius(10)
+                    }
                 }
             }
         }
@@ -183,16 +209,4 @@ public struct ScriptCardView: View {
         case .callToAction: return .green
         }
     }
-}
-
-/// Helper SwiftUI Share Sheet UIActivityViewController wrapper
-public struct ShareSheet: UIViewControllerRepresentable {
-    public var activityItems: [Any]
-    public var applicationActivities: [UIActivity]? = nil
-
-    public func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: activityItems, applicationActivities: applicationActivities)
-    }
-
-    public func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }

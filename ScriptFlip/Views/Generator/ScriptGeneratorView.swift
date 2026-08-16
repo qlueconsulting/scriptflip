@@ -67,16 +67,40 @@ public struct ScriptGeneratorView: View {
             .navigationTitle("ScriptFlip")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button(action: { 
-                        DebugLogService.shared.log("[View] Diagnostics button tapped from toolbar.")
-                        viewModel.showDiagnostics = true 
-                    }) {
-                        Image(systemName: "wrench.and.screwdriver")
-                            .font(.subheadline)
-                            .foregroundStyle(.cyan)
+                ToolbarItemGroup(placement: .topBarLeading) {
+                    HStack(spacing: 12) {
+                        // History Button
+                        Button(action: {
+                            DebugLogService.shared.log("[View] History button tapped from toolbar.")
+                            viewModel.showHistory = true
+                        }) {
+                            Image(systemName: "clock.arrow.circlepath")
+                                .font(.subheadline.bold())
+                                .foregroundStyle(.cyan)
+                        }
+                        
+                        // Diagnostics Button
+                        Button(action: { 
+                            DebugLogService.shared.log("[View] Diagnostics button tapped from toolbar.")
+                            viewModel.showDiagnostics = true 
+                        }) {
+                            Image(systemName: "wrench.and.screwdriver")
+                                .font(.subheadline)
+                                .foregroundStyle(.gray)
+                        }
+                        
+                        // About App Button
+                        Button(action: {
+                            DebugLogService.shared.log("[View] About button tapped from toolbar.")
+                            viewModel.showAbout = true
+                        }) {
+                            Image(systemName: "info.circle")
+                                .font(.subheadline)
+                                .foregroundStyle(.gray)
+                        }
                     }
                 }
+                
                 ToolbarItem(placement: .topBarTrailing) {
                     usageBadge
                 }
@@ -114,6 +138,14 @@ public struct ScriptGeneratorView: View {
                         activePrompterScript = script
                     }
                 )
+            }
+            .sheet(isPresented: $viewModel.showHistory) {
+                HistoryView { prompterScript in
+                    activePrompterScript = prompterScript
+                }
+            }
+            .sheet(isPresented: $viewModel.showAbout) {
+                AboutView()
             }
             .sheet(isPresented: $viewModel.showPaywall) {
                 PaywallContainerView()
@@ -271,7 +303,7 @@ public struct ScriptGeneratorView: View {
                     }) {
                         HStack(spacing: 12) {
                             Image(systemName: style.iconName)
-                               .font(.title3)
+                                .font(.title3)
                                 .foregroundStyle(viewModel.selectedStyle == style ? .cyan : .gray)
                                 .frame(width: 28)
                             
@@ -321,7 +353,7 @@ public struct ScriptGeneratorView: View {
                 } else {
                     Image(systemName: "sparkles")
                         .font(.title3.bold())
-                    Text("Generate Short-Form Scripts")
+                    Text("Generate Universal Script")
                         .font(.headline.bold())
                 }
             }

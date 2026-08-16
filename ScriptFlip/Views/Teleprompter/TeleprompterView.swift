@@ -49,7 +49,7 @@ public struct TeleprompterView: View {
                                     Image(systemName: "video.fill")
                                         .foregroundStyle(.cyan)
                                     Text("CUE: \(section.visualCue)")
-                                        .font(.system(size: viewModel.fontSize * 0.55, weight: .medium))
+                                        .font(.system(size: max(12, viewModel.fontSize * 0.55), weight: .medium))
                                         .foregroundStyle(.cyan)
                                         .italic()
                                 }
@@ -132,58 +132,87 @@ public struct TeleprompterView: View {
                 Spacer()
             }
             
-            // Bottom Control Toolbar
+            // Bottom Control Toolbar - Fixed slider layout alignment & direct label pairing
             VStack {
                 Spacer()
                 
                 VStack(spacing: 16) {
-                    HStack(spacing: 24) {
-                        // Font size control
-                        HStack(spacing: 8) {
-                            Image(systemName: "textformat.size.smaller")
-                                .foregroundStyle(.gray)
-                            Slider(value: $viewModel.fontSize, in: 20...52, step: 2)
-                                .tint(.cyan)
-                            Image(systemName: "textformat.size.larger")
-                                .foregroundStyle(.white)
+                    HStack(alignment: .center, spacing: 16) {
+                        // Left Column: Font Size Control with its own direct label
+                        VStack(spacing: 6) {
+                            HStack {
+                                Image(systemName: "textformat")
+                                    .font(.caption2.bold())
+                                    .foregroundStyle(.cyan)
+                                Text("Text Size")
+                                    .font(.caption.bold())
+                                    .foregroundStyle(.white)
+                                Spacer()
+                                Text("\(Int(viewModel.fontSize)) pt")
+                                    .font(.caption.monospaced())
+                                    .foregroundStyle(.cyan)
+                            }
+                            
+                            HStack(spacing: 6) {
+                                Image(systemName: "textformat.size.smaller")
+                                    .font(.system(size: 13, weight: .bold))
+                                    .foregroundStyle(.gray)
+                                Slider(value: $viewModel.fontSize, in: 20...52, step: 2)
+                                    .tint(.cyan)
+                                Image(systemName: "textformat.size.larger")
+                                    .font(.system(size: 15, weight: .bold))
+                                    .foregroundStyle(.white)
+                            }
                         }
-                        .frame(width: 140)
+                        .frame(maxWidth: .infinity)
                         
-                        // Play / Pause main trigger
+                        // Center Column: Big Play / Pause main trigger button
                         Button(action: { viewModel.togglePlayPause() }) {
                             Image(systemName: viewModel.isPlaying ? "pause.fill" : "play.fill")
                                 .font(.system(size: 26, weight: .bold))
                                 .foregroundStyle(.black)
-                                .frame(width: 64, height: 64)
+                                .frame(width: 60, height: 60)
                                 .background(viewModel.isPlaying ? Color.yellow : Color.cyan)
                                 .clipShape(Circle())
                                 .shadow(color: (viewModel.isPlaying ? Color.yellow : Color.cyan).opacity(0.5), radius: 10)
                         }
                         
-                        // Speed control
-                        HStack(spacing: 8) {
-                            Image(systemName: "turtle.fill")
-                                .foregroundStyle(.gray)
-                            Slider(value: $viewModel.scrollSpeed, in: 10...100, step: 5)
-                                .tint(.yellow)
-                            Image(systemName: "hare.fill")
-                                .foregroundStyle(.white)
+                        // Right Column: Scroll Speed Control with its own direct label
+                        VStack(spacing: 6) {
+                            HStack {
+                                Image(systemName: "gauge.with.needle.fill")
+                                    .font(.caption2.bold())
+                                    .foregroundStyle(.yellow)
+                                Text("Scroll Speed")
+                                    .font(.caption.bold())
+                                    .foregroundStyle(.white)
+                                Spacer()
+                                Text("\(Int(viewModel.scrollSpeed)) px/s")
+                                    .font(.caption.monospaced())
+                                    .foregroundStyle(.yellow)
+                            }
+                            
+                            HStack(spacing: 6) {
+                                Image(systemName: "tortoise.fill")
+                                    .font(.system(size: 13, weight: .bold))
+                                    .foregroundStyle(.gray)
+                                Slider(value: $viewModel.scrollSpeed, in: 10...100, step: 5)
+                                    .tint(.yellow)
+                                Image(systemName: "hare.fill")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundStyle(.white)
+                            }
                         }
-                        .frame(width: 140)
+                        .frame(maxWidth: .infinity)
                     }
-                    
-                    HStack {
-                        Text("Speed: \(Int(viewModel.scrollSpeed)) px/s")
-                        Spacer()
-                        Text("Font: \(Int(viewModel.fontSize)) pt")
-                    }
-                    .font(.caption.monospaced())
-                    .foregroundStyle(.gray)
-                    .padding(.horizontal, 10)
                 }
-                .padding(20)
+                .padding(18)
                 .background(.ultraThinMaterial)
                 .cornerRadius(24)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24)
+                        .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                )
                 .padding(.horizontal, 16)
                 .padding(.bottom, 20)
             }

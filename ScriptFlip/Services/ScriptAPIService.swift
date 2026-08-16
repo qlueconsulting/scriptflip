@@ -334,9 +334,9 @@ public final class ScriptAPIService: ScriptAPIServiceProtocol, @unchecked Sendab
         
         // 5. PARSE RESPONSE PAYLOAD
         let decoder = JSONDecoder()
-        var dtos: [GeneratedScriptDTO] = []
+        var universalDTOs: [UniversalScriptDTO] = []
         
-        // Check for wrapped { error: "..." }
+        // Check for wrapped { script: { ... } } or { error: "..." }
         if let responseWrapper = try? decoder.decode(GenerationResponse.self, from: data) {
             if let errorMsg = responseWrapper.error, !errorMsg.isEmpty {
                 let error = ScriptAPIError.edgeFunctionError(errorMsg)
@@ -354,18 +354,31 @@ public final class ScriptAPIService: ScriptAPIServiceProtocol, @unchecked Sendab
                 throw error
             }
             if let resolved = responseWrapper.resolvedScripts, !resolved.isEmpty {
-                dtos = resolved
+                universalDTOs = resolved
             }
         }
         
-        if dtos.isEmpty {
-            if let directArray = try? decoder.decode([GeneratedScriptDTO].self, from: data) {
-                dtos = directArray
-            } else if let single = try? decoder.decode(GeneratedScriptDTO.self, from: data) {
-                dtos = [single]
+        if universalDTOs.isEmpty {
+            if let singleUniversal = try? decoder.decode(UniversalScriptDTO.self, from: data) {
+                universalDTOs = [singleUniversal]
+            } else if let arrayUniversal = try? decoder.decode([UniversalScriptDTO].self, from: data) {
+                universalDTOs = arrayUniversal
+            } else if let legacyArray = try? decoder.decode([GeneratedScriptDTO].self, from: data) {
+                universalDTOs = legacyArray.map {
+                    UniversalScriptDTO(
+                        title: "Universal Short-Form Script",
+                        hook: $0.hook,
+                        body: $0.body,
+                        callToAction: $0.cta,
+                        cta: $0.cta,
+                        estimatedDuration: "30-45s",
+                        visualCues: [$0.visualCue],
+                        visualCue: $0.visualCue
+                    )
+                }
             } else {
                 do {
-                    dtos = try decoder.decode([GeneratedScriptDTO].self, from: data)
+                    universalDTOs = try decoder.decode([UniversalScriptDTO].self, from: data)
                 } catch {
                     let decodingError = ScriptAPIError.decodingError(error, rawBody: responseBodyString)
                     recordDiagnostics(
@@ -397,7 +410,7 @@ public final class ScriptAPIService: ScriptAPIServiceProtocol, @unchecked Sendab
         )
         
         let selectedStyle = ScriptStyle(rawValue: request.scriptStyle) ?? .casual
-        return dtos.enumerated().map { index, dto in
+        return universalDTOs.enumerated().map { index, dto in
             Script(dto: dto, index: index + 1, style: selectedStyle)
         }
     }

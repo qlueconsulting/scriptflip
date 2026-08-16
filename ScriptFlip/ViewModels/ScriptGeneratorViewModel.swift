@@ -21,6 +21,8 @@ public final class ScriptGeneratorViewModel {
     public var showPaywall: Bool = false
     public var showResults: Bool = false
     public var showDiagnostics: Bool = false
+    public var showHistory: Bool = false
+    public var showAbout: Bool = false
     
     public var userUsage: UserUsage = UserUsage()
     
@@ -120,7 +122,7 @@ public final class ScriptGeneratorViewModel {
             inputText: trimmedInput,
             scriptStyle: selectedStyle.rawValue,
             inputType: requestType,
-            outputCount: 3
+            outputCount: 1
         )
         
         DebugLogService.shared.log("[ViewModel] Dispatching request to APIService for style '\(selectedStyle.rawValue)'...")
@@ -129,6 +131,11 @@ public final class ScriptGeneratorViewModel {
             let scripts = try await apiService.generateScripts(request: payload)
             DebugLogService.shared.log("[ViewModel] Successfully received \(scripts.count) scripts from Edge Function.")
             self.generatedScripts = scripts
+            
+            // Auto-save generated scripts to history
+            for script in scripts {
+                HistoryManager.shared.addScript(script)
+            }
             
             // Increment usage count only if NOT in Unlimited / TestFlight mode
             if !subscriptionManager.isUnlimited {

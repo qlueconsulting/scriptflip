@@ -38,7 +38,51 @@ public struct GenerationRequest: Codable, Sendable {
     }
 }
 
-/// DTO for raw JSON payload returned by Supabase Edge Function array `[{ hook, body, visualCue, cta }]`.
+/// DTO for single universal script payload returned by Supabase Edge Function:
+/// `{ title, hook, body, callToAction, estimatedDuration, visualCues }`
+public struct UniversalScriptDTO: Codable, Sendable {
+    public let title: String?
+    public let hook: String
+    public let body: String
+    public let callToAction: String?
+    public let cta: String?
+    public let estimatedDuration: String?
+    public let visualCues: [String]?
+    public let visualCue: String?
+    
+    public init(
+        title: String? = nil,
+        hook: String,
+        body: String,
+        callToAction: String? = nil,
+        cta: String? = nil,
+        estimatedDuration: String? = "30-45s",
+        visualCues: [String]? = nil,
+        visualCue: String? = nil
+    ) {
+        self.title = title
+        self.hook = hook
+        self.body = body
+        self.callToAction = callToAction
+        self.cta = cta ?? callToAction
+        self.estimatedDuration = estimatedDuration
+        self.visualCues = visualCues
+        self.visualCue = visualCue
+    }
+    
+    public var resolvedCTA: String {
+        callToAction ?? cta ?? "Save and share this video!"
+    }
+    
+    public var resolvedVisualCue: String {
+        if let cues = visualCues, !cues.isEmpty {
+            return cues.joined(separator: "; ")
+        }
+        return visualCue ?? "Direct camera eye-contact and vibrant text overlays"
+    }
+}
+
+/// Backward-compatible DTO for array item `{ hook, body, visualCue, cta }`.
 public struct GeneratedScriptDTO: Codable, Sendable {
     public let hook: String
     public let body: String
@@ -53,19 +97,29 @@ public struct GeneratedScriptDTO: Codable, Sendable {
     }
 }
 
-/// Wrapped response payload if returned inside a root container object (`{ data: [...] }` or `{ scripts: [...] }`).
+/// Wrapped response payload if returned inside a root container object (`{ script: { ... } }`, `{ data: [...] }` or `{ scripts: [...] }`).
 public struct GenerationResponse: Codable, Sendable {
-    public let data: [GeneratedScriptDTO]?
-    public let scripts: [GeneratedScriptDTO]?
+    public let script: UniversalScriptDTO?
+    public let data: [UniversalScriptDTO]?
+    public let scripts: [UniversalScriptDTO]?
     public let error: String?
     
-    public init(data: [GeneratedScriptDTO]? = nil, scripts: [GeneratedScriptDTO]? = nil, error: String? = nil) {
+    public init(
+        script: UniversalScriptDTO? = nil,
+        data: [UniversalScriptDTO]? = nil,
+        scripts: [UniversalScriptDTO]? = nil,
+        error: String? = nil
+    ) {
+        self.script = script
         self.data = data
         self.scripts = scripts
         self.error = error
     }
     
-    public var resolvedScripts: [GeneratedScriptDTO]? {
-        data ?? scripts
+    public var resolvedScripts: [UniversalScriptDTO]? {
+        if let single = script {
+            return [single]
+        }
+        return data ?? scripts
     }
 }

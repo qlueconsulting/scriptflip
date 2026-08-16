@@ -44,6 +44,7 @@ public struct Script: Codable, Identifiable, Hashable, Sendable {
     public var sections: [ScriptSection]
     public var viralityScore: Int // 1 to 100
     public var keyTakeaway: String
+    public var estimatedDuration: String
     
     // Convenience properties for Edge Function output format
     public var hook: String {
@@ -86,7 +87,8 @@ public struct Script: Codable, Identifiable, Hashable, Sendable {
         targetPlatform: TargetPlatform = .universal,
         sections: [ScriptSection],
         viralityScore: Int = 94,
-        keyTakeaway: String
+        keyTakeaway: String,
+        estimatedDuration: String = "30-45s"
     ) {
         self.id = id
         self.title = title
@@ -97,41 +99,65 @@ public struct Script: Codable, Identifiable, Hashable, Sendable {
         self.sections = sections
         self.viralityScore = viralityScore
         self.keyTakeaway = keyTakeaway
+        self.estimatedDuration = estimatedDuration
     }
     
-    /// Initialize full `Script` model from Supabase Edge Function DTO (`hook`, `body`, `visualCue`, `cta`)
-    public init(dto: GeneratedScriptDTO, index: Int = 1, style: ScriptStyle = .casual) {
+    /// Initialize full `Script` model from single `UniversalScriptDTO`
+    public init(dto: UniversalScriptDTO, index: Int = 1, style: ScriptStyle = .casual) {
         self.id = UUID()
-        self.title = "Universal Script: \(style.rawValue) Angle"
+        self.title = dto.title?.isEmpty == false ? dto.title! : "Universal Script: \(style.rawValue) Angle"
         self.hookDurationSeconds = 3
-        self.estimatedTotalDurationSeconds = 30
+        self.estimatedTotalDurationSeconds = 35
         self.style = style
         self.targetPlatform = .universal
+        self.estimatedDuration = dto.estimatedDuration ?? "30-45s"
+        
+        let primaryVisualCue = dto.visualCues?.first ?? dto.visualCue ?? "Direct camera eye-contact with high-contrast text overlay"
+        let bodyVisualCue = (dto.visualCues != nil && dto.visualCues!.count > 1) ? dto.visualCues![1] : "Dynamic camera cuts and text overlays"
+        let ctaVisualCue = (dto.visualCues != nil && dto.visualCues!.count > 2) ? dto.visualCues![2] : "Screen banner with follow / save prompt"
         
         self.sections = [
             ScriptSection(
                 timeRange: "0:00 - 0:03",
                 sectionType: .hook,
                 spokenText: dto.hook,
-                visualCue: dto.visualCue,
+                visualCue: primaryVisualCue,
                 audioCue: "High energy audio punch"
             ),
             ScriptSection(
                 timeRange: "0:03 - 0:25",
                 sectionType: .body,
                 spokenText: dto.body,
-                visualCue: "Dynamic camera cuts and text overlays"
+                visualCue: bodyVisualCue
             ),
             ScriptSection(
                 timeRange: "0:25 - 0:30",
                 sectionType: .callToAction,
-                spokenText: dto.cta,
-                visualCue: "Screen banner with follow / save prompt"
+                spokenText: dto.resolvedCTA,
+                visualCue: ctaVisualCue
             )
         ]
         
-        self.viralityScore = 94 + (index % 5)
-        self.keyTakeaway = "Universal 3-second hook & high-retention pacing engineered for TikTok, Reels, and Shorts algorithms."
+        self.viralityScore = 95
+        self.keyTakeaway = "Universal 3-second pattern interrupt & high-retention pacing engineered for TikTok, Reels, and Shorts algorithms."
+    }
+    
+    /// Initialize full `Script` model from legacy `GeneratedScriptDTO`
+    public init(dto: GeneratedScriptDTO, index: Int = 1, style: ScriptStyle = .casual) {
+        self.init(
+            dto: UniversalScriptDTO(
+                title: "Universal Script: \(style.rawValue) Angle",
+                hook: dto.hook,
+                body: dto.body,
+                callToAction: dto.cta,
+                cta: dto.cta,
+                estimatedDuration: "30-45s",
+                visualCues: [dto.visualCue],
+                visualCue: dto.visualCue
+            ),
+            index: index,
+            style: style
+        )
     }
     
     /// Full combined text suitable for teleprompter display.

@@ -246,7 +246,7 @@ serve(async (req) => {
       )
     }
 
-    let { inputText, scriptStyle, outputCount, inputType } = payload
+    let { inputText, scriptStyle, inputType } = payload
     if (!inputText || inputText.trim() === "") {
       return new Response(
         JSON.stringify({ error: "Missing required field: inputText cannot be empty." }),
@@ -335,14 +335,23 @@ serve(async (req) => {
 
     const modelHierarchy = Array.from(new Set(baseModelHierarchy))
 
-    const count = outputCount || 1
     const style = scriptStyle || 'Casual & Relatable'
 
-    // 6. Token-Minimized Ultra-Dense System Prompt for Universal Short-Form Script
-    const systemPrompt = `Expert viral scriptwriter. Output ONLY valid JSON: {"scripts":[{"hook":"...","body":"...","visualCue":"...","cta":"..."}]}. Write ${count} Universal Short-Form Script (optimized for TikTok, Instagram Reels, and YouTube Shorts) in ${style} tone: 0-3s high-tension hook, 15-25s fast value body, specific visual/framing cues, and high-converting CTA. No markdown, no pre/post-amble.`
+    // 6. Single Universal Script Prompt with structured schema
+    const systemPrompt = `Expert viral video scriptwriter. Output ONLY valid JSON matching this exact structure:
+{
+  "script": {
+    "title": "Short punchy video title",
+    "hook": "0-3s high retention hook with pattern interrupt",
+    "body": "15-25s fast-paced high value delivery",
+    "callToAction": "Clear viral engagement call to action",
+    "estimatedDuration": "30-45s",
+    "visualCues": ["Opening visual cue direction", "Mid-video camera movement cue", "Ending banner cue"]
+  }
+}
+Write 1 Universal Short-Form Video Script (optimized for TikTok, Instagram Reels, and YouTube Shorts) in ${style} tone. No markdown formatting, backticks, or preamble.`
 
-    // Calculate strict minimal token budget: 500 tokens for 1 script, or count * 450 tokens
-    const maxTokensBudget = count === 1 ? 500 : count * 450
+    const maxTokensBudget = 550
 
     const maskedKey = anthropicApiKey.length > 10 
       ? `${anthropicApiKey.substring(0, 7)}...${anthropicApiKey.substring(anthropicApiKey.length - 4)}` 
@@ -353,7 +362,7 @@ serve(async (req) => {
     console.log(`[generate-scripts] Model Hierarchy: ${JSON.stringify(modelHierarchy)}`)
     console.log(`[generate-scripts] Masked API Key: ${maskedKey}`)
     console.log(`[generate-scripts] Input Text Length: ${sanitizedInput.length} chars (clamped)`)
-    console.log(`[generate-scripts] Output Script Count: ${count}, Max Tokens: ${maxTokensBudget}`)
+    console.log(`[generate-scripts] Max Tokens: ${maxTokensBudget}`)
     console.log("====================================================================")
 
     let finalResponse: Response | null = null
@@ -368,7 +377,7 @@ serve(async (req) => {
         model: currentModel,
         max_tokens: maxTokensBudget,
         temperature: 0.7,
-        messages: [{ role: "user", content: `${systemPrompt}\n\nSource:\n${sanitizedInput}` }]
+        messages: [{ role: "user", content: `${systemPrompt}\n\nSource Content:\n${sanitizedInput}` }]
       }
 
       try {
@@ -439,44 +448,70 @@ serve(async (req) => {
       )
     }
 
-    // 10. Clean and Parse Script Array JSON
+    // 10. Clean and Parse Script Object JSON
     let contentText = result.content[0].text.trim()
     if (contentText.startsWith("```")) {
       contentText = contentText.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim()
     }
 
-    let parsedScripts: any
+    let parsedJSON: any
     try {
-      parsedScripts = JSON.parse(contentText)
+      parsedJSON = JSON.parse(contentText)
     } catch (jsonErr) {
-      console.error("[generate-scripts] Failed to parse script array JSON:", contentText)
+      console.error("[generate-scripts] Failed to parse script JSON:", contentText)
       return new Response(
         JSON.stringify({ 
-          error: `Failed to parse generated scripts JSON from model: ${jsonErr.message}`,
+          error: `Failed to parse generated script JSON from model: ${jsonErr.message}`,
           rawOutput: contentText.substring(0, 500)
         }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       )
     }
 
-    // Support both { scripts: [...] }, { data: [...] }, and [...] root array
-    let finalArray: any[] = []
-    if (Array.isArray(parsedScripts)) {
-      finalArray = parsedScripts
-    } else if (parsedScripts.scripts && Array.isArray(parsedScripts.scripts)) {
-      finalArray = parsedScripts.scripts
-    } else if (parsedScripts.data && Array.isArray(parsedScripts.data)) {
-      finalArray = parsedScripts.data
-    } else if (parsedScripts.hook && parsedScripts.body) {
-      finalArray = [parsedScripts]
+    // Extract standardized script object
+    let scriptObj: any = null
+    if (parsedJSON.script && typeof parsedJSON.script === 'object') {
+      scriptObj = parsedJSON.script
+    } else if (Array.isArray(parsedJSON.scripts) && parsedJSON.scripts.length > 0) {
+      scriptObj = parsedJSON.scripts[0]
+    } else if (Array.isArray(parsedJSON.data) && parsedJSON.data.length > 0) {
+      scriptObj = parsedJSON.data[0]
+    } else if (Array.isArray(parsedJSON) && parsedJSON.length > 0) {
+      scriptObj = parsedJSON[0]
+    } else if (parsedJSON.hook && parsedJSON.body) {
+      scriptObj = parsedJSON
     }
 
-    console.log(`[generate-scripts] Successfully generated ${finalArray.length} universal scripts with model '${successfulModel}'.`)
+    if (!scriptObj) {
+      scriptObj = {
+        title: "Universal Short-Form Script",
+        hook: "Stop scrolling and check this out!",
+        body: contentText.substring(0, 200),
+        callToAction: "Follow for more daily tips!",
+        estimatedDuration: "30-45s",
+        visualCues: ["Point directly at camera", "Text overlay with key insight"]
+      }
+    }
+
+    // Standardize fields for universal compatibility
+    const normalizedScript = {
+      title: scriptObj.title || "Universal Short-Form Script",
+      hook: scriptObj.hook || "",
+      body: scriptObj.body || "",
+      callToAction: scriptObj.callToAction || scriptObj.cta || "",
+      cta: scriptObj.callToAction || scriptObj.cta || "",
+      estimatedDuration: scriptObj.estimatedDuration || "30-45s",
+      visualCues: Array.isArray(scriptObj.visualCues) ? scriptObj.visualCues : (scriptObj.visualCue ? [scriptObj.visualCue] : ["Camera focus with energetic delivery"]),
+      visualCue: Array.isArray(scriptObj.visualCues) ? scriptObj.visualCues.join("; ") : (scriptObj.visualCue || "Dynamic camera zoom and captions")
+    }
+
+    console.log(`[generate-scripts] Successfully generated single universal script with model '${successfulModel}'.`)
 
     return new Response(
       JSON.stringify({ 
-        data: finalArray,
-        scripts: finalArray,
+        script: normalizedScript,
+        data: [normalizedScript],
+        scripts: [normalizedScript],
         activeModel: successfulModel
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
