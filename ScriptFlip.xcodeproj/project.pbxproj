@@ -25,6 +25,7 @@
 		110F /* ScriptCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210F /* ScriptCardView.swift */; };
 		1110 /* ScriptResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2110 /* ScriptResultsView.swift */; };
 		1111 /* TeleprompterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2111 /* TeleprompterView.swift */; };
+		1114 /* NetworkDiagnosticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2114 /* NetworkDiagnosticsView.swift */; };
 		1120 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 3101 /* RevenueCat */; };
 		1121 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 3102 /* RevenueCatUI */; };
 		1130 /* ScriptAPIServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2130 /* ScriptAPIServiceTests.swift */; };
@@ -70,6 +71,7 @@
 		210F /* ScriptCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptCardView.swift; sourceTree = "<group>"; };
 		2110 /* ScriptResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptResultsView.swift; sourceTree = "<group>"; };
 		2111 /* TeleprompterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeleprompterView.swift; sourceTree = "<group>"; };
+		2114 /* NetworkDiagnosticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkDiagnosticsView.swift; sourceTree = "<group>"; };
 		2112 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		2113 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		2120 /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
@@ -177,8 +179,17 @@
 				050B /* Paywall */,
 				050C /* Results */,
 				050D /* Teleprompter */,
+				050E /* Diagnostics */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		050E /* Diagnostics */ = {
+			isa = PBXGroup;
+			children = (
+				2114 /* NetworkDiagnosticsView.swift */,
+			);
+			path = Diagnostics;
 			sourceTree = "<group>";
 		};
 		050A /* Generator */ = {
@@ -396,6 +407,7 @@
 				110F /* ScriptCardView.swift in Sources */,
 				1110 /* ScriptResultsView.swift in Sources */,
 				1111 /* TeleprompterView.swift in Sources */,
+				1114 /* NetworkDiagnosticsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

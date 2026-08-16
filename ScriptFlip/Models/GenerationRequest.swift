@@ -53,7 +53,19 @@ public struct GeneratedScriptDTO: Codable, Sendable {
     }
 }
 
-/// Wrapped response payload if returned inside a root container object.
+/// Wrapped response payload if returned inside a root container object (`{ data: [...] }` or `{ scripts: [...] }`).
 public struct GenerationResponse: Codable, Sendable {
-    public let scripts: [GeneratedScriptDTO]
+    public let data: [GeneratedScriptDTO]?
+    public let scripts: [GeneratedScriptDTO]?
+    public let error: String?
+    
+    public init(data: [GeneratedScriptDTO]? = nil, scripts: [GeneratedScriptDTO]? = nil, error: String? = nil) {
+        self.data = data
+        self.scripts = scripts
+        self.error = error
+    }
+    
+    public var resolvedScripts: [GeneratedScriptDTO]? {
+        data ?? scripts
+    }
 }

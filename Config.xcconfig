@@ -3,7 +3,7 @@
 // ScriptFlip
 //
 
-SUPABASE_URL = https://tcgonpbwenimvilzquoz.supabase.co
+SUPABASE_URL = https://tcgonpbwenimvilzquoz.supabase.co/functions/v1/generate-scripts
 SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRjZ29ucGJ3ZW5pbXZpbHpxdW96Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYyOTc0MDQsImV4cCI6MjEwMTg3MzQwNH0.BMVRR6wcnLa_mSsyzgS66xDHCqlu1j2PG3k2mKoVG_U
 REVENUECAT_API_KEY = test_bhvwLSsozoeDelykSuyQQFMyzgr
 

@@ -11,10 +11,14 @@ public final class ScriptGeneratorViewModel {
     
     public var isLoading: Bool = false
     public var errorMessage: String? = nil
+    public var configurationAlertMessage: String? = nil
+    public var showConfigAlert: Bool = false
+    
     public var generatedScripts: [Script] = []
     
     public var showPaywall: Bool = false
     public var showResults: Bool = false
+    public var showDiagnostics: Bool = false
     
     public var userUsage: UserUsage = UserUsage()
     
@@ -53,6 +57,10 @@ public final class ScriptGeneratorViewModel {
             print("[ScriptGeneratorViewModel] Warning during usage refresh: \(error.localizedDescription)")
             self.userUsage = UserUsage()
         }
+    }
+    
+    public func getDiagnostics() -> NetworkDiagnosticInfo {
+        apiService.getDiagnostics()
     }
     
     public var canGenerateFree: Bool {
@@ -101,21 +109,23 @@ public final class ScriptGeneratorViewModel {
             
             self.isLoading = false
             self.showResults = true
-        } catch {
-            print("[ScriptGeneratorViewModel] Network error encountered: \(error.localizedDescription). Utilizing offline fallback generator.")
-            // Graceful fallback to offline generation if backend or network is unreachable
-            let fallbackScripts = ScriptAPIService.mockScripts(for: payload)
-            if !fallbackScripts.isEmpty {
-                self.generatedScripts = fallbackScripts
-                if !isPro {
-                    self.userUsage = usageTracker.incrementUsage()
-                }
-                self.isLoading = false
-                self.showResults = true
-            } else {
-                self.isLoading = false
-                self.errorMessage = error.localizedDescription
+        } catch let apiError as ScriptAPIError {
+            self.isLoading = false
+            
+            switch apiError {
+            case .configurationError(let message):
+                self.configurationAlertMessage = "Configuration Error: Invalid Supabase URL or Anon Key.\n\n\(message)"
+                self.showConfigAlert = true
+                self.errorMessage = self.configurationAlertMessage
+            default:
+                self.errorMessage = apiError.localizedDescription
             }
+            
+            print("[ScriptGeneratorViewModel] Edge Function call failed: \(apiError.localizedDescription)")
+        } catch {
+            self.isLoading = false
+            self.errorMessage = error.localizedDescription
+            print("[ScriptGeneratorViewModel] Unexpected error: \(error.localizedDescription)")
         }
     }
 }

@@ -83,7 +83,7 @@ final class ScriptAPIServiceTests: XCTestCase {
 
         let service = ScriptAPIService(
             baseURL: "https://tcgonpbwenimvilzquoz.supabase.co/functions/v1/generate-scripts",
-            supabaseAnonKey: "test_key",
+            supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test_anon_key",
             session: session ?? .shared
         )
 
@@ -96,6 +96,50 @@ final class ScriptAPIServiceTests: XCTestCase {
         XCTAssertEqual(scripts[0].visualCue, "Fast zoom-in on face with red alert graphic.")
         XCTAssertEqual(scripts[0].cta, "Tap follow for daily video tips!")
         XCTAssertEqual(scripts[1].hook, "3 quick tools for short form creators.")
+        
+        let diagnostics = service.getDiagnostics()
+        XCTAssertEqual(diagnostics.lastResponseStatusCode, 200)
+        XCTAssertTrue(diagnostics.hasValidAnonKey)
+    }
+
+    // MARK: - Wrapped Data Response Parsing
+
+    func testGenerateScriptsWrappedDataParsing() async throws {
+        let jsonResponse = """
+        {
+            "data": [
+                {
+                    "hook": "Here is how to create 10 Shorts a day",
+                    "body": "Step 1 is repurposing long podcasts. Step 2 is teleprompter recording.",
+                    "visualCue": "Phone screenshot showing prompter app",
+                    "cta": "Link in bio to download!"
+                }
+            ]
+        }
+        """
+        
+        MockURLProtocol.requestHandler = { request in
+            let url = request.url ?? URL(fileURLWithPath: "/")
+            let response = HTTPURLResponse(
+                url: url,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: ["Content-Type": "application/json"]
+            ) ?? HTTPURLResponse()
+            return (response, jsonResponse.data(using: .utf8))
+        }
+
+        let service = ScriptAPIService(
+            baseURL: "https://tcgonpbwenimvilzquoz.supabase.co/functions/v1/generate-scripts",
+            supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test_anon_key",
+            session: session ?? .shared
+        )
+
+        let request = GenerationRequest(inputText: "Sample podcast", scriptStyle: "expert")
+        let scripts = try await service.generateScripts(request: request)
+
+        XCTAssertEqual(scripts.count, 1)
+        XCTAssertEqual(scripts.first?.hook, "Here is how to create 10 Shorts a day")
     }
 
     // MARK: - Error Handling Tests
@@ -114,7 +158,7 @@ final class ScriptAPIServiceTests: XCTestCase {
 
         let service = ScriptAPIService(
             baseURL: "https://tcgonpbwenimvilzquoz.supabase.co/functions/v1/generate-scripts",
-            supabaseAnonKey: "test_key",
+            supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test_anon_key",
             session: session ?? .shared
         )
 
@@ -124,8 +168,9 @@ final class ScriptAPIServiceTests: XCTestCase {
             _ = try await service.generateScripts(request: request)
             XCTFail("Expected bad request error")
         } catch let error as ScriptAPIError {
-            if case .badRequest(let message) = error {
-                XCTAssertTrue(message.contains("Invalid input parameters"))
+            if case .badRequest(let status, let body) = error {
+                XCTAssertEqual(status, 400)
+                XCTAssertTrue(body.contains("Invalid input parameters"))
             } else {
                 XCTFail("Expected .badRequest error, got \(error)")
             }
@@ -148,7 +193,7 @@ final class ScriptAPIServiceTests: XCTestCase {
 
         let service = ScriptAPIService(
             baseURL: "https://tcgonpbwenimvilzquoz.supabase.co/functions/v1/generate-scripts",
-            supabaseAnonKey: "test_key",
+            supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test_anon_key",
             session: session ?? .shared
         )
 
@@ -158,8 +203,9 @@ final class ScriptAPIServiceTests: XCTestCase {
             _ = try await service.generateScripts(request: request)
             XCTFail("Expected 500 server error")
         } catch let error as ScriptAPIError {
-            if case .serverError(let code) = error {
+            if case .serverError(let code, let body) = error {
                 XCTAssertEqual(code, 500)
+                XCTAssertTrue(body.contains("Internal Server Error"))
             } else {
                 XCTFail("Expected .serverError, got \(error)")
             }
@@ -175,7 +221,7 @@ final class ScriptAPIServiceTests: XCTestCase {
 
         let service = ScriptAPIService(
             baseURL: "https://tcgonpbwenimvilzquoz.supabase.co/functions/v1/generate-scripts",
-            supabaseAnonKey: "test_key",
+            supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test_anon_key",
             session: session ?? .shared
         )
 

@@ -68,17 +68,35 @@ public struct ScriptGeneratorView: View {
             .navigationTitle("ScriptFlip")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button(action: { viewModel.showDiagnostics = true }) {
+                        Image(systemName: "wrench.and.screwdriver")
+                            .font(.subheadline)
+                            .foregroundStyle(.gray)
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     usageBadge
                 }
             }
+            .alert("Configuration Error", isPresented: $viewModel.showConfigAlert) {
+                Button("Open Diagnostics") {
+                    viewModel.showDiagnostics = true
+                }
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(viewModel.configurationAlertMessage ?? "Invalid Supabase URL or Anon Key.")
+            }
             .alert("Script Generation Error", isPresented: $showErrorAlert) {
+                Button("Inspect Diagnostics") {
+                    viewModel.showDiagnostics = true
+                }
                 Button("OK", role: .cancel) { }
             } message: {
                 Text(viewModel.errorMessage ?? "An unexpected network error occurred.")
             }
             .onChange(of: viewModel.errorMessage) { oldValue, newValue in
-                if newValue != nil {
+                if newValue != nil && !viewModel.showConfigAlert {
                     showErrorAlert = true
                 }
             }
@@ -93,6 +111,13 @@ public struct ScriptGeneratorView: View {
             }
             .sheet(isPresented: $viewModel.showPaywall) {
                 PaywallContainerView()
+            }
+            .sheet(isPresented: $viewModel.showDiagnostics) {
+                NetworkDiagnosticsView(diagnostics: viewModel.getDiagnostics()) {
+                    Task {
+                        await viewModel.generateScripts()
+                    }
+                }
             }
             .fullScreenCover(item: $activePrompterScript) { script in
                 TeleprompterView(script: script)
@@ -296,6 +321,11 @@ public struct ScriptGeneratorView: View {
             .shadow(color: Color.cyan.opacity(0.3), radius: 12, y: 4)
         }
         .disabled(viewModel.isLoading)
+        .simultaneousGesture(
+            LongPressGesture(minimumDuration: 0.8).onEnded { _ in
+                viewModel.showDiagnostics = true
+            }
+        )
     }
 }
 
