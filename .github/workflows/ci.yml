@@ -34,3 +34,11 @@ jobs:
               grep -E "error:|failed|failure|fatal:|XCTest" -B 2 -A 5 /tmp/test.log | tail -n 80 || tail -n 50 /tmp/test.log
               exit 1
             }
+
+      - name: Upload Test Log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-test-logs
+          path: /tmp/test.log
+          if-no-files-found: ignore

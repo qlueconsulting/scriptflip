@@ -118,8 +118,17 @@ jobs:
             --apiKey "$KEY_ID" \
             --apiIssuer "$ISSUER_ID"
 
+      - name: Upload Build & Archive Log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-archive-logs
+          path: /tmp/archive.log
+          if-no-files-found: ignore
+
       - name: Clean Up Keychain
         if: always()
         run: |
           security delete-keychain $RUNNER_TEMP/app-signing.keychain-db 2>/dev/null || true
           rm -f ~/.appstoreconnect/private_keys/* ~/.private_keys/* 2>/dev/null || true
+
