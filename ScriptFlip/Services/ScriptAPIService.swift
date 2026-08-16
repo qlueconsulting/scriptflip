@@ -37,6 +37,11 @@ public enum ScriptAPIError: LocalizedError, Sendable {
         case .networkError(let code, let message):
             return "Network Error (\(code)): \(message)"
         case .badRequest(let status, let body):
+            if let data = body.data(using: .utf8),
+               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let message = json["error"] as? String {
+                return message
+            }
             return "Bad Request (HTTP \(status)): \(body)"
         case .serverError(let status, let body):
             return "Server Error (HTTP \(status)): \(body)"

@@ -97,6 +97,15 @@ public struct ScriptGeneratorView: View {
             } message: {
                 Text(viewModel.errorMessage ?? "An unexpected error occurred.")
             }
+            .alert("No Captions Found", isPresented: $viewModel.showMissingCaptionsAlert) {
+                Button("Switch to Raw Text") {
+                    viewModel.inputMode = .rawText
+                    viewModel.inputText = ""
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("No captions or transcripts were found for this YouTube video. Would you like to switch to 'Raw Transcript / Text' mode and paste the content manually?")
+            }
             .sheet(isPresented: $viewModel.showResults) {
                 ScriptResultsView(
                     scripts: viewModel.generatedScripts,

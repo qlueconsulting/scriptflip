@@ -14,6 +14,7 @@ public final class ScriptGeneratorViewModel {
     public var showErrorAlert: Bool = false
     public var configurationAlertMessage: String? = nil
     public var showConfigAlert: Bool = false
+    public var showMissingCaptionsAlert: Bool = false
     
     public var generatedScripts: [Script] = []
     
@@ -149,8 +150,13 @@ public final class ScriptGeneratorViewModel {
                 self.showConfigAlert = true
                 self.errorMessage = self.configurationAlertMessage
             default:
-                self.errorMessage = apiError.localizedDescription
-                self.showErrorAlert = true
+                let desc = apiError.localizedDescription
+                self.errorMessage = desc
+                if desc.localizedCaseInsensitiveContains("captions") || desc.localizedCaseInsensitiveContains("transcript") {
+                    self.showMissingCaptionsAlert = true
+                } else {
+                    self.showErrorAlert = true
+                }
             }
         } catch {
             self.isLoading = false

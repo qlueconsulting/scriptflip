@@ -173,6 +173,27 @@ final class ScriptFlipTests: XCTestCase {
         XCTAssertEqual(reset.remainingFreeGenerations, 3)
         XCTAssertFalse(reset.isLimitReached)
     }
+    
+    @MainActor
+    func testMissingCaptionsAlertTrigger() async {
+        final class MockCaptionsFailAPIService: ScriptAPIServiceProtocol, @unchecked Sendable {
+            func generateScripts(request: GenerationRequest) async throws -> [Script] {
+                throw ScriptAPIError.badRequest(statusCode: 400, responseBody: "{\"error\":\"No captions found for this YouTube video. Please paste the transcript or summary text manually.\"}")
+            }
+            func getDiagnostics() -> NetworkDiagnosticInfo {
+                NetworkDiagnosticInfo()
+            }
+        }
+        
+        let vm = ScriptGeneratorViewModel(apiService: MockCaptionsFailAPIService())
+        vm.inputText = "https://youtube.com/watch?v=dQw4w9WgXcQ"
+        
+        await vm.generateScripts()
+        
+        XCTAssertFalse(vm.isLoading)
+        XCTAssertTrue(vm.showMissingCaptionsAlert)
+        XCTAssertEqual(vm.errorMessage, "No captions found for this YouTube video. Please paste the transcript or summary text manually.")
+    }
 }
 
 
