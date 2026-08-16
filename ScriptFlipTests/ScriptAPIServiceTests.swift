@@ -35,7 +35,7 @@ final class MockURLProtocol: URLProtocol {
 }
 
 final class ScriptAPIServiceTests: XCTestCase {
-    private var session: URLSession!
+    private var session: URLSession?
 
     override func setUp() {
         super.setUp()
@@ -71,19 +71,20 @@ final class ScriptAPIServiceTests: XCTestCase {
         """
         
         MockURLProtocol.requestHandler = { request in
+            let url = request.url ?? URL(fileURLWithPath: "/")
             let response = HTTPURLResponse(
-                url: request.url!,
+                url: url,
                 statusCode: 200,
                 httpVersion: nil,
                 headerFields: ["Content-Type": "application/json"]
-            )!
+            ) ?? HTTPURLResponse()
             return (response, jsonResponse.data(using: .utf8))
         }
 
         let service = ScriptAPIService(
             baseURL: "https://tcgonpbwenimvilzquoz.supabase.co/functions/v1/generate-scripts",
             supabaseAnonKey: "test_key",
-            session: session
+            session: session ?? .shared
         )
 
         let request = GenerationRequest(inputText: "https://youtube.com/watch?v=123", scriptStyle: "casual")
@@ -101,19 +102,20 @@ final class ScriptAPIServiceTests: XCTestCase {
 
     func testGenerateScripts400BadRequest() async {
         MockURLProtocol.requestHandler = { request in
+            let url = request.url ?? URL(fileURLWithPath: "/")
             let response = HTTPURLResponse(
-                url: request.url!,
+                url: url,
                 statusCode: 400,
                 httpVersion: nil,
                 headerFields: nil
-            )!
+            ) ?? HTTPURLResponse()
             return (response, "Invalid input parameters".data(using: .utf8))
         }
 
         let service = ScriptAPIService(
             baseURL: "https://tcgonpbwenimvilzquoz.supabase.co/functions/v1/generate-scripts",
             supabaseAnonKey: "test_key",
-            session: session
+            session: session ?? .shared
         )
 
         let request = GenerationRequest(inputText: "", scriptStyle: "casual")
@@ -134,19 +136,20 @@ final class ScriptAPIServiceTests: XCTestCase {
 
     func testGenerateScripts500ServerError() async {
         MockURLProtocol.requestHandler = { request in
+            let url = request.url ?? URL(fileURLWithPath: "/")
             let response = HTTPURLResponse(
-                url: request.url!,
+                url: url,
                 statusCode: 500,
                 httpVersion: nil,
                 headerFields: nil
-            )!
+            ) ?? HTTPURLResponse()
             return (response, "Internal Server Error".data(using: .utf8))
         }
 
         let service = ScriptAPIService(
             baseURL: "https://tcgonpbwenimvilzquoz.supabase.co/functions/v1/generate-scripts",
             supabaseAnonKey: "test_key",
-            session: session
+            session: session ?? .shared
         )
 
         let request = GenerationRequest(inputText: "Sample transcript", scriptStyle: "expert")
@@ -173,7 +176,7 @@ final class ScriptAPIServiceTests: XCTestCase {
         let service = ScriptAPIService(
             baseURL: "https://tcgonpbwenimvilzquoz.supabase.co/functions/v1/generate-scripts",
             supabaseAnonKey: "test_key",
-            session: session
+            session: session ?? .shared
         )
 
         let request = GenerationRequest(inputText: "Sample transcript", scriptStyle: "casual")

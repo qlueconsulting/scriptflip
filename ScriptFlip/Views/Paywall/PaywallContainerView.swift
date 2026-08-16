@@ -17,8 +17,8 @@ public struct PaywallContainerView: View {
                 Color.black.ignoresSafeArea()
                 
                 #if canImport(RevenueCatUI)
-                if Purchases.isConfigured {
-                    PaywallView()
+                if Purchases.isConfigured, let offering = subscriptionManager.currentOffering {
+                    PaywallView(offering: offering)
                         .onPurchaseCompleted { customerInfo in
                             if customerInfo.entitlements["pro"]?.isActive == true {
                                 subscriptionManager.isPro = true
