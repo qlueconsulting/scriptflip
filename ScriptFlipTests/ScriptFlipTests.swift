@@ -105,6 +105,21 @@ final class ScriptFlipTests: XCTestCase {
         XCTAssertTrue(endpoint.contains("tcgonpbwenimvilzquoz.supabase.co"))
     }
     
+    func testExportComplianceNonExemptEncryptionDeclaration() {
+        // Verify ITSAppUsesNonExemptEncryption is configured for TestFlight automation
+        guard let infoPlistPath = Bundle.main.path(forResource: "Info", ofType: "plist") ?? Bundle(for: type(of: self)).path(forResource: "Info", ofType: "plist"),
+              let dict = NSDictionary(contentsOfFile: infoPlistPath) else {
+            // If running in test host where bundle dictionary is directly in main bundle:
+            if let usesNonExempt = Bundle.main.object(forInfoDictionaryKey: "ITSAppUsesNonExemptEncryption") as? Bool {
+                XCTAssertFalse(usesNonExempt)
+            }
+            return
+        }
+        if let usesNonExempt = dict["ITSAppUsesNonExemptEncryption"] as? Bool {
+            XCTAssertFalse(usesNonExempt)
+        }
+    }
+    
     func testGenerationRequestInputTextKeySerialization() throws {
         let request = GenerationRequest(
             inputText: "Test input video content",

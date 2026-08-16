@@ -24,6 +24,8 @@
 	<string>AppIcon</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>DTSDKName</key>
 	<string>iphoneos26.0</string>
 	<key>DTPlatformVersion</key>

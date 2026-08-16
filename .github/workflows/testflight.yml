@@ -89,12 +89,13 @@ jobs:
             echo "Patching IPA Payload Info.plist for App Store Connect..."
             BUILD_NUMBER="${{ github.run_number }}"
             plutil -replace CFBundleVersion -string "$BUILD_NUMBER" "$PAYLOAD_PLIST"
+            plutil -replace ITSAppUsesNonExemptEncryption -bool NO "$PAYLOAD_PLIST"
             plutil -replace DTSDKName -string "iphoneos26.0" "$PAYLOAD_PLIST"
             plutil -replace DTPlatformVersion -string "26.0" "$PAYLOAD_PLIST"
             plutil -replace DTXcode -string "2600" "$PAYLOAD_PLIST"
             plutil -replace DTXcodeBuild -string "26A100" "$PAYLOAD_PLIST"
             plutil -replace MinimumOSVersion -string "17.0" "$PAYLOAD_PLIST"
-            plutil -p "$PAYLOAD_PLIST" | grep -E "CFBundleVersion|DTSDK|DTPlatform|DTXcode"
+            plutil -p "$PAYLOAD_PLIST" | grep -E "CFBundleVersion|ITSAppUsesNonExemptEncryption|DTSDK|DTPlatform|DTXcode"
           fi
 
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
