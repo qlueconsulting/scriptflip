@@ -6,6 +6,10 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
+const ANTHROPIC_ENDPOINT = "https://api.anthropic.com/v1/messages"
+const PRIMARY_MODEL = "claude-3-haiku-20240307"
+const FALLBACK_MODEL = "claude-3-5-sonnet-latest"
+
 serve(async (req) => {
   // 1. Handle CORS Pre-Flight OPTIONS Request
   if (req.method === 'OPTIONS') {
@@ -26,7 +30,7 @@ serve(async (req) => {
 
     // 2. Parse and Validate Client Request Payload
     let bodyText = ""
-    let payload: { inputText?: string; scriptStyle?: string } = {}
+    let payload: { inputText?: string; scriptStyle?: string; model?: string } = {}
     try {
       bodyText = await req.text()
       payload = JSON.parse(bodyText)
@@ -45,6 +49,8 @@ serve(async (req) => {
       )
     }
 
+    const targetModel = payload.model || PRIMARY_MODEL
+
     const systemPrompt = `You are an elite short-form video copywriter specializing in TikTok, Instagram Reels, and YouTube Shorts.
 Analyze the provided content and extract 3 distinct, high-retention video script options in a ${scriptStyle || 'Casual'} tone.
 Each script MUST have:
@@ -55,26 +61,61 @@ Each script MUST have:
 
 CRITICAL: Return ONLY a valid, raw JSON array containing exactly 3 objects with keys "hook", "body", "visualCue", "cta". Do not wrap in markdown or backticks.`
 
-    // 3. Call Anthropic Messages API
-    console.log(`[generate-scripts] Calling Anthropic API for style '${scriptStyle || 'Casual'}'...`)
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    const requestHeaders = {
+      "x-api-key": anthropicApiKey,
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json",
+    }
+
+    const requestBody = {
+      model: targetModel,
+      max_tokens: 1500,
+      temperature: 0.7,
+      messages: [{ role: "user", content: `${systemPrompt}\n\nContent:\n${inputText}` }]
+    }
+
+    // 3. Pre-Request Debug Logging
+    const maskedKey = anthropicApiKey.length > 10 
+      ? `${anthropicApiKey.substring(0, 7)}...${anthropicApiKey.substring(anthropicApiKey.length - 4)}` 
+      : "***"
+
+    console.log("================ [generate-scripts] ANTHROPIC DISPATCH ================")
+    console.log(`[generate-scripts] Endpoint: ${ANTHROPIC_ENDPOINT}`)
+    console.log(`[generate-scripts] Target Model: ${targetModel}`)
+    console.log(`[generate-scripts] Headers: x-api-key=${maskedKey}, anthropic-version=2023-06-01, content-type=application/json`)
+    console.log(`[generate-scripts] Max Tokens: ${requestBody.max_tokens}`)
+    console.log(`[generate-scripts] Payload Body Size: ${JSON.stringify(requestBody).length} bytes`)
+    console.log("=======================================================================")
+
+    // 4. Execute Fetch to Anthropic Messages API
+    let response = await fetch(ANTHROPIC_ENDPOINT, {
       method: "POST",
-      headers: {
-        "x-api-key": anthropicApiKey,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "claude-3-5-sonnet-20241022",
-        max_tokens: 1500,
-        temperature: 0.7,
-        messages: [{ role: "user", content: `${systemPrompt}\n\nContent:\n${inputText}` }]
-      }),
+      headers: requestHeaders,
+      body: JSON.stringify(requestBody),
     })
 
-    const rawResponseText = await response.text()
+    let rawResponseText = await response.text()
+    console.log(`[generate-scripts] Anthropic HTTP Status: ${response.status}`)
 
-    // 4. Safely Handle Non-OK Anthropic Responses
+    // 5. Automatic Fallback if 404 or model error occurs
+    if (!response.ok && (response.status === 404 || rawResponseText.includes("not_found_error")) && targetModel !== FALLBACK_MODEL) {
+      console.warn(`[generate-scripts] Primary model '${targetModel}' failed with ${response.status}. Attempting fallback to '${FALLBACK_MODEL}'...`)
+      
+      const fallbackRequestBody = {
+        ...requestBody,
+        model: FALLBACK_MODEL,
+      }
+
+      response = await fetch(ANTHROPIC_ENDPOINT, {
+        method: "POST",
+        headers: requestHeaders,
+        body: JSON.stringify(fallbackRequestBody),
+      })
+      rawResponseText = await response.text()
+      console.log(`[generate-scripts] Fallback Model '${FALLBACK_MODEL}' HTTP Status: ${response.status}`)
+    }
+
+    // 6. Handle Non-OK Anthropic Responses Gracefully
     if (!response.ok) {
       console.error(`[generate-scripts] Anthropic API Error (Status ${response.status}):`, rawResponseText)
       let parsedError = rawResponseText
@@ -92,7 +133,7 @@ CRITICAL: Return ONLY a valid, raw JSON array containing exactly 3 objects with 
       )
     }
 
-    // 5. Parse Successful Response Payload
+    // 7. Parse Successful Response Payload
     let result: any
     try {
       result = JSON.parse(rawResponseText)
@@ -112,7 +153,7 @@ CRITICAL: Return ONLY a valid, raw JSON array containing exactly 3 objects with 
       )
     }
 
-    // 6. Clean and Parse Script Array JSON
+    // 8. Clean and Parse Script Array JSON
     let contentText = result.content[0].text.trim()
     // Strip markdown code block fences if present (e.g. ```json ... ```)
     if (contentText.startsWith("```")) {
