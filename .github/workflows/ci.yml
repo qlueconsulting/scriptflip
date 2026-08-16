@@ -21,25 +21,16 @@ jobs:
           sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
           xcodebuild -version
 
-      - name: Build & Test via xcodebuild (iOS Simulator)
+      - name: Build and Test via xcodebuild (iOS Simulator)
         run: |
           xcodebuild test \
             -project ScriptFlip.xcodeproj \
             -scheme ScriptFlip \
             -destination 'platform=iOS Simulator,name=iPhone 16' \
             -enableCodeCoverage NO \
-            CODE_SIGNING_ALLOWED=NO \
-            -quiet || \
-          xcodebuild test \
-            -project ScriptFlip.xcodeproj \
-            -scheme ScriptFlip \
-            -destination 'platform=iOS Simulator,name=iPhone 15' \
-            -enableCodeCoverage NO \
-            CODE_SIGNING_ALLOWED=NO \
-            -quiet || \
+            CODE_SIGNING_ALLOWED=NO || \
           xcodebuild build \
             -project ScriptFlip.xcodeproj \
             -scheme ScriptFlip \
             -destination 'generic/platform=iOS Simulator' \
-            CODE_SIGNING_ALLOWED=NO \
-            -quiet
+            CODE_SIGNING_ALLOWED=NO
