@@ -26,7 +26,14 @@ jobs:
           xcodebuild test \
             -project ScriptFlip.xcodeproj \
             -scheme ScriptFlip \
-            -destination 'generic/platform=iOS Simulator' \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -enableCodeCoverage NO \
+            CODE_SIGNING_ALLOWED=NO \
+            -quiet || \
+          xcodebuild test \
+            -project ScriptFlip.xcodeproj \
+            -scheme ScriptFlip \
+            -destination 'platform=iOS Simulator,name=iPhone 15' \
             -enableCodeCoverage NO \
             CODE_SIGNING_ALLOWED=NO \
             -quiet || \
