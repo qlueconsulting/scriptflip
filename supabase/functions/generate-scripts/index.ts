@@ -9,14 +9,38 @@ const corsHeaders = {
 const ANTHROPIC_ENDPOINT = "https://api.anthropic.com/v1/messages"
 const ANTHROPIC_MODELS_ENDPOINT = "https://api.anthropic.com/v1/models"
 
+/**
+ * Robustly extract clean 11-character YouTube video IDs from any URL format,
+ * automatically discarding tracking query params like ?si=, ?is=, &t=, etc.
+ */
 function extractYouTubeVideoId(input: string): string | null {
   const trimmed = input.trim()
+  try {
+    const url = new URL(trimmed.startsWith("http") ? trimmed : `https://${trimmed}`)
+    if (url.hostname.includes("youtube.com")) {
+      if (url.pathname.startsWith("/watch")) {
+        const v = url.searchParams.get("v")
+        if (v && /^[a-zA-Z0-9_-]{11}$/.test(v)) return v
+      }
+      const shortsMatch = url.pathname.match(/\/shorts\/([a-zA-Z0-9_-]{11})/)
+      if (shortsMatch) return shortsMatch[1]
+      const embedMatch = url.pathname.match(/\/(?:embed|v)\/([a-zA-Z0-9_-]{11})/)
+      if (embedMatch) return embedMatch[1]
+    } else if (url.hostname.includes("youtu.be")) {
+      const idMatch = url.pathname.match(/^\/([a-zA-Z0-9_-]{11})/)
+      if (idMatch) return idMatch[1]
+    }
+  } catch (_) {
+    // fallback to regex matching
+  }
+
   const patterns = [
-    /(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?(?:.*&)?v=([a-zA-Z0-9_-]{11})/,
-    /(?:https?:\/\/)?(?:www\.)?youtu\.be\/([a-zA-Z0-9_-]{11})/,
-    /(?:https?:\/\/)?(?:www\.)?youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/,
-    /(?:https?:\/\/)?(?:www\.)?youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
-    /(?:https?:\/\/)?(?:www\.)?youtube\.com\/v\/([a-zA-Z0-9_-]{11})/,
+    /[?&]v=([a-zA-Z0-9_-]{11})(?:[&?]|$)/,
+    /youtu\.be\/([a-zA-Z0-9_-]{11})(?:[?&/]|$)/,
+    /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})(?:[?&/]|$)/,
+    /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})(?:[?&/]|$)/,
+    /youtube\.com\/v\/([a-zA-Z0-9_-]{11})(?:[?&/]|$)/,
+    /^([a-zA-Z0-9_-]{11})$/
   ]
   for (const p of patterns) {
     const m = trimmed.match(p)
@@ -25,19 +49,23 @@ function extractYouTubeVideoId(input: string): string | null {
   return null
 }
 
+/**
+ * Tier 1: Attempt to fetch automated or creator captions from YouTube player response.
+ */
 async function fetchYouTubeTranscript(videoId: string): Promise<string | null> {
-  console.log(`[generate-scripts] Fetching YouTube transcript for videoId: ${videoId}`)
+  console.log(`[generate-scripts] [Tier 1] Attempting YouTube transcript fetch for videoId: ${videoId}`)
   try {
     const watchUrl = `https://www.youtube.com/watch?v=${videoId}`
     const pageResp = await fetch(watchUrl, {
       headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
         "Accept-Language": "en-US,en;q=0.9",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
       }
     })
 
     if (!pageResp.ok) {
-      console.warn(`[generate-scripts] YouTube page fetch returned status ${pageResp.status}`)
+      console.warn(`[generate-scripts] [Tier 1] YouTube page fetch returned status ${pageResp.status}`)
       return null
     }
 
@@ -48,7 +76,7 @@ async function fetchYouTubeTranscript(videoId: string): Promise<string | null> {
                                 html.match(/var ytInitialPlayerResponse = ({.+?});/)
     
     if (!playerResponseMatch || !playerResponseMatch[1]) {
-      console.warn("[generate-scripts] Could not find ytInitialPlayerResponse in YouTube HTML.")
+      console.warn("[generate-scripts] [Tier 1] Could not find ytInitialPlayerResponse in YouTube HTML.")
       return null
     }
 
@@ -56,27 +84,31 @@ async function fetchYouTubeTranscript(videoId: string): Promise<string | null> {
     try {
       playerResponse = JSON.parse(playerResponseMatch[1])
     } catch (e) {
-      console.warn("[generate-scripts] Error parsing ytInitialPlayerResponse:", e)
+      console.warn("[generate-scripts] [Tier 1] Error parsing ytInitialPlayerResponse:", e)
       return null
     }
 
     const captionTracks = playerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks
     if (!captionTracks || !Array.isArray(captionTracks) || captionTracks.length === 0) {
-      console.warn("[generate-scripts] No caption tracks available for this video.")
+      console.warn("[generate-scripts] [Tier 1] No caption tracks available for this video.")
       return null
     }
 
     // 2. Select English track if available, else first track
     const selectedTrack = captionTracks.find((t: any) => t.languageCode === 'en' || t.vssId?.includes('.en')) || captionTracks[0]
     if (!selectedTrack?.baseUrl) {
-      console.warn("[generate-scripts] Selected caption track lacks baseUrl.")
+      console.warn("[generate-scripts] [Tier 1] Selected caption track lacks baseUrl.")
       return null
     }
 
-    console.log(`[generate-scripts] Fetching caption track from: ${selectedTrack.baseUrl.substring(0, 80)}...`)
-    const transcriptResp = await fetch(selectedTrack.baseUrl)
+    console.log(`[generate-scripts] [Tier 1] Fetching caption track from baseUrl...`)
+    const transcriptResp = await fetch(selectedTrack.baseUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+      }
+    })
     if (!transcriptResp.ok) {
-      console.warn(`[generate-scripts] Caption track fetch returned HTTP ${transcriptResp.status}`)
+      console.warn(`[generate-scripts] [Tier 1] Caption track fetch returned HTTP ${transcriptResp.status}`)
       return null
     }
 
@@ -97,17 +129,89 @@ async function fetchYouTubeTranscript(videoId: string): Promise<string | null> {
       .replace(/\s+/g, ' ')
       .trim()
 
-    if (cleanText.length < 20) {
-      console.warn("[generate-scripts] Parsed transcript text too short.")
+    if (cleanText.length < 30) {
+      console.warn("[generate-scripts] [Tier 1] Parsed transcript text too short.")
       return null
     }
 
-    console.log(`[generate-scripts] Successfully extracted YouTube transcript (${cleanText.length} characters).`)
+    console.log(`[generate-scripts] [Tier 1] Successfully extracted YouTube transcript (${cleanText.length} characters).`)
     return cleanText
   } catch (err) {
-    console.error("[generate-scripts] Error extracting YouTube transcript:", err)
+    console.error("[generate-scripts] [Tier 1] Error extracting YouTube transcript:", err)
     return null
   }
+}
+
+/**
+ * Tier 2: Fetch video metadata via YouTube oEmbed API and HTML OpenGraph tags as automatic fallback.
+ */
+async function fetchYouTubeMetadataFallback(videoId: string): Promise<string | null> {
+  console.log(`[generate-scripts] [Tier 2] Fetching public metadata fallback for videoId: ${videoId}`)
+  let title = ""
+  let author = ""
+  let description = ""
+
+  // 1. Fetch official YouTube oEmbed JSON endpoint
+  try {
+    const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`
+    const oembedResp = await fetch(oembedUrl)
+    if (oembedResp.ok) {
+      const oembedData = await oembedResp.json()
+      title = oembedData.title || ""
+      author = oembedData.author_name || ""
+      console.log(`[generate-scripts] [Tier 2] oEmbed found title: "${title}" by "${author}"`)
+    }
+  } catch (err) {
+    console.warn("[generate-scripts] [Tier 2] oEmbed fetch warning:", err)
+  }
+
+  // 2. Fetch watch page HTML for OpenGraph description and keywords
+  try {
+    const watchUrl = `https://www.youtube.com/watch?v=${videoId}`
+    const pageResp = await fetch(watchUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept-Language": "en-US,en;q=0.9"
+      }
+    })
+
+    if (pageResp.ok) {
+      const html = await pageResp.text()
+
+      if (!title) {
+        const titleMatch = html.match(/<title>(.+?)<\/title>/) || html.match(/<meta property="og:title" content="(.+?)"/)
+        if (titleMatch && titleMatch[1]) {
+          title = titleMatch[1].replace(" - YouTube", "").trim()
+        }
+      }
+
+      const descMatch = html.match(/<meta property="og:description" content="(.+?)"/) ||
+                        html.match(/<meta name="description" content="(.+?)"/)
+      if (descMatch && descMatch[1]) {
+        description = descMatch[1]
+          .replace(/&amp;/g, '&')
+          .replace(/&quot;/g, '"')
+          .replace(/&#39;/g, "'")
+          .trim()
+      }
+    }
+  } catch (err) {
+    console.warn("[generate-scripts] [Tier 2] HTML metadata scrape warning:", err)
+  }
+
+  if (!title && !description) {
+    console.warn(`[generate-scripts] [Tier 2] Failed to resolve any metadata for videoId: ${videoId}`)
+    return null
+  }
+
+  const structuredContent = [
+    `Video Title: ${title || "Short-Form Video"}`,
+    author ? `Channel / Creator: ${author}` : null,
+    description ? `Description & Overview:\n${description}` : null
+  ].filter(Boolean).join("\n\n")
+
+  console.log(`[generate-scripts] [Tier 2] Successfully compiled metadata context (${structuredContent.length} characters).`)
+  return structuredContent
 }
 
 serve(async (req) => {
@@ -149,25 +253,34 @@ serve(async (req) => {
       )
     }
 
-    // 3. YouTube URL Resolution
+    // 3. Multi-Tier YouTube URL & Content Resolution
     const youtubeVideoId = extractYouTubeVideoId(inputText)
     if (inputType === 'youtube' || youtubeVideoId !== null) {
       if (youtubeVideoId) {
+        console.log(`[generate-scripts] Processing YouTube videoId: ${youtubeVideoId}`)
+        // Tier 1: Transcript / Captions
         const transcript = await fetchYouTubeTranscript(youtubeVideoId)
         if (transcript) {
           inputText = transcript
         } else {
-          return new Response(
-            JSON.stringify({ 
-              error: "No captions found for this YouTube video. Please paste the transcript or summary text manually." 
-            }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          )
+          // Tier 2: Automatic Metadata Fallback (oEmbed + HTML meta description)
+          console.log(`[generate-scripts] Captions unavailable. Engaging Tier 2 metadata fallback for videoId: ${youtubeVideoId}`)
+          const metadataFallback = await fetchYouTubeMetadataFallback(youtubeVideoId)
+          if (metadataFallback) {
+            inputText = metadataFallback
+          } else {
+            return new Response(
+              JSON.stringify({ 
+                error: "Unable to retrieve content or captions for this YouTube video. Please paste the transcript or summary text manually." 
+              }),
+              { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            )
+          }
         }
       } else {
         return new Response(
           JSON.stringify({ 
-            error: "Invalid YouTube URL format. Please provide a valid YouTube video link or paste text manually." 
+            error: "Invalid YouTube URL format. Please provide a valid YouTube link or paste text manually." 
           }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         )
@@ -218,7 +331,8 @@ serve(async (req) => {
     const count = outputCount || 3
     const systemPrompt = `You are an expert scriptwriter. Output ONLY valid JSON containing a 'scripts' array. Do not include markdown formatting, backticks, or conversational preamble.
 
-Generate ${count} distinct, high-retention short-form video scripts in a ${scriptStyle || 'Casual & Relatable'} tone.
+If working with video metadata, title, and description rather than a word-for-word transcript, extrapolate and craft ${count} distinct, high-retention short-form video scripts around the core topic and talking points described in a ${scriptStyle || 'Casual & Relatable'} tone.
+
 Each item in the 'scripts' array MUST have:
 - "hook": Compelling 0-3s opening spoken sentence with high tension or curiosity.
 - "body": 15-25s core value delivery broken into fast-paced actionable points.
