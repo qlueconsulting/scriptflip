@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Diagnostic sheet displaying live Supabase Edge Function connectivity, client event logs, and request/response payloads.
+/// Diagnostic sheet displaying live Supabase Edge Function connectivity, tester controls, client event logs, and request/response payloads.
 public struct NetworkDiagnosticsView: View {
     @Environment(\.dismiss) private var dismiss
     let diagnostics: NetworkDiagnosticInfo
@@ -8,6 +8,9 @@ public struct NetworkDiagnosticsView: View {
     
     @State private var isCopied: Bool = false
     @State private var logs: [String] = []
+    @State private var isTesterOverrideActive: Bool = SubscriptionManager.isTesterOverrideEnabled
+    @State private var currentUsedCount: Int = UsageTracker.shared.getUsage().usedCount
+    @State private var testerActionMessage: String? = nil
     
     public init(diagnostics: NetworkDiagnosticInfo, onRunTest: @escaping () -> Void = {}) {
         self.diagnostics = diagnostics
@@ -23,6 +26,9 @@ public struct NetworkDiagnosticsView: View {
                     VStack(alignment: .leading, spacing: 20) {
                         // Overview Header Card
                         headerCard
+                        
+                        // Tester Controls Section
+                        testerControlsSection
                         
                         // Configuration Section
                         configurationSection
@@ -55,6 +61,8 @@ public struct NetworkDiagnosticsView: View {
             }
             .onAppear {
                 self.logs = DebugLogService.shared.getLogs()
+                self.isTesterOverrideActive = SubscriptionManager.isTesterOverrideEnabled
+                self.currentUsedCount = UsageTracker.shared.getUsage().usedCount
             }
         }
     }
@@ -80,6 +88,106 @@ public struct NetworkDiagnosticsView: View {
         .padding(16)
         .background(Color.white.opacity(0.06))
         .cornerRadius(14)
+    }
+    
+    private var testerControlsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("TESTER CONTROLS")
+                    .font(.caption.bold())
+                    .foregroundStyle(.yellow)
+                Spacer()
+                if SubscriptionManager.isTestFlightOrDebug || isTesterOverrideActive {
+                    Text("UNLIMITED ACTIVE")
+                        .font(.caption2.bold())
+                        .foregroundStyle(.black)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.yellow)
+                        .cornerRadius(6)
+                }
+            }
+            
+            VStack(alignment: .leading, spacing: 12) {
+                diagnosticRow(
+                    title: "Runtime Environment",
+                    value: SubscriptionManager.isTestFlightOrDebug ? "TestFlight Sandbox / Debug (Unlimited Mode)" : "Production App Store (Strict 3-Limit)",
+                    isMonospace: false,
+                    isSuccess: SubscriptionManager.isTestFlightOrDebug
+                )
+                
+                diagnosticRow(
+                    title: "Unlimited Tester Mode Override",
+                    value: isTesterOverrideActive ? "ENABLED (Bypassing Free Limit)" : "DISABLED (Standard Quota Enforced)",
+                    isMonospace: false,
+                    isSuccess: isTesterOverrideActive
+                )
+                
+                diagnosticRow(
+                    title: "Monthly Usage Counter",
+                    value: "\(currentUsedCount) of 3 Used (\(max(0, 3 - currentUsedCount)) Free Left)",
+                    isMonospace: true
+                )
+                
+                if let message = testerActionMessage {
+                    Text(message)
+                        .font(.caption.bold())
+                        .foregroundStyle(.green)
+                        .padding(.vertical, 2)
+                }
+                
+                HStack(spacing: 10) {
+                    Button(action: {
+                        UsageTracker.shared.resetUsage()
+                        currentUsedCount = 0
+                        DebugLogService.shared.log("[Diagnostics] Tester reset free credits to 3 (usedCount = 0).")
+                        testerActionMessage = "✅ Free Credits Reset to 3!"
+                        self.logs = DebugLogService.shared.getLogs()
+                    }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "arrow.counterclockwise")
+                            Text("Reset Free Credits to 3")
+                        }
+                        .font(.caption.bold())
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 10)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 40)
+                        .background(Color.white.opacity(0.12))
+                        .cornerRadius(10)
+                    }
+                    
+                    Button(action: {
+                        let newValue = !SubscriptionManager.isTesterOverrideEnabled
+                        SubscriptionManager.isTesterOverrideEnabled = newValue
+                        isTesterOverrideActive = newValue
+                        DebugLogService.shared.log("[Diagnostics] Toggled Unlimited Tester Mode to \(newValue).")
+                        testerActionMessage = newValue ? "✨ Unlimited Mode Enabled" : "🔒 Unlimited Mode Disabled"
+                        self.logs = DebugLogService.shared.getLogs()
+                    }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: isTesterOverrideActive ? "checkmark.seal.fill" : "seal")
+                            Text(isTesterOverrideActive ? "Disable Unlimited" : "Enable Unlimited")
+                        }
+                        .font(.caption.bold())
+                        .foregroundStyle(isTesterOverrideActive ? .black : .white)
+                        .padding(.horizontal, 10)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 40)
+                        .background(isTesterOverrideActive ? Color.yellow : Color.white.opacity(0.12))
+                        .cornerRadius(10)
+                    }
+                }
+                .padding(.top, 4)
+            }
+            .padding(16)
+            .background(Color.white.opacity(0.04))
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.yellow.opacity(0.25), lineWidth: 1)
+            )
+        }
     }
     
     private var configurationSection: some View {
@@ -294,6 +402,8 @@ public struct NetworkDiagnosticsView: View {
         Endpoint URL: \(diagnostics.endpointURL)
         Anon Key Status: \(diagnostics.anonKeyStatus)
         Anon Key Valid: \(diagnostics.hasValidAnonKey)
+        TestFlight/Debug Env: \(SubscriptionManager.isTestFlightOrDebug)
+        Tester Override Active: \(SubscriptionManager.isTesterOverrideEnabled)
         Last Timestamp: \(diagnostics.lastRequestTimestamp?.description ?? "None")
         Last Method: \(diagnostics.lastRequestMethod ?? "None")
         Last Status Code: \(diagnostics.lastResponseStatusCode?.description ?? "None")

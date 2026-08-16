@@ -126,6 +126,47 @@ final class ScriptFlipTests: XCTestCase {
         XCTAssertTrue(logs[0].contains("Test message 1"))
         XCTAssertTrue(logs[1].contains("Test message 2"))
     }
+    
+    // MARK: - TestFlight & Tester Override Tests
+    
+    func testTestFlightOrDebugDetection() {
+        #if DEBUG
+        XCTAssertTrue(SubscriptionManager.isTestFlightOrDebug)
+        #endif
+    }
+    
+    func testTesterOverrideToggle() {
+        let initial = SubscriptionManager.isTesterOverrideEnabled
+        SubscriptionManager.isTesterOverrideEnabled = true
+        XCTAssertTrue(SubscriptionManager.isTesterOverrideEnabled)
+        SubscriptionManager.isTesterOverrideEnabled = false
+        XCTAssertFalse(SubscriptionManager.isTesterOverrideEnabled)
+        SubscriptionManager.isTesterOverrideEnabled = initial
+    }
+    
+    @MainActor
+    func testUnlimitedModeBypassesCreditLimitation() {
+        let subManager = SubscriptionManager.shared
+        XCTAssertTrue(subManager.isUnlimited) // Due to #if DEBUG or TestFlight
+        
+        let vm = ScriptGeneratorViewModel()
+        XCTAssertTrue(vm.canGenerateFree)
+    }
+    
+    func testResetUsageClearsQuota() {
+        let tracker = UsageTracker.shared
+        tracker.incrementUsage()
+        tracker.incrementUsage()
+        tracker.incrementUsage()
+        XCTAssertTrue(tracker.getUsage().isLimitReached)
+        
+        tracker.resetUsage()
+        let reset = tracker.getUsage()
+        XCTAssertEqual(reset.usedCount, 0)
+        XCTAssertEqual(reset.remainingFreeGenerations, 3)
+        XCTAssertFalse(reset.isLimitReached)
+    }
 }
+
 
 

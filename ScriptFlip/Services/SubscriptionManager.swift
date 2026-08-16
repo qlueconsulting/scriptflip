@@ -18,6 +18,35 @@ public final class SubscriptionManager {
         // Zero async operations or eager SDK calls in init
     }
     
+    // MARK: - TestFlight & Tester Override Detection
+    
+    /// Detects if running in a Debug build or TestFlight sandbox environment.
+    public static var isTestFlightOrDebug: Bool {
+        #if DEBUG
+        return true
+        #else
+        guard let url = Bundle.main.appStoreReceiptURL else { return false }
+        return url.lastPathComponent == "sandboxReceipt"
+        #endif
+    }
+    
+    /// User-persisted tester override to simulate unlimited Pro tier during QA / Diagnostics.
+    public static var isTesterOverrideEnabled: Bool {
+        get {
+            UserDefaults.standard.bool(forKey: "DEBUG_UNLIMITED_TESTER_MODE")
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: "DEBUG_UNLIMITED_TESTER_MODE")
+        }
+    }
+    
+    /// Determines whether the user has unlimited generations (active Pro, TestFlight sandbox, or manual Tester override).
+    public var isUnlimited: Bool {
+        isPro || Self.isTestFlightOrDebug || Self.isTesterOverrideEnabled
+    }
+    
+    // MARK: - SDK Lifecycle
+    
     /// Lazily configure RevenueCat SDK safely on demand without blocking app launch.
     public nonisolated static func ensureConfigured() {
         let apiKey = AppEnvironment.revenueCatAPIKey
@@ -48,24 +77,18 @@ public final class SubscriptionManager {
         Self.ensureConfigured()
         
         guard Purchases.isConfigured else {
-            print("[SubscriptionManager] Purchases not configured. Returning fallback entitlement status.")
-            #if DEBUG
-            self.isPro = UserDefaults.standard.bool(forKey: "DEBUG_SIMULATE_PRO")
-            #endif
-            return self.isPro
+            print("[SubscriptionManager] Purchases not configured. Returning entitlement status.")
+            return self.isUnlimited
         }
         
         do {
             let customerInfo = try await Purchases.shared.customerInfo()
             self.isPro = customerInfo.entitlements["pro"]?.isActive ?? false
             await fetchOfferings()
-            return self.isPro
+            return self.isUnlimited
         } catch {
             print("[SubscriptionManager] Graceful handling - customerInfo fetch error: \(error.localizedDescription)")
-            #if DEBUG
-            self.isPro = UserDefaults.standard.bool(forKey: "DEBUG_SIMULATE_PRO")
-            #endif
-            return self.isPro
+            return self.isUnlimited
         }
     }
     
@@ -105,7 +128,7 @@ public final class SubscriptionManager {
             let result = try await Purchases.shared.purchase(package: package)
             if !result.userCancelled {
                 self.isPro = result.customerInfo.entitlements["pro"]?.isActive ?? false
-                return self.isPro
+                return self.isUnlimited
             }
         } catch {
             self.errorMessage = error.localizedDescription
@@ -129,7 +152,7 @@ public final class SubscriptionManager {
         do {
             let customerInfo = try await Purchases.shared.restorePurchases()
             self.isPro = customerInfo.entitlements["pro"]?.isActive ?? false
-            return self.isPro
+            return self.isUnlimited
         } catch {
             self.errorMessage = error.localizedDescription
             return false

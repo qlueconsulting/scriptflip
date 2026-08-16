@@ -25,7 +25,7 @@ public final class ScriptGeneratorViewModel {
     
     private let apiService: ScriptAPIServiceProtocol
     private let usageTracker: UsageTracker
-    private let subscriptionManager: SubscriptionManager
+    public let subscriptionManager: SubscriptionManager
     
     public enum InputMode: String, CaseIterable, Identifiable, Sendable {
         case url = "URL (YouTube/Podcast)"
@@ -66,7 +66,7 @@ public final class ScriptGeneratorViewModel {
     }
     
     public var canGenerateFree: Bool {
-        subscriptionManager.isPro || !userUsage.isLimitReached
+        subscriptionManager.isUnlimited || !userUsage.isLimitReached
     }
     
     public func generateScripts() async {
@@ -83,22 +83,27 @@ public final class ScriptGeneratorViewModel {
         
         refreshUsage()
         
-        // Check if free credits remain
-        let hasFreeCredits = !userUsage.isLimitReached
-        var isPro = subscriptionManager.isPro
+        let isUnlimited = subscriptionManager.isUnlimited
         
-        // Only if free credits are exhausted do we check live RevenueCat Pro entitlements
-        if !hasFreeCredits && !isPro {
-            DebugLogService.shared.log("[ViewModel] Free quota reached. Checking live Pro subscription status...")
-            isPro = await subscriptionManager.fetchCustomerInfo()
+        // Check if user has unlimited access (TestFlight, Debug, Tester override, or active Pro)
+        if isUnlimited {
+            DebugLogService.shared.log("[ViewModel] Unlimited mode active (TestFlight/Debug=\(SubscriptionManager.isTestFlightOrDebug), TesterOverride=\(SubscriptionManager.isTesterOverrideEnabled), isPro=\(subscriptionManager.isPro)). Bypassing quota check.")
+        } else {
+            let hasFreeCredits = !userUsage.isLimitReached
             
-            if !isPro {
-                let limitMsg = "Subscription required: You have used your 3 free generations for this month. Please subscribe to Pro for unlimited access."
-                DebugLogService.shared.log("[ViewModel] Blocked early: \(limitMsg)")
-                self.errorMessage = limitMsg
-                self.showPaywall = true
-                self.showErrorAlert = true
-                return
+            // Only if free credits are exhausted do we check live RevenueCat Pro entitlements
+            if !hasFreeCredits {
+                DebugLogService.shared.log("[ViewModel] Free quota reached. Checking live Pro subscription status...")
+                let hasLivePro = await subscriptionManager.fetchCustomerInfo()
+                
+                if !hasLivePro {
+                    let limitMsg = "Subscription required: You have used your 3 free generations for this month. Please subscribe to Pro for unlimited access."
+                    DebugLogService.shared.log("[ViewModel] Blocked early: \(limitMsg)")
+                    self.errorMessage = limitMsg
+                    self.showPaywall = true
+                    self.showErrorAlert = true
+                    return
+                }
             }
         }
         
@@ -124,10 +129,12 @@ public final class ScriptGeneratorViewModel {
             DebugLogService.shared.log("[ViewModel] Successfully received \(scripts.count) scripts from Edge Function.")
             self.generatedScripts = scripts
             
-            // Increment usage if not Pro
-            if !isPro {
+            // Increment usage count only if NOT in Unlimited / TestFlight mode
+            if !subscriptionManager.isUnlimited {
                 self.userUsage = usageTracker.incrementUsage()
                 DebugLogService.shared.log("[ViewModel] Incremented usage: now \(self.userUsage.usedCount)/3.")
+            } else {
+                DebugLogService.shared.log("[ViewModel] Unlimited mode: free credit count not decremented.")
             }
             
             self.isLoading = false
