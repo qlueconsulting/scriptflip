@@ -8,8 +8,8 @@ public struct NetworkDiagnosticsView: View {
     
     @State private var isCopied: Bool = false
     @State private var logs: [String] = []
-    @State private var isTesterOverrideActive: Bool = SubscriptionManager.isTesterOverrideEnabled
-    @State private var currentUsedCount: Int = UsageTracker.shared.getUsage().usedCount
+    @State private var isTesterOverrideActive: Bool = false
+    @State private var currentUsedCount: Int = 0
     @State private var testerActionMessage: String? = nil
     
     public init(diagnostics: NetworkDiagnosticInfo, onRunTest: @escaping () -> Void = {}) {
