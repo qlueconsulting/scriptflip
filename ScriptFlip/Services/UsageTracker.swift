@@ -10,22 +10,30 @@ public final class UsageTracker: Sendable {
     
     /// Get current usage, resetting count if a new calendar month has started.
     public func getUsage() -> UserUsage {
-        guard let data = UserDefaults.standard.data(forKey: userDefaultsKey),
-              let usage = try? JSONDecoder().decode(UserUsage.self, from: data) else {
+        guard let data = UserDefaults.standard.data(forKey: userDefaultsKey) else {
             let initial = UserUsage()
             saveUsage(initial)
             return initial
         }
         
-        // Check if calendar month has changed
-        let calendar = Calendar.current
-        if !calendar.isDate(usage.lastResetDate, equalTo: Date(), toGranularity: .month) {
-            let resetUsage = UserUsage(usedCount: 0, lastResetDate: Date())
-            saveUsage(resetUsage)
-            return resetUsage
+        do {
+            let usage = try JSONDecoder().decode(UserUsage.self, from: data)
+            
+            // Check if calendar month has changed
+            let calendar = Calendar.current
+            if !calendar.isDate(usage.lastResetDate, equalTo: Date(), toGranularity: .month) {
+                let resetUsage = UserUsage(usedCount: 0, lastResetDate: Date())
+                saveUsage(resetUsage)
+                return resetUsage
+            }
+            
+            return usage
+        } catch {
+            print("[UsageTracker] Error decoding saved usage data: \(error.localizedDescription). Resetting to initial usage.")
+            let fallback = UserUsage()
+            saveUsage(fallback)
+            return fallback
         }
-        
-        return usage
     }
     
     /// Increment usage count after successful script generation.
@@ -44,8 +52,11 @@ public final class UsageTracker: Sendable {
     }
     
     private func saveUsage(_ usage: UserUsage) {
-        if let encoded = try? JSONEncoder().encode(usage) {
+        do {
+            let encoded = try JSONEncoder().encode(usage)
             UserDefaults.standard.set(encoded, forKey: userDefaultsKey)
+        } catch {
+            print("[UsageTracker] Error encoding usage data: \(error.localizedDescription)")
         }
     }
 }

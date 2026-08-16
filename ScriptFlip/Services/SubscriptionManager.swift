@@ -15,12 +15,7 @@ public final class SubscriptionManager {
     public var errorMessage: String? = nil
     
     private init() {
-        // Safe initialization without unguarded background tasks
-        if Purchases.isConfigured {
-            Task {
-                await fetchCustomerInfo()
-            }
-        }
+        // Zero async operations or singleton calls in init
     }
     
     /// Configure RevenueCat SDK safely with Public API Key.
@@ -37,10 +32,6 @@ public final class SubscriptionManager {
         
         Purchases.logLevel = .warn
         Purchases.configure(withAPIKey: apiKey)
-        
-        Task { @MainActor in
-            await SubscriptionManager.shared.fetchCustomerInfo()
-        }
     }
     
     /// Check customer entitlements and active Pro status before every generation request.
@@ -85,7 +76,7 @@ public final class SubscriptionManager {
         }
     }
     
-    /// Purchase a package via RevenueCat.
+    /// Purchase a package via RevenueCat safely with optional binding.
     public func purchase(package: Package) async -> Bool {
         guard Purchases.isConfigured else {
             self.errorMessage = "In-App Purchases are currently initializing. Please try again in a moment."
@@ -108,7 +99,7 @@ public final class SubscriptionManager {
         return false
     }
     
-    /// Restore user purchases.
+    /// Restore user purchases safely.
     public func restorePurchases() async -> Bool {
         guard Purchases.isConfigured else {
             self.errorMessage = "In-App Purchases are currently initializing. Please try again in a moment."
