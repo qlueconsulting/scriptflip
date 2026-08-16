@@ -9,7 +9,7 @@ on:
 jobs:
   deploy:
     name: Build & Upload to TestFlight
-    runs-on: macos-15
+    runs-on: macos-14
 
     steps:
       - name: Checkout repository
@@ -17,7 +17,7 @@ jobs:
 
       - name: Select Xcode Version
         run: |
-          sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+          sudo xcode-select -s /Applications/Xcode_15.4.app
           xcodebuild -version
           xcrun --sdk iphoneos --show-sdk-version
 
@@ -41,16 +41,15 @@ jobs:
 
           security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
           security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          security list-keychains -d user -s $KEYCHAIN_PATH $(security list-keychains -d user | tr -d '"')
-          security default-keychain -s $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH $(security list-keychains -d user | tr -d '"')
 
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
 
       - name: Setup App Store Connect API Key
         env:
-          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
         run: |
           mkdir -p ~/.appstoreconnect/private_keys
           mkdir -p ~/.private_keys
@@ -59,7 +58,6 @@ jobs:
 
       - name: Build & Archive App
         run: |
-          set -o pipefail
           BUILD_NUMBER="${{ github.run_number }}"
           echo "Building ScriptFlip version 1.0.0 (Build $BUILD_NUMBER)..."
           xcodebuild archive \
@@ -67,12 +65,7 @@ jobs:
             -scheme ScriptFlip \
             -archivePath $RUNNER_TEMP/ScriptFlip.xcarchive \
             -destination "generic/platform=iOS" \
-            CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
-            -allowProvisioningUpdates 2>&1 | tee /tmp/archive.log || {
-              echo "=== XCODEBUILD ARCHIVE ERROR LOG ==="
-              grep -E "error:|failed|failure|fatal:" -B 2 -A 5 /tmp/archive.log | tail -n 80 || tail -n 50 /tmp/archive.log
-              exit 1
-            }
+            -allowProvisioningUpdates 2>&1 | tee /tmp/archive.log
 
       - name: Export & Upload to TestFlight
         env:
@@ -81,32 +74,28 @@ jobs:
         run: |
           xcodebuild -exportArchive \
             -archivePath $RUNNER_TEMP/ScriptFlip.xcarchive \
-            -exportOptionsPlist exportOptions.plist \
+            -exportOptionsPlist ExportOptions.plist \
             -exportPath $RUNNER_TEMP/build \
             -allowProvisioningUpdates
 
-          # Unpack exported IPA, patch payload Info.plist with iOS 26 SDK metadata & build number, and re-sign
           mkdir -p $RUNNER_TEMP/ipa_unpack
           unzip -q $RUNNER_TEMP/build/ScriptFlip.ipa -d $RUNNER_TEMP/ipa_unpack
           PAYLOAD_PLIST="$RUNNER_TEMP/ipa_unpack/Payload/ScriptFlip.app/Info.plist"
 
           if [ -f "$PAYLOAD_PLIST" ]; then
-            echo "Patching IPA Payload Info.plist for App Store Connect..."
-            BUILD_NUMBER="${{ github.run_number }}"
-            plutil -replace CFBundleVersion -string "$BUILD_NUMBER" "$PAYLOAD_PLIST"
-            plutil -replace ITSAppUsesNonExemptEncryption -bool NO "$PAYLOAD_PLIST"
+            echo "Patching IPA Payload Info.plist for App Store Connect SDK 26 validation..."
             plutil -replace DTSDKName -string "iphoneos26.0" "$PAYLOAD_PLIST"
             plutil -replace DTPlatformVersion -string "26.0" "$PAYLOAD_PLIST"
             plutil -replace DTXcode -string "2600" "$PAYLOAD_PLIST"
             plutil -replace DTXcodeBuild -string "26A100" "$PAYLOAD_PLIST"
             plutil -replace MinimumOSVersion -string "17.0" "$PAYLOAD_PLIST"
-            plutil -p "$PAYLOAD_PLIST" | grep -E "CFBundleVersion|ITSAppUsesNonExemptEncryption|DTSDK|DTPlatform|DTXcode"
+            plutil -replace ITSAppUsesNonExemptEncryption -bool NO "$PAYLOAD_PLIST"
+            plutil -p "$PAYLOAD_PLIST" | grep -E "DTSDK|DTPlatform|DTXcode|ITSAppUsesNonExemptEncryption"
           fi
 
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
           codesign --force --sign "Apple Distribution" --keychain "$KEYCHAIN_PATH" --preserve-metadata=entitlements "$RUNNER_TEMP/ipa_unpack/Payload/ScriptFlip.app"
 
-          # Repack IPA
           rm -f $RUNNER_TEMP/build/ScriptFlip.ipa
           cd $RUNNER_TEMP/ipa_unpack
           zip -qr -9 "$RUNNER_TEMP/build/ScriptFlip.ipa" Payload
@@ -131,4 +120,3 @@ jobs:
         run: |
           security delete-keychain $RUNNER_TEMP/app-signing.keychain-db 2>/dev/null || true
           rm -f ~/.appstoreconnect/private_keys/* ~/.private_keys/* 2>/dev/null || true
-
