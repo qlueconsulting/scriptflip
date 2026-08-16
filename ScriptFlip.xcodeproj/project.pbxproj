@@ -26,6 +26,7 @@
 		1110 /* ScriptResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2110 /* ScriptResultsView.swift */; };
 		1111 /* TeleprompterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2111 /* TeleprompterView.swift */; };
 		1114 /* NetworkDiagnosticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2114 /* NetworkDiagnosticsView.swift */; };
+		1115 /* DebugLogService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2115 /* DebugLogService.swift */; };
 		1120 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 3101 /* RevenueCat */; };
 		1121 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 3102 /* RevenueCatUI */; };
 		1130 /* ScriptAPIServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2130 /* ScriptAPIServiceTests.swift */; };
@@ -72,6 +73,7 @@
 		2110 /* ScriptResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptResultsView.swift; sourceTree = "<group>"; };
 		2111 /* TeleprompterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeleprompterView.swift; sourceTree = "<group>"; };
 		2114 /* NetworkDiagnosticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkDiagnosticsView.swift; sourceTree = "<group>"; };
+		2115 /* DebugLogService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugLogService.swift; sourceTree = "<group>"; };
 		2112 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		2113 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		2120 /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
@@ -159,6 +161,7 @@
 				2108 /* ScriptAPIService.swift */,
 				2109 /* SubscriptionManager.swift */,
 				210A /* UsageTracker.swift */,
+				2115 /* DebugLogService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -408,6 +411,7 @@
 				1110 /* ScriptResultsView.swift in Sources */,
 				1111 /* TeleprompterView.swift in Sources */,
 				1114 /* NetworkDiagnosticsView.swift in Sources */,
+				1115 /* DebugLogService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

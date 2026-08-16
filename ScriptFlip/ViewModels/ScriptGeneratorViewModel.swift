@@ -11,6 +11,7 @@ public final class ScriptGeneratorViewModel {
     
     public var isLoading: Bool = false
     public var errorMessage: String? = nil
+    public var showErrorAlert: Bool = false
     public var configurationAlertMessage: String? = nil
     public var showConfigAlert: Bool = false
     
@@ -53,6 +54,7 @@ public final class ScriptGeneratorViewModel {
     public func refreshUsage() {
         do {
             self.userUsage = usageTracker.getUsage()
+            DebugLogService.shared.log("[ViewModel] Usage refreshed: \(userUsage.usedCount)/3 used (\(userUsage.remainingFreeGenerations) remaining).")
         } catch {
             print("[ScriptGeneratorViewModel] Warning during usage refresh: \(error.localizedDescription)")
             self.userUsage = UserUsage()
@@ -68,24 +70,41 @@ public final class ScriptGeneratorViewModel {
     }
     
     public func generateScripts() async {
+        DebugLogService.shared.log("[ViewModel] generateScripts invoked. inputMode=\(inputMode.rawValue), textLength=\(inputText.count)")
+        
         let trimmedInput = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedInput.isEmpty else {
-            self.errorMessage = "Please enter a valid YouTube/Podcast URL or transcript text."
+            let msg = "Please enter a valid YouTube/Podcast URL or transcript text."
+            DebugLogService.shared.log("[ViewModel] Blocked early: \(msg)")
+            self.errorMessage = msg
+            self.showErrorAlert = true
             return
         }
         
-        // Check RevenueCat user entitlements safely before every generation request
-        let isPro = await subscriptionManager.fetchCustomerInfo()
         refreshUsage()
         
-        // 3 free generations limit enforcement: trigger paywall on 4th attempt if not Pro
-        if !isPro && userUsage.isLimitReached {
-            self.showPaywall = true
-            return
+        // Check if free credits remain
+        let hasFreeCredits = !userUsage.isLimitReached
+        var isPro = subscriptionManager.isPro
+        
+        // Only if free credits are exhausted do we check live RevenueCat Pro entitlements
+        if !hasFreeCredits && !isPro {
+            DebugLogService.shared.log("[ViewModel] Free quota reached. Checking live Pro subscription status...")
+            isPro = await subscriptionManager.fetchCustomerInfo()
+            
+            if !isPro {
+                let limitMsg = "Subscription required: You have used your 3 free generations for this month. Please subscribe to Pro for unlimited access."
+                DebugLogService.shared.log("[ViewModel] Blocked early: \(limitMsg)")
+                self.errorMessage = limitMsg
+                self.showPaywall = true
+                self.showErrorAlert = true
+                return
+            }
         }
         
         self.isLoading = true
         self.errorMessage = nil
+        self.showErrorAlert = false
         
         let requestType: GenerationRequest.InputType = (inputMode == .url)
             ? (trimmedInput.contains("youtube") || trimmedInput.contains("youtu.be") ? .youtubeUrl : .podcastUrl)
@@ -98,19 +117,24 @@ public final class ScriptGeneratorViewModel {
             outputCount: 3
         )
         
+        DebugLogService.shared.log("[ViewModel] Dispatching request to APIService for style '\(selectedStyle.rawValue)'...")
+        
         do {
             let scripts = try await apiService.generateScripts(request: payload)
+            DebugLogService.shared.log("[ViewModel] Successfully received \(scripts.count) scripts from Edge Function.")
             self.generatedScripts = scripts
             
             // Increment usage if not Pro
             if !isPro {
                 self.userUsage = usageTracker.incrementUsage()
+                DebugLogService.shared.log("[ViewModel] Incremented usage: now \(self.userUsage.usedCount)/3.")
             }
             
             self.isLoading = false
             self.showResults = true
         } catch let apiError as ScriptAPIError {
             self.isLoading = false
+            DebugLogService.shared.log("[ViewModel] ScriptAPIError caught: \(apiError.localizedDescription)")
             
             switch apiError {
             case .configurationError(let message):
@@ -119,13 +143,13 @@ public final class ScriptGeneratorViewModel {
                 self.errorMessage = self.configurationAlertMessage
             default:
                 self.errorMessage = apiError.localizedDescription
+                self.showErrorAlert = true
             }
-            
-            print("[ScriptGeneratorViewModel] Edge Function call failed: \(apiError.localizedDescription)")
         } catch {
             self.isLoading = false
+            DebugLogService.shared.log("[ViewModel] Unexpected error caught: \(error.localizedDescription)")
             self.errorMessage = error.localizedDescription
-            print("[ScriptGeneratorViewModel] Unexpected error: \(error.localizedDescription)")
+            self.showErrorAlert = true
         }
     }
 }

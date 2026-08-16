@@ -1,12 +1,13 @@
 import SwiftUI
 
-/// Diagnostic sheet displaying live Supabase Edge Function connectivity and request/response payloads.
+/// Diagnostic sheet displaying live Supabase Edge Function connectivity, client event logs, and request/response payloads.
 public struct NetworkDiagnosticsView: View {
     @Environment(\.dismiss) private var dismiss
     let diagnostics: NetworkDiagnosticInfo
     let onRunTest: () -> Void
     
     @State private var isCopied: Bool = false
+    @State private var logs: [String] = []
     
     public init(diagnostics: NetworkDiagnosticInfo, onRunTest: @escaping () -> Void = {}) {
         self.diagnostics = diagnostics
@@ -25,6 +26,9 @@ public struct NetworkDiagnosticsView: View {
                         
                         // Configuration Section
                         configurationSection
+                        
+                        // Client Activity Logs Section
+                        clientLogsSection
                         
                         // Last Request Section
                         lastRequestSection
@@ -48,6 +52,9 @@ public struct NetworkDiagnosticsView: View {
                             .foregroundStyle(.gray)
                     }
                 }
+            }
+            .onAppear {
+                self.logs = DebugLogService.shared.getLogs()
             }
         }
     }
@@ -88,6 +95,44 @@ public struct NetworkDiagnosticsView: View {
             }
             .padding(16)
             .background(Color.white.opacity(0.04))
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
+            )
+        }
+    }
+    
+    private var clientLogsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("CLIENT EVENT LOGS")
+                    .font(.caption.bold())
+                    .foregroundStyle(.gray)
+                Spacer()
+                Button("Refresh") {
+                    self.logs = DebugLogService.shared.getLogs()
+                }
+                .font(.caption2.bold())
+                .foregroundStyle(.cyan)
+            }
+            
+            VStack(alignment: .leading, spacing: 6) {
+                if logs.isEmpty {
+                    Text("No client events recorded yet.")
+                        .font(.caption)
+                        .foregroundStyle(.gray)
+                } else {
+                    ForEach(logs.suffix(8), id: \.self) { log in
+                        Text(log)
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundStyle(.white.opacity(0.85))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+            }
+            .padding(12)
+            .background(Color.black.opacity(0.4))
             .cornerRadius(12)
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
@@ -243,6 +288,7 @@ public struct NetworkDiagnosticsView: View {
     }
     
     private func copyFullDiagnostics() {
+        let currentLogs = DebugLogService.shared.getLogs().joined(separator: "\n")
         let dump = """
         === SCRIPTFLIP NETWORK DIAGNOSTICS ===
         Endpoint URL: \(diagnostics.endpointURL)
@@ -253,6 +299,9 @@ public struct NetworkDiagnosticsView: View {
         Last Status Code: \(diagnostics.lastResponseStatusCode?.description ?? "None")
         Last Duration: \(diagnostics.lastDurationMs != nil ? "\(diagnostics.lastDurationMs!) ms" : "None")
         Last Error: \(diagnostics.lastErrorMessage ?? "None")
+        
+        --- CLIENT EVENT LOGS ---
+        \(currentLogs.isEmpty ? "None" : currentLogs)
         
         --- REQUEST BODY ---
         \(diagnostics.lastRequestBody ?? "None")

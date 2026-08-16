@@ -5,7 +5,6 @@ public struct ScriptGeneratorView: View {
     @State private var viewModel: ScriptGeneratorViewModel
     @State private var subscriptionManager: SubscriptionManager
     @State private var activePrompterScript: Script? = nil
-    @State private var showErrorAlert: Bool = false
     
     public init(
         viewModel: ScriptGeneratorViewModel? = nil,
@@ -69,10 +68,13 @@ public struct ScriptGeneratorView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button(action: { viewModel.showDiagnostics = true }) {
+                    Button(action: { 
+                        DebugLogService.shared.log("[View] Diagnostics button tapped from toolbar.")
+                        viewModel.showDiagnostics = true 
+                    }) {
                         Image(systemName: "wrench.and.screwdriver")
                             .font(.subheadline)
-                            .foregroundStyle(.gray)
+                            .foregroundStyle(.cyan)
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
@@ -87,18 +89,13 @@ public struct ScriptGeneratorView: View {
             } message: {
                 Text(viewModel.configurationAlertMessage ?? "Invalid Supabase URL or Anon Key.")
             }
-            .alert("Script Generation Error", isPresented: $showErrorAlert) {
+            .alert("Script Generation Alert", isPresented: $viewModel.showErrorAlert) {
                 Button("Inspect Diagnostics") {
                     viewModel.showDiagnostics = true
                 }
                 Button("OK", role: .cancel) { }
             } message: {
-                Text(viewModel.errorMessage ?? "An unexpected network error occurred.")
-            }
-            .onChange(of: viewModel.errorMessage) { oldValue, newValue in
-                if newValue != nil && !viewModel.showConfigAlert {
-                    showErrorAlert = true
-                }
+                Text(viewModel.errorMessage ?? "An unexpected error occurred.")
             }
             .sheet(isPresented: $viewModel.showResults) {
                 ScriptResultsView(
@@ -156,7 +153,10 @@ public struct ScriptGeneratorView: View {
     }
     
     private var usageBadge: some View {
-        Button(action: { viewModel.showPaywall = true }) {
+        Button(action: { 
+            DebugLogService.shared.log("[View] Usage badge tapped.")
+            viewModel.showPaywall = true 
+        }) {
             HStack(spacing: 6) {
                 if subscriptionManager.isPro {
                     Image(systemName: "crown.fill")
@@ -182,7 +182,10 @@ public struct ScriptGeneratorView: View {
     private var inputTypePicker: some View {
         HStack(spacing: 8) {
             ForEach(ScriptGeneratorViewModel.InputMode.allCases) { mode in
-                Button(action: { viewModel.inputMode = mode }) {
+                Button(action: { 
+                    DebugLogService.shared.log("[View] Switched input mode to \(mode.rawValue).")
+                    viewModel.inputMode = mode 
+                }) {
                     HStack(spacing: 6) {
                         Image(systemName: mode.iconName)
                         Text(mode.rawValue)
@@ -249,7 +252,10 @@ public struct ScriptGeneratorView: View {
             
             VStack(spacing: 10) {
                 ForEach(ScriptStyle.allCases) { style in
-                    Button(action: { viewModel.selectedStyle = style }) {
+                    Button(action: { 
+                        DebugLogService.shared.log("[View] Selected script style: \(style.rawValue).")
+                        viewModel.selectedStyle = style 
+                    }) {
                         HStack(spacing: 12) {
                             Image(systemName: style.iconName)
                                .font(.title3)
@@ -288,10 +294,9 @@ public struct ScriptGeneratorView: View {
     
     private var generateButton: some View {
         Button(action: {
+            DebugLogService.shared.log("[View] Generate button tapped.")
             Task {
-                do {
-                    await viewModel.generateScripts()
-                }
+                await viewModel.generateScripts()
             }
         }) {
             HStack(spacing: 10) {
@@ -321,11 +326,6 @@ public struct ScriptGeneratorView: View {
             .shadow(color: Color.cyan.opacity(0.3), radius: 12, y: 4)
         }
         .disabled(viewModel.isLoading)
-        .simultaneousGesture(
-            LongPressGesture(minimumDuration: 0.8).onEnded { _ in
-                viewModel.showDiagnostics = true
-            }
-        )
     }
 }
 

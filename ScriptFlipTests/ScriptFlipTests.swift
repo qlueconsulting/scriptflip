@@ -100,5 +100,32 @@ final class ScriptFlipTests: XCTestCase {
         XCTAssertTrue(jsonString.contains("\"inputText\":\"Test input video content\""))
         XCTAssertTrue(jsonString.contains("\"scriptStyle\":\"Casual\""))
     }
+    
+    // MARK: - ViewModel Early Return & Logging Tests
+    
+    @MainActor
+    func testGenerateScriptsEmptyInputEarlyReturn() async {
+        let vm = ScriptGeneratorViewModel()
+        vm.inputText = "   "
+        
+        await vm.generateScripts()
+        
+        XCTAssertFalse(vm.isLoading)
+        XCTAssertTrue(vm.showErrorAlert)
+        XCTAssertEqual(vm.errorMessage, "Please enter a valid YouTube/Podcast URL or transcript text.")
+        XCTAssertTrue(vm.generatedScripts.isEmpty)
+    }
+    
+    func testDebugLogServiceBuffer() {
+        DebugLogService.shared.clear()
+        DebugLogService.shared.log("Test message 1")
+        DebugLogService.shared.log("Test message 2")
+        
+        let logs = DebugLogService.shared.getLogs()
+        XCTAssertEqual(logs.count, 2)
+        XCTAssertTrue(logs[0].contains("Test message 1"))
+        XCTAssertTrue(logs[1].contains("Test message 2"))
+    }
 }
+
 
