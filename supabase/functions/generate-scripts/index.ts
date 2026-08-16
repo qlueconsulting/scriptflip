@@ -7,8 +7,7 @@ const corsHeaders = {
 }
 
 const ANTHROPIC_ENDPOINT = "https://api.anthropic.com/v1/messages"
-const PRIMARY_MODEL = "claude-3-haiku-20240307"
-const FALLBACK_MODEL = "claude-3-5-sonnet-latest"
+const ANTHROPIC_MODELS_ENDPOINT = "https://api.anthropic.com/v1/models"
 
 serve(async (req) => {
   // 1. Handle CORS Pre-Flight OPTIONS Request
@@ -30,7 +29,7 @@ serve(async (req) => {
 
     // 2. Parse and Validate Client Request Payload
     let bodyText = ""
-    let payload: { inputText?: string; scriptStyle?: string; model?: string } = {}
+    let payload: { inputText?: string; scriptStyle?: string; model?: string; outputCount?: number } = {}
     try {
       bodyText = await req.text()
       payload = JSON.parse(bodyText)
@@ -41,7 +40,7 @@ serve(async (req) => {
       )
     }
 
-    const { inputText, scriptStyle } = payload
+    const { inputText, scriptStyle, outputCount } = payload
     if (!inputText || inputText.trim() === "") {
       return new Response(
         JSON.stringify({ error: "Missing required field: inputText cannot be empty." }),
@@ -49,75 +48,116 @@ serve(async (req) => {
       )
     }
 
-    const targetModel = payload.model || PRIMARY_MODEL
-
-    const systemPrompt = `You are an elite short-form video copywriter specializing in TikTok, Instagram Reels, and YouTube Shorts.
-Analyze the provided content and extract 3 distinct, high-retention video script options in a ${scriptStyle || 'Casual'} tone.
-Each script MUST have:
-- "hook": Compelling 0-3s opening spoken sentence with high tension or curiosity.
-- "body": 15-25s core value delivery broken into fast-paced actionable points.
-- "visualCue": Specific on-screen camera directions, text overlays, and framing tips.
-- "cta": Engagement-driving call to action for the end of the video.
-
-CRITICAL: Return ONLY a valid, raw JSON array containing exactly 3 objects with keys "hook", "body", "visualCue", "cta". Do not wrap in markdown or backticks.`
-
     const requestHeaders = {
       "x-api-key": anthropicApiKey,
       "anthropic-version": "2023-06-01",
       "content-type": "application/json",
     }
 
-    const requestBody = {
-      model: targetModel,
-      max_tokens: 1500,
-      temperature: 0.7,
-      messages: [{ role: "user", content: `${systemPrompt}\n\nContent:\n${inputText}` }]
+    // 3. Dynamic Model Discovery & Hierarchy
+    let dynamicModels: string[] = []
+    try {
+      const modelsResp = await fetch(ANTHROPIC_MODELS_ENDPOINT, {
+        headers: requestHeaders
+      })
+      if (modelsResp.ok) {
+        const modelsJson = await modelsResp.json()
+        if (modelsJson.data && Array.isArray(modelsJson.data)) {
+          dynamicModels = modelsJson.data.map((m: any) => m.id)
+          console.log("[generate-scripts] Discovered active models via /v1/models:", dynamicModels)
+        }
+      } else {
+        console.warn(`[generate-scripts] /v1/models returned HTTP ${modelsResp.status}`)
+      }
+    } catch (e) {
+      console.warn("[generate-scripts] Error querying /v1/models:", e)
     }
 
-    // 3. Pre-Request Debug Logging
+    const baseModelHierarchy = [
+      payload.model,
+      Deno.env.get("ANTHROPIC_MODEL"),
+      ...dynamicModels,
+      "claude-3-5-sonnet-20241022",
+      "claude-3-5-sonnet-latest",
+      "claude-3-5-haiku-20241022",
+      "claude-3-5-haiku-latest",
+      "claude-3-5-sonnet-20240620",
+      "claude-3-haiku-20240307",
+      "claude-3-sonnet-20240229",
+      "claude-3-opus-20240229"
+    ].filter(Boolean) as string[]
+
+    const modelHierarchy = Array.from(new Set(baseModelHierarchy))
+
+    const count = outputCount || 3
+    const systemPrompt = `You are an elite short-form video copywriter specializing in TikTok, Instagram Reels, and YouTube Shorts.
+Analyze the provided content and extract ${count} distinct, high-retention video script options in a ${scriptStyle || 'Casual & Relatable'} tone.
+Each script MUST have:
+- "hook": Compelling 0-3s opening spoken sentence with high tension or curiosity.
+- "body": 15-25s core value delivery broken into fast-paced actionable points.
+- "visualCue": Specific on-screen camera directions, text overlays, and framing tips.
+- "cta": Engagement-driving call to action for the end of the video.
+
+CRITICAL: Return ONLY a valid, raw JSON array containing exactly ${count} objects with keys "hook", "body", "visualCue", "cta". Do not wrap in markdown or backticks.`
+
     const maskedKey = anthropicApiKey.length > 10 
       ? `${anthropicApiKey.substring(0, 7)}...${anthropicApiKey.substring(anthropicApiKey.length - 4)}` 
       : "***"
 
-    console.log("================ [generate-scripts] ANTHROPIC DISPATCH ================")
+    console.log("================ [generate-scripts] DISPATCH START ================")
     console.log(`[generate-scripts] Endpoint: ${ANTHROPIC_ENDPOINT}`)
-    console.log(`[generate-scripts] Target Model: ${targetModel}`)
-    console.log(`[generate-scripts] Headers: x-api-key=${maskedKey}, anthropic-version=2023-06-01, content-type=application/json`)
-    console.log(`[generate-scripts] Max Tokens: ${requestBody.max_tokens}`)
-    console.log(`[generate-scripts] Payload Body Size: ${JSON.stringify(requestBody).length} bytes`)
-    console.log("=======================================================================")
+    console.log(`[generate-scripts] Model Hierarchy: ${JSON.stringify(modelHierarchy)}`)
+    console.log(`[generate-scripts] Masked API Key: ${maskedKey}`)
+    console.log("====================================================================")
 
-    // 4. Execute Fetch to Anthropic Messages API
-    let response = await fetch(ANTHROPIC_ENDPOINT, {
-      method: "POST",
-      headers: requestHeaders,
-      body: JSON.stringify(requestBody),
-    })
+    let finalResponse: Response | null = null
+    let rawResponseText = ""
+    let successfulModel = ""
 
-    let rawResponseText = await response.text()
-    console.log(`[generate-scripts] Anthropic HTTP Status: ${response.status}`)
-
-    // 5. Automatic Fallback if 404 or model error occurs
-    if (!response.ok && (response.status === 404 || rawResponseText.includes("not_found_error")) && targetModel !== FALLBACK_MODEL) {
-      console.warn(`[generate-scripts] Primary model '${targetModel}' failed with ${response.status}. Attempting fallback to '${FALLBACK_MODEL}'...`)
+    // 4. Iterate through Model Hierarchy with Automatic Fallback
+    for (const currentModel of modelHierarchy) {
+      console.log(`[generate-scripts] Attempting dispatch with model: '${currentModel}'...`)
       
-      const fallbackRequestBody = {
-        ...requestBody,
-        model: FALLBACK_MODEL,
+      const requestBody = {
+        model: currentModel,
+        max_tokens: 1500,
+        temperature: 0.7,
+        messages: [{ role: "user", content: `${systemPrompt}\n\nContent:\n${inputText}` }]
       }
 
-      response = await fetch(ANTHROPIC_ENDPOINT, {
-        method: "POST",
-        headers: requestHeaders,
-        body: JSON.stringify(fallbackRequestBody),
-      })
-      rawResponseText = await response.text()
-      console.log(`[generate-scripts] Fallback Model '${FALLBACK_MODEL}' HTTP Status: ${response.status}`)
+      try {
+        const resp = await fetch(ANTHROPIC_ENDPOINT, {
+          method: "POST",
+          headers: requestHeaders,
+          body: JSON.stringify(requestBody),
+        })
+
+        const text = await resp.text()
+        console.log(`[generate-scripts] Model '${currentModel}' returned HTTP ${resp.status}`)
+
+        if (resp.ok) {
+          finalResponse = resp
+          rawResponseText = text
+          successfulModel = currentModel
+          console.log(`[generate-scripts] Model '${currentModel}' succeeded!`)
+          break
+        } else {
+          console.warn(`[generate-scripts] Model '${currentModel}' failed with HTTP ${resp.status}: ${text.substring(0, 200)}`)
+          finalResponse = resp
+          rawResponseText = text
+          // Stop trying only for fatal authentication errors
+          if (resp.status === 401 || resp.status === 403) {
+            break
+          }
+        }
+      } catch (fetchErr) {
+        console.error(`[generate-scripts] Network error connecting to Anthropic with model '${currentModel}':`, fetchErr)
+      }
     }
 
-    // 6. Handle Non-OK Anthropic Responses Gracefully
-    if (!response.ok) {
-      console.error(`[generate-scripts] Anthropic API Error (Status ${response.status}):`, rawResponseText)
+    // 5. Handle Non-OK Anthropic Responses Gracefully
+    if (!finalResponse || !finalResponse.ok) {
+      console.error(`[generate-scripts] All models in hierarchy failed. Last response:`, rawResponseText)
       let parsedError = rawResponseText
       try {
         const errorJson = JSON.parse(rawResponseText)
@@ -127,13 +167,14 @@ CRITICAL: Return ONLY a valid, raw JSON array containing exactly 3 objects with 
       }
       return new Response(
         JSON.stringify({ 
-          error: `Anthropic API Error (${response.status}): ${parsedError}` 
+          error: `Anthropic API Error (${finalResponse?.status || 502}): ${parsedError}`,
+          modelsAttempted: modelHierarchy
         }),
-        { status: response.status >= 400 && response.status < 600 ? response.status : 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: finalResponse?.status && finalResponse.status >= 400 && finalResponse.status < 600 ? finalResponse.status : 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       )
     }
 
-    // 7. Parse Successful Response Payload
+    // 6. Parse Successful Response Payload
     let result: any
     try {
       result = JSON.parse(rawResponseText)
@@ -153,7 +194,7 @@ CRITICAL: Return ONLY a valid, raw JSON array containing exactly 3 objects with 
       )
     }
 
-    // 8. Clean and Parse Script Array JSON
+    // 7. Clean and Parse Script Array JSON
     let contentText = result.content[0].text.trim()
     // Strip markdown code block fences if present (e.g. ```json ... ```)
     if (contentText.startsWith("```")) {
@@ -175,10 +216,13 @@ CRITICAL: Return ONLY a valid, raw JSON array containing exactly 3 objects with 
     }
 
     const finalArray = Array.isArray(parsedScripts) ? parsedScripts : [parsedScripts]
-    console.log(`[generate-scripts] Successfully generated ${finalArray.length} scripts.`)
+    console.log(`[generate-scripts] Successfully generated ${finalArray.length} scripts with model '${successfulModel}'.`)
 
     return new Response(
-      JSON.stringify({ data: finalArray }),
+      JSON.stringify({ 
+        data: finalArray,
+        activeModel: successfulModel
+      }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     )
   } catch (error) {
