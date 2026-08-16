@@ -53,7 +53,11 @@ final class ScriptFlipTests: XCTestCase {
     
     @MainActor
     func testTeleprompterTogglePlayPause() {
-        let mockScript = ScriptAPIService.mockScripts(for: GenerationRequest(inputType: .rawText, content: "Test", style: .casual))[0]
+        let scripts = ScriptAPIService.mockScripts(for: GenerationRequest(inputType: .rawText, content: "Test", style: .casual))
+        guard let mockScript = scripts.first else {
+            XCTFail("Expected mock scripts to be non-empty")
+            return
+        }
         let vm = TeleprompterViewModel(script: mockScript)
         
         XCTAssertFalse(vm.isPlaying)

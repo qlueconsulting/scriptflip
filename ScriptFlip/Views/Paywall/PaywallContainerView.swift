@@ -47,11 +47,6 @@ public struct PaywallContainerView: View {
                     }
                 }
             }
-            .task {
-                if Purchases.isConfigured {
-                    await subscriptionManager.fetchCustomerInfo()
-                }
-            }
         }
     }
     
@@ -104,10 +99,8 @@ public struct PaywallContainerView: View {
             
             VStack(spacing: 12) {
                 Button(action: {
-                    Task {
-                        subscriptionManager.isPro = true
-                        dismiss()
-                    }
+                    subscriptionManager.isPro = true
+                    dismiss()
                 }) {
                     Text("Subscribe for $19.00 / month")
                         .font(.headline.bold())

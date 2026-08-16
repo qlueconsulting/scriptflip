@@ -261,7 +261,9 @@ public struct ScriptGeneratorView: View {
     private var generateButton: some View {
         Button(action: {
             Task {
-                await viewModel.generateScripts()
+                do {
+                    await viewModel.generateScripts()
+                }
             }
         }) {
             HStack(spacing: 10) {

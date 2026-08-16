@@ -37,9 +37,8 @@ public final class TeleprompterViewModel {
     private func startTimer() {
         stopTimer()
         timer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in
+            DispatchQueue.main.async { [weak self] in
                 guard let self = self, self.isPlaying else { return }
-                // Increment scroll offset according to speed
                 self.scrollOffset += (self.scrollSpeed * 0.05)
             }
         }

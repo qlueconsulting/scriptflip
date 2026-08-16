@@ -116,8 +116,7 @@ public struct ScriptCardView: View {
                 Button(action: {
                     UIPasteboard.general.string = script.fullSpokenText
                     isCopied = true
-                    Task {
-                        try? await Task.sleep(nanoseconds: 2_000_000_000)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
                         isCopied = false
                     }
                 }) {
