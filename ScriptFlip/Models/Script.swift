@@ -60,6 +60,7 @@ public struct Script: Codable, Identifiable, Hashable, Sendable {
     }
     
     public enum TargetPlatform: String, Codable, CaseIterable, Identifiable, Sendable {
+        case universal = "Universal (TikTok, Reels, Shorts)"
         case tikTok = "TikTok"
         case reels = "Instagram Reels"
         case shorts = "YouTube Shorts"
@@ -68,6 +69,7 @@ public struct Script: Codable, Identifiable, Hashable, Sendable {
         
         public var iconName: String {
             switch self {
+            case .universal: return "sparkles.rectangle.stack.fill"
             case .tikTok: return "play.square.stack.fill"
             case .reels: return "camera.metering.matrix"
             case .shorts: return "play.tv.fill"
@@ -81,9 +83,9 @@ public struct Script: Codable, Identifiable, Hashable, Sendable {
         hookDurationSeconds: Int = 3,
         estimatedTotalDurationSeconds: Int = 30,
         style: ScriptStyle,
-        targetPlatform: TargetPlatform = .tikTok,
+        targetPlatform: TargetPlatform = .universal,
         sections: [ScriptSection],
-        viralityScore: Int = 92,
+        viralityScore: Int = 94,
         keyTakeaway: String
     ) {
         self.id = id
@@ -100,13 +102,11 @@ public struct Script: Codable, Identifiable, Hashable, Sendable {
     /// Initialize full `Script` model from Supabase Edge Function DTO (`hook`, `body`, `visualCue`, `cta`)
     public init(dto: GeneratedScriptDTO, index: Int = 1, style: ScriptStyle = .casual) {
         self.id = UUID()
-        self.title = "Option \(index): \(style.rawValue) Angle"
+        self.title = "Universal Script: \(style.rawValue) Angle"
         self.hookDurationSeconds = 3
         self.estimatedTotalDurationSeconds = 30
         self.style = style
-        
-        let platform: TargetPlatform = (index % 3 == 1) ? .tikTok : (index % 3 == 2 ? .reels : .shorts)
-        self.targetPlatform = platform
+        self.targetPlatform = .universal
         
         self.sections = [
             ScriptSection(
@@ -130,8 +130,8 @@ public struct Script: Codable, Identifiable, Hashable, Sendable {
             )
         ]
         
-        self.viralityScore = 90 + (index % 8)
-        self.keyTakeaway = "Clear 3-second hook with fast-paced delivery drives highest algorithmic completion rate."
+        self.viralityScore = 94 + (index % 5)
+        self.keyTakeaway = "Universal 3-second hook & high-retention pacing engineered for TikTok, Reels, and Shorts algorithms."
     }
     
     /// Full combined text suitable for teleprompter display.

@@ -48,6 +48,22 @@ final class ScriptFlipTests: XCTestCase {
         XCTAssertGreaterThan(scripts.first?.sections.count ?? 0, 0)
     }
     
+    func testUniversalScriptPlatformInitialization() {
+        let dto = GeneratedScriptDTO(
+            hook: "Universal Hook for all platforms",
+            body: "Universal Body content",
+            visualCue: "Direct camera zoom",
+            cta: "Save and share"
+        )
+        let script = Script(dto: dto, index: 1, style: .casual)
+        
+        XCTAssertEqual(script.targetPlatform, .universal)
+        XCTAssertEqual(script.targetPlatform.rawValue, "Universal (TikTok, Reels, Shorts)")
+        XCTAssertEqual(script.targetPlatform.iconName, "sparkles.rectangle.stack.fill")
+        XCTAssertEqual(script.title, "Universal Script: Casual Angle")
+        XCTAssertEqual(script.sections.count, 3)
+    }
+    
     // MARK: - Teleprompter State Logic Tests
     
     @MainActor

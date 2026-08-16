@@ -437,8 +437,9 @@ public final class ScriptAPIService: ScriptAPIServiceProtocol, @unchecked Sendab
     public static func mockScripts(for request: GenerationRequest) -> [Script] {
         let snippet = String(request.inputText.prefix(30))
         let style = ScriptStyle(rawValue: request.scriptStyle) ?? .casual
+        let count = request.outputCount ?? 1
         
-        return [
+        let allOptions = [
             Script(
                 dto: GeneratedScriptDTO(
                     hook: "Stop scrolling if you're still relying on raw text for '\(snippet)...'!",
@@ -470,5 +471,7 @@ public final class ScriptAPIService: ScriptAPIServiceProtocol, @unchecked Sendab
                 style: style
             )
         ]
+        
+        return Array(allOptions.prefix(count))
     }
 }

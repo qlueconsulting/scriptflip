@@ -8,6 +8,7 @@ const corsHeaders = {
 
 const ANTHROPIC_ENDPOINT = "https://api.anthropic.com/v1/messages"
 const ANTHROPIC_MODELS_ENDPOINT = "https://api.anthropic.com/v1/models"
+const MAX_INPUT_CHARS = 2800
 
 /**
  * Robustly extract clean 11-character YouTube video IDs from any URL format,
@@ -287,13 +288,19 @@ serve(async (req) => {
       }
     }
 
+    // 4. Token Reduction: Input Clamping & Sanitization
+    const trimmedInput = inputText.trim()
+    const sanitizedInput = trimmedInput.length > MAX_INPUT_CHARS
+      ? trimmedInput.substring(0, MAX_INPUT_CHARS) + "\n[...content truncated for maximum brevity...]"
+      : trimmedInput
+
     const requestHeaders = {
       "x-api-key": anthropicApiKey,
       "anthropic-version": "2023-06-01",
       "content-type": "application/json",
     }
 
-    // 4. Dynamic Model Discovery & Hierarchy
+    // 5. Dynamic Model Discovery & Hierarchy
     let dynamicModels: string[] = []
     try {
       const modelsResp = await fetch(ANTHROPIC_MODELS_ENDPOINT, {
@@ -328,16 +335,14 @@ serve(async (req) => {
 
     const modelHierarchy = Array.from(new Set(baseModelHierarchy))
 
-    const count = outputCount || 3
-    const systemPrompt = `You are an expert scriptwriter. Output ONLY valid JSON containing a 'scripts' array. Do not include markdown formatting, backticks, or conversational preamble.
+    const count = outputCount || 1
+    const style = scriptStyle || 'Casual & Relatable'
 
-If working with video metadata, title, and description rather than a word-for-word transcript, extrapolate and craft ${count} distinct, high-retention short-form video scripts around the core topic and talking points described in a ${scriptStyle || 'Casual & Relatable'} tone.
+    // 6. Token-Minimized Ultra-Dense System Prompt for Universal Short-Form Script
+    const systemPrompt = `Expert viral scriptwriter. Output ONLY valid JSON: {"scripts":[{"hook":"...","body":"...","visualCue":"...","cta":"..."}]}. Write ${count} Universal Short-Form Script (optimized for TikTok, Instagram Reels, and YouTube Shorts) in ${style} tone: 0-3s high-tension hook, 15-25s fast value body, specific visual/framing cues, and high-converting CTA. No markdown, no pre/post-amble.`
 
-Each item in the 'scripts' array MUST have:
-- "hook": Compelling 0-3s opening spoken sentence with high tension or curiosity.
-- "body": 15-25s core value delivery broken into fast-paced actionable points.
-- "visualCue": Specific on-screen camera directions, text overlays, and framing tips.
-- "cta": Engagement-driving call to action for the end of the video.`
+    // Calculate strict minimal token budget: 500 tokens for 1 script, or count * 450 tokens
+    const maxTokensBudget = count === 1 ? 500 : count * 450
 
     const maskedKey = anthropicApiKey.length > 10 
       ? `${anthropicApiKey.substring(0, 7)}...${anthropicApiKey.substring(anthropicApiKey.length - 4)}` 
@@ -347,22 +352,23 @@ Each item in the 'scripts' array MUST have:
     console.log(`[generate-scripts] Endpoint: ${ANTHROPIC_ENDPOINT}`)
     console.log(`[generate-scripts] Model Hierarchy: ${JSON.stringify(modelHierarchy)}`)
     console.log(`[generate-scripts] Masked API Key: ${maskedKey}`)
-    console.log(`[generate-scripts] Input Text Length: ${inputText.length} chars`)
+    console.log(`[generate-scripts] Input Text Length: ${sanitizedInput.length} chars (clamped)`)
+    console.log(`[generate-scripts] Output Script Count: ${count}, Max Tokens: ${maxTokensBudget}`)
     console.log("====================================================================")
 
     let finalResponse: Response | null = null
     let rawResponseText = ""
     let successfulModel = ""
 
-    // 5. Iterate through Model Hierarchy with Automatic Fallback
+    // 7. Iterate through Model Hierarchy with Automatic Fallback
     for (const currentModel of modelHierarchy) {
       console.log(`[generate-scripts] Attempting dispatch with model: '${currentModel}'...`)
       
       const requestBody = {
         model: currentModel,
-        max_tokens: 1500,
+        max_tokens: maxTokensBudget,
         temperature: 0.7,
-        messages: [{ role: "user", content: `${systemPrompt}\n\nSource Content:\n${inputText}` }]
+        messages: [{ role: "user", content: `${systemPrompt}\n\nSource:\n${sanitizedInput}` }]
       }
 
       try {
@@ -394,7 +400,7 @@ Each item in the 'scripts' array MUST have:
       }
     }
 
-    // 6. Handle Non-OK Anthropic Responses Gracefully
+    // 8. Handle Non-OK Anthropic Responses Gracefully
     if (!finalResponse || !finalResponse.ok) {
       console.error(`[generate-scripts] All models in hierarchy failed. Last response:`, rawResponseText)
       let parsedError = rawResponseText
@@ -413,7 +419,7 @@ Each item in the 'scripts' array MUST have:
       )
     }
 
-    // 7. Parse Successful Response Payload
+    // 9. Parse Successful Response Payload
     let result: any
     try {
       result = JSON.parse(rawResponseText)
@@ -433,7 +439,7 @@ Each item in the 'scripts' array MUST have:
       )
     }
 
-    // 8. Clean and Parse Script Array JSON
+    // 10. Clean and Parse Script Array JSON
     let contentText = result.content[0].text.trim()
     if (contentText.startsWith("```")) {
       contentText = contentText.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim()
@@ -465,7 +471,7 @@ Each item in the 'scripts' array MUST have:
       finalArray = [parsedScripts]
     }
 
-    console.log(`[generate-scripts] Successfully generated ${finalArray.length} scripts with model '${successfulModel}'.`)
+    console.log(`[generate-scripts] Successfully generated ${finalArray.length} universal scripts with model '${successfulModel}'.`)
 
     return new Response(
       JSON.stringify({ 

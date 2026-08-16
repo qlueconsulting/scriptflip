@@ -17,7 +17,7 @@ public struct GenerationRequest: Codable, Sendable {
         inputText: String,
         scriptStyle: String,
         inputType: InputType? = nil,
-        outputCount: Int? = 3
+        outputCount: Int? = 1
     ) {
         self.inputText = inputText
         self.scriptStyle = scriptStyle
@@ -29,7 +29,7 @@ public struct GenerationRequest: Codable, Sendable {
         inputType: InputType,
         content: String,
         style: ScriptStyle,
-        outputCount: Int = 3
+        outputCount: Int = 1
     ) {
         self.inputText = content
         self.scriptStyle = style.rawValue
