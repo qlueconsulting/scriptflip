@@ -34,8 +34,7 @@ final class ScriptFlipTests: XCTestCase {
     
     // MARK: - Mock API Response Handling
     
-    func testMockAPIReturnsCorrectScriptCount() async throws {
-        let apiService = ScriptAPIService()
+    func testMockAPIReturnsCorrectScriptCount() {
         let request = GenerationRequest(
             inputType: .rawText,
             content: "Testing raw text input content for short video",
@@ -43,7 +42,7 @@ final class ScriptFlipTests: XCTestCase {
             outputCount: 3
         )
         
-        let scripts = try await apiService.generateScripts(request: request)
+        let scripts = ScriptAPIService.mockScripts(for: request)
         XCTAssertEqual(scripts.count, 3)
         XCTAssertEqual(scripts.first?.style, .directResponse)
         XCTAssertGreaterThan(scripts.first?.sections.count ?? 0, 0)

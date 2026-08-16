@@ -240,4 +240,145 @@ final class ScriptAPIServiceTests: XCTestCase {
             XCTFail("Unexpected error: \(error)")
         }
     }
+
+    // MARK: - Pre-Flight Validation Tests
+
+    func testPreflightValidationInvalidURL() async {
+        let service = ScriptAPIService(
+            baseURL: "",
+            supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test_anon_key",
+            session: session ?? .shared
+        )
+
+        let request = GenerationRequest(inputText: "Sample input", scriptStyle: "casual")
+
+        do {
+            _ = try await service.generateScripts(request: request)
+            XCTFail("Expected configuration error for empty URL")
+        } catch let error as ScriptAPIError {
+            if case .configurationError(let msg) = error {
+                XCTAssertTrue(msg.contains("Invalid or empty Supabase Endpoint URL"))
+            } else {
+                XCTFail("Expected .configurationError, got \(error)")
+            }
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+
+        let diagnostics = service.getDiagnostics()
+        XCTAssertNotNil(diagnostics.lastErrorMessage)
+        XCTAssertTrue(diagnostics.lastErrorMessage?.contains("Invalid or empty") ?? false)
+    }
+
+    func testPreflightValidationMissingOrPlaceholderAnonKey() async {
+        let service = ScriptAPIService(
+            baseURL: "https://tcgonpbwenimvilzquoz.supabase.co/functions/v1/generate-scripts",
+            supabaseAnonKey: "your-anon-key-here",
+            session: session ?? .shared
+        )
+
+        let initialDiagnostics = service.getDiagnostics()
+        XCTAssertFalse(initialDiagnostics.hasValidAnonKey)
+        XCTAssertEqual(initialDiagnostics.anonKeyStatus, "MISSING or Placeholder")
+
+        let request = GenerationRequest(inputText: "Sample input", scriptStyle: "casual")
+
+        do {
+            _ = try await service.generateScripts(request: request)
+            XCTFail("Expected configuration error for placeholder key")
+        } catch let error as ScriptAPIError {
+            if case .configurationError(let msg) = error {
+                XCTAssertTrue(msg.contains("Missing or placeholder Supabase Anon Key"))
+            } else {
+                XCTFail("Expected .configurationError, got \(error)")
+            }
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+
+        let diagnostics = service.getDiagnostics()
+        XCTAssertNotNil(diagnostics.lastErrorMessage)
+        XCTAssertTrue(diagnostics.lastErrorMessage?.contains("Missing or placeholder") ?? false)
+    }
+
+    // MARK: - Edge Function Error & Diagnostic Payload Tracking Tests
+
+    func testEdgeFunctionErrorPayloadTracking() async {
+        let jsonResponse = """
+        {
+            "error": "OpenAI quota exceeded for edge function."
+        }
+        """
+
+        MockURLProtocol.requestHandler = { request in
+            let url = request.url ?? URL(fileURLWithPath: "/")
+            let response = HTTPURLResponse(
+                url: url,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: ["Content-Type": "application/json"]
+            ) ?? HTTPURLResponse()
+            return (response, jsonResponse.data(using: .utf8))
+        }
+
+        let service = ScriptAPIService(
+            baseURL: "https://tcgonpbwenimvilzquoz.supabase.co/functions/v1/generate-scripts",
+            supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test_anon_key",
+            session: session ?? .shared
+        )
+
+        let request = GenerationRequest(inputText: "Sample input", scriptStyle: "casual")
+
+        do {
+            _ = try await service.generateScripts(request: request)
+            XCTFail("Expected edge function error")
+        } catch let error as ScriptAPIError {
+            if case .edgeFunctionError(let message) = error {
+                XCTAssertEqual(message, "OpenAI quota exceeded for edge function.")
+            } else {
+                XCTFail("Expected .edgeFunctionError, got \(error)")
+            }
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+
+        let diagnostics = service.getDiagnostics()
+        XCTAssertEqual(diagnostics.lastResponseStatusCode, 200)
+        XCTAssertNotNil(diagnostics.lastErrorMessage)
+        XCTAssertTrue(diagnostics.lastErrorMessage?.contains("OpenAI quota exceeded") ?? false)
+        XCTAssertNotNil(diagnostics.lastDurationMs)
+        XCTAssertNotNil(diagnostics.lastRequestBody)
+    }
+
+    func testNetworkCannotFindHostErrorTracking() async {
+        MockURLProtocol.requestHandler = { _ in
+            throw URLError(.cannotFindHost)
+        }
+
+        let service = ScriptAPIService(
+            baseURL: "https://invalid-host-supabase.co/functions/v1/generate-scripts",
+            supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test_anon_key",
+            session: session ?? .shared
+        )
+
+        let request = GenerationRequest(inputText: "Sample input", scriptStyle: "casual")
+
+        do {
+            _ = try await service.generateScripts(request: request)
+            XCTFail("Expected cannotFindHost error")
+        } catch let error as ScriptAPIError {
+            if case .cannotFindHost(let host) = error {
+                XCTAssertEqual(host, "invalid-host-supabase.co")
+            } else {
+                XCTFail("Expected .cannotFindHost, got \(error)")
+            }
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+
+        let diagnostics = service.getDiagnostics()
+        XCTAssertNil(diagnostics.lastResponseStatusCode)
+        XCTAssertNotNil(diagnostics.lastErrorMessage)
+        XCTAssertTrue(diagnostics.lastErrorMessage?.contains("cannotFindHost") ?? false || diagnostics.lastErrorMessage?.contains("Server Cannot Be Found") ?? false)
+    }
 }
