@@ -13,7 +13,7 @@ public final class TeleprompterViewModel {
     public var isMirrored: Bool = false
     public var scrollOffset: Double = 0.0
     
-    private nonisolated(unsafe) var timer: Timer? = nil
+    private var timer: Timer? = nil
     
     public init(script: Script) {
         self.script = script
