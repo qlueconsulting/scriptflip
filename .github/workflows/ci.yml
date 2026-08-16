@@ -28,9 +28,11 @@ jobs:
             -scheme ScriptFlip \
             -destination 'generic/platform=iOS Simulator' \
             -enableCodeCoverage NO \
+            CODE_SIGNING_ALLOWED=NO \
             -quiet || \
           xcodebuild build \
             -project ScriptFlip.xcodeproj \
             -scheme ScriptFlip \
             -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
             -quiet
