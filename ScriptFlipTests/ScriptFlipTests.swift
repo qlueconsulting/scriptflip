@@ -79,4 +79,26 @@ final class ScriptFlipTests: XCTestCase {
         let subManager = SubscriptionManager.shared
         XCTAssertFalse(subManager.isPurchasing)
     }
+    
+    // MARK: - Environment & Serialization Tests
+    
+    func testAppEnvironmentEndpointResolution() {
+        let endpoint = AppEnvironment.generateScriptsEndpoint
+        XCTAssertEqual(endpoint, "https://tcgonpbwenimvilzquoz.supabase.co/functions/v1/generate-scripts")
+        XCTAssertTrue(endpoint.hasPrefix("https://"))
+        XCTAssertTrue(endpoint.contains("tcgonpbwenimvilzquoz.supabase.co"))
+    }
+    
+    func testGenerationRequestInputTextKeySerialization() throws {
+        let request = GenerationRequest(
+            inputText: "Test input video content",
+            scriptStyle: "Casual"
+        )
+        let data = try JSONEncoder().encode(request)
+        let jsonString = String(data: data, encoding: .utf8) ?? ""
+        
+        XCTAssertTrue(jsonString.contains("\"inputText\":\"Test input video content\""))
+        XCTAssertTrue(jsonString.contains("\"scriptStyle\":\"Casual\""))
+    }
 }
+
