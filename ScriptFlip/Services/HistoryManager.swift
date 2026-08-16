@@ -56,13 +56,14 @@ public struct HistoryItem: Codable, Identifiable, Hashable, Sendable {
 public final class HistoryManager: @unchecked Sendable {
     public static let shared = HistoryManager()
     
-    private let storageKey = "scriptflip_saved_history_v1"
+    private let storageKey: String
     private let maxHistoryCap = 5
     private let userDefaults: UserDefaults
     private let queue = DispatchQueue(label: "com.qlueconsulting.scriptflip.history", attributes: .concurrent)
     
-    public init(userDefaults: UserDefaults = .standard) {
+    public init(userDefaults: UserDefaults = .standard, storageKey: String = "scriptflip_saved_history_v1") {
         self.userDefaults = userDefaults
+        self.storageKey = storageKey
     }
     
     /// Returns all saved history items (maximum 5, ordered newest first).
@@ -90,7 +91,11 @@ public final class HistoryManager: @unchecked Sendable {
     @discardableResult
     public func addHistoryItem(_ item: HistoryItem) -> [HistoryItem] {
         queue.sync(flags: .barrier) {
-            var current = (try? JSONDecoder().decode([HistoryItem].self, from: userDefaults.data(forKey: storageKey) ?? Data())) ?? []
+            var current: [HistoryItem] = []
+            if let data = userDefaults.data(forKey: storageKey),
+               let decoded = try? JSONDecoder().decode([HistoryItem].self, from: data) {
+                current = decoded
+            }
             
             // Remove existing duplicate with same ID or identical hook/body
             current.removeAll { $0.id == item.id || ($0.hook == item.hook && $0.body == item.body) }
@@ -115,7 +120,11 @@ public final class HistoryManager: @unchecked Sendable {
     /// Deletes a specific history entry by UUID.
     public func deleteItem(id: UUID) {
         queue.sync(flags: .barrier) {
-            var current = (try? JSONDecoder().decode([HistoryItem].self, from: userDefaults.data(forKey: storageKey) ?? Data())) ?? []
+            var current: [HistoryItem] = []
+            if let data = userDefaults.data(forKey: storageKey),
+               let decoded = try? JSONDecoder().decode([HistoryItem].self, from: data) {
+                current = decoded
+            }
             current.removeAll { $0.id == id }
             if let encoded = try? JSONEncoder().encode(current) {
                 userDefaults.set(encoded, forKey: storageKey)

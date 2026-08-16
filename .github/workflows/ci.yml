@@ -32,5 +32,5 @@ jobs:
           xcodebuild build \
             -project ScriptFlip.xcodeproj \
             -scheme ScriptFlip \
-            -destination 'generic/platform=iOS Simulator' \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
             CODE_SIGNING_ALLOWED=NO

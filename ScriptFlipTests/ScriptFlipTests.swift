@@ -229,7 +229,7 @@ final class ScriptFlipTests: XCTestCase {
     // MARK: - HistoryManager & Universal Script DTO Tests
     
     func testHistoryManagerStrictCapAtFive() {
-        let history = HistoryManager(userDefaults: UserDefaults(suiteName: "test_history_suite") ?? .standard)
+        let history = HistoryManager(userDefaults: .standard, storageKey: "test_scriptflip_history_\(UUID().uuidString)")
         history.clearHistory()
         
         for i in 1...8 {
