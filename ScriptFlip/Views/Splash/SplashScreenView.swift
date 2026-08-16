@@ -2,15 +2,15 @@ import SwiftUI
 
 /// Animated splash loading screen that transitions smoothly to the main UI.
 public struct SplashScreenView<Content: View>: View {
-    @ViewBuilder let content: () -> Content
+    private let content: Content
     
     @State private var isSplashActive: Bool = true
     @State private var logoScale: CGFloat = 0.8
     @State private var logoOpacity: Double = 0.0
     @State private var textOpacity: Double = 0.0
     
-    public init(@ViewBuilder content: @escaping () -> Content) {
-        self.content = content
+    public init(@ViewBuilder content: () -> Content) {
+        self.content = content()
     }
     
     public var body: some View {
@@ -19,7 +19,7 @@ public struct SplashScreenView<Content: View>: View {
                 splashScreen
                     .transition(.opacity.combined(with: .scale(scale: 1.05)))
             } else {
-                content()
+                content
                     .transition(.opacity)
             }
         }
