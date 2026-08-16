@@ -59,6 +59,7 @@ jobs:
 
       - name: Build & Archive App
         run: |
+          set -o pipefail
           BUILD_NUMBER="${{ github.run_number }}"
           echo "Building ScriptFlip version 1.0.0 (Build $BUILD_NUMBER)..."
           xcodebuild archive \
@@ -67,7 +68,11 @@ jobs:
             -archivePath $RUNNER_TEMP/ScriptFlip.xcarchive \
             -destination "generic/platform=iOS" \
             CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
-            -allowProvisioningUpdates
+            -allowProvisioningUpdates 2>&1 | tee /tmp/archive.log || {
+              echo "=== XCODEBUILD ARCHIVE ERROR LOG ==="
+              grep -E "error:|failed|failure|fatal:" -B 2 -A 5 /tmp/archive.log | tail -n 80 || tail -n 50 /tmp/archive.log
+              exit 1
+            }
 
       - name: Export & Upload to TestFlight
         env:

@@ -21,16 +21,16 @@ jobs:
           sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
           xcodebuild -version
 
-      - name: Build and Test via xcodebuild (iOS Simulator)
+      - name: Build & Test via xcodebuild (iOS Simulator)
         run: |
+          set -o pipefail
           xcodebuild test \
             -project ScriptFlip.xcodeproj \
             -scheme ScriptFlip \
             -destination 'platform=iOS Simulator,name=iPhone 16' \
             -enableCodeCoverage NO \
-            CODE_SIGNING_ALLOWED=NO || \
-          xcodebuild build \
-            -project ScriptFlip.xcodeproj \
-            -scheme ScriptFlip \
-            -destination 'platform=iOS Simulator,name=iPhone 16' \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO 2>&1 | tee /tmp/test.log || {
+              echo "=== XCODEBUILD TEST FAILURE LOG ==="
+              grep -E "error:|failed|failure|fatal:|XCTest" -B 2 -A 5 /tmp/test.log | tail -n 80 || tail -n 50 /tmp/test.log
+              exit 1
+            }
