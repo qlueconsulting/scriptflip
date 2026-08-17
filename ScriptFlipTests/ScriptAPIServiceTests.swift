@@ -104,6 +104,63 @@ final class ScriptAPIServiceTests: XCTestCase {
 
     // MARK: - Wrapped Data Response Parsing
 
+    func testGenerateScriptsWrappedSingleUniversalScriptContract() async throws {
+        let jsonResponse = """
+        {
+            "script": {
+                "title": "Universal Short-Form Masterclass",
+                "hook": "Stop making this single mistake on TikTok!",
+                "body": "Retention in short form video drops within the first 3 seconds. Here is the 3-block structure that fixes it.",
+                "callToAction": "Save and share this video right now!",
+                "estimatedDuration": "38s",
+                "visualCues": [
+                    "Point directly at camera with energetic zoom",
+                    "Show analytics graphic overlay",
+                    "Screen banner pointing to follow button"
+                ]
+            }
+        }
+        """
+        
+        MockURLProtocol.requestHandler = { request in
+            let url = request.url ?? URL(fileURLWithPath: "/")
+            let response = HTTPURLResponse(
+                url: url,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: ["Content-Type": "application/json"]
+            ) ?? HTTPURLResponse()
+            return (response, jsonResponse.data(using: .utf8))
+        }
+
+        let service = ScriptAPIService(
+            baseURL: "https://tcgonpbwenimvilzquoz.supabase.co/functions/v1/generate-scripts",
+            supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test_anon_key",
+            session: session ?? .shared
+        )
+
+        let request = GenerationRequest(inputText: "https://youtube.com/watch?v=12345678901", scriptStyle: "casual")
+        let scripts = try await service.generateScripts(request: request)
+
+        XCTAssertEqual(scripts.count, 1)
+        guard let script = scripts.first else {
+            XCTFail("Missing generated script")
+            return
+        }
+        
+        XCTAssertEqual(script.title, "Universal Short-Form Masterclass")
+        XCTAssertEqual(script.hook, "Stop making this single mistake on TikTok!")
+        XCTAssertEqual(script.body, "Retention in short form video drops within the first 3 seconds. Here is the 3-block structure that fixes it.")
+        XCTAssertEqual(script.cta, "Save and share this video right now!")
+        XCTAssertEqual(script.estimatedDuration, "38s")
+        XCTAssertEqual(script.visualCue, "Point directly at camera with energetic zoom")
+        XCTAssertEqual(script.sections.count, 3)
+        XCTAssertEqual(script.sections[0].spokenText, "Stop making this single mistake on TikTok!")
+        XCTAssertEqual(script.sections[0].visualCue, "Point directly at camera with energetic zoom")
+        XCTAssertEqual(script.sections[1].visualCue, "Show analytics graphic overlay")
+        XCTAssertEqual(script.sections[2].visualCue, "Screen banner pointing to follow button")
+    }
+
     func testGenerateScriptsWrappedDataParsing() async throws {
         let jsonResponse = """
         {

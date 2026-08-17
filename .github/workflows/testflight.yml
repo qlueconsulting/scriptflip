@@ -45,7 +45,13 @@ jobs:
           security default-keychain -s $KEYCHAIN_PATH
 
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
+          PROFILE_UUID=$(security cms -D -i $PP_PATH 2>/dev/null | plutil -extract UUID raw - 2>/dev/null || true)
+          if [ -n "$PROFILE_UUID" ]; then
+            echo "Installing provisioning profile with UUID: $PROFILE_UUID"
+            cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/${PROFILE_UUID}.mobileprovision
+          fi
+          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/ScriptFlip_AppStore_Profile.mobileprovision
+          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/build_pp.mobileprovision
 
       - name: Setup App Store Connect API Key
         env:
@@ -59,12 +65,21 @@ jobs:
 
       - name: Build & Archive App
         run: |
+          set -o pipefail
+          BUILD_NUMBER="${{ github.run_number }}"
+          echo "Archiving ScriptFlip (Build $BUILD_NUMBER)..."
           xcodebuild archive \
             -project ScriptFlip.xcodeproj \
             -scheme ScriptFlip \
             -archivePath $RUNNER_TEMP/ScriptFlip.xcarchive \
             -destination "generic/platform=iOS" \
             -allowProvisioningUpdates 2>&1 | tee /tmp/archive.log
+
+          if [ ! -d "$RUNNER_TEMP/ScriptFlip.xcarchive" ]; then
+            echo "Error: Archive was not created!"
+            tail -n 100 /tmp/archive.log
+            exit 1
+          fi
 
       - name: Ensure Archive SDK Metadata
         run: |
@@ -83,12 +98,19 @@ jobs:
           KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
         run: |
-          echo "Exporting archive..."
+          set -o pipefail
+          echo "Exporting archive to IPA..."
           xcodebuild -exportArchive \
             -archivePath $RUNNER_TEMP/ScriptFlip.xcarchive \
             -exportOptionsPlist exportOptions.plist \
             -exportPath $RUNNER_TEMP/build \
             -allowProvisioningUpdates 2>&1 | tee /tmp/export.log
+
+          if [ ! -f "$RUNNER_TEMP/build/ScriptFlip.ipa" ]; then
+            echo "Error: Exported IPA not found!"
+            cat /tmp/export.log
+            exit 1
+          fi
 
           mkdir -p $RUNNER_TEMP/ipa_unpack
           unzip -q $RUNNER_TEMP/build/ScriptFlip.ipa -d $RUNNER_TEMP/ipa_unpack
