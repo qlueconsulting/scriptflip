@@ -160,6 +160,7 @@ final class ScriptFlipTests: XCTestCase {
     
     // MARK: - TestFlight & Tester Override Tests
     
+    @MainActor
     func testTestFlightOrDebugDetection() {
         let isTestFlight = SubscriptionManager.isTestFlightOrDebug
         #if DEBUG
@@ -169,6 +170,7 @@ final class ScriptFlipTests: XCTestCase {
         #endif
     }
     
+    @MainActor
     func testTesterOverrideToggle() {
         let initial = SubscriptionManager.isTesterOverrideEnabled
         defer { SubscriptionManager.isTesterOverrideEnabled = initial }
