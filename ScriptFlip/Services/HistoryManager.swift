@@ -68,7 +68,7 @@ public final class HistoryManager: @unchecked Sendable {
     
     /// Returns all saved history items (maximum 5, ordered newest first).
     public func getHistory() -> [HistoryItem] {
-        queue.sync {
+        queue.sync { () -> [HistoryItem] in
             guard let data = userDefaults.data(forKey: storageKey) else { return [] }
             do {
                 let decoder = JSONDecoder()
@@ -90,7 +90,7 @@ public final class HistoryManager: @unchecked Sendable {
     /// Adds a HistoryItem, ensuring max 5 items stored.
     @discardableResult
     public func addHistoryItem(_ item: HistoryItem) -> [HistoryItem] {
-        queue.sync(flags: .barrier) {
+        queue.sync(flags: .barrier) { () -> [HistoryItem] in
             var current: [HistoryItem] = []
             if let data = userDefaults.data(forKey: storageKey),
                let decoded = try? JSONDecoder().decode([HistoryItem].self, from: data) {
@@ -119,7 +119,7 @@ public final class HistoryManager: @unchecked Sendable {
     
     /// Deletes a specific history entry by UUID.
     public func deleteItem(id: UUID) {
-        queue.sync(flags: .barrier) {
+        queue.sync(flags: .barrier) { () -> Void in
             var current: [HistoryItem] = []
             if let data = userDefaults.data(forKey: storageKey),
                let decoded = try? JSONDecoder().decode([HistoryItem].self, from: data) {
@@ -135,7 +135,7 @@ public final class HistoryManager: @unchecked Sendable {
     
     /// Clears all stored history items.
     public func clearHistory() {
-        queue.sync(flags: .barrier) {
+        queue.sync(flags: .barrier) { () -> Void in
             userDefaults.removeObject(forKey: storageKey)
             DebugLogService.shared.log("[HistoryManager] History completely cleared.")
         }

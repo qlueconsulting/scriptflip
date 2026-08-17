@@ -55,13 +55,8 @@ public final class ScriptGeneratorViewModel {
     }
     
     public func refreshUsage() {
-        do {
-            self.userUsage = usageTracker.getUsage()
-            DebugLogService.shared.log("[ViewModel] Usage refreshed: \(userUsage.usedCount)/3 used (\(userUsage.remainingFreeGenerations) remaining).")
-        } catch {
-            print("[ScriptGeneratorViewModel] Warning during usage refresh: \(error.localizedDescription)")
-            self.userUsage = UserUsage()
-        }
+        self.userUsage = usageTracker.getUsage()
+        DebugLogService.shared.log("[ViewModel] Usage refreshed: \(userUsage.usedCount)/3 used (\(userUsage.remainingFreeGenerations) remaining).")
     }
     
     public func getDiagnostics() -> NetworkDiagnosticInfo {
