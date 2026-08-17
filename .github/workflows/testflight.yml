@@ -83,6 +83,7 @@ jobs:
           KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
         run: |
+          echo "Exporting archive..."
           xcodebuild -exportArchive \
             -archivePath $RUNNER_TEMP/ScriptFlip.xcarchive \
             -exportOptionsPlist exportOptions.plist \
@@ -105,13 +106,15 @@ jobs:
           fi
 
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
-          codesign --force --sign "Apple Distribution" --keychain "$KEYCHAIN_PATH" --preserve-metadata=entitlements "$RUNNER_TEMP/ipa_unpack/Payload/ScriptFlip.app"
+          echo "Signing application bundle and embedded frameworks with --deep..."
+          codesign --force --deep --sign "Apple Distribution" --keychain "$KEYCHAIN_PATH" --preserve-metadata=entitlements "$RUNNER_TEMP/ipa_unpack/Payload/ScriptFlip.app"
 
           rm -f $RUNNER_TEMP/build/ScriptFlip.ipa
           cd $RUNNER_TEMP/ipa_unpack
           zip -qr -9 "$RUNNER_TEMP/build/ScriptFlip.ipa" Payload
           cd -
 
+          echo "Uploading IPA to TestFlight via altool..."
           xcrun altool --upload-app \
             -f $RUNNER_TEMP/build/ScriptFlip.ipa \
             -t ios \
