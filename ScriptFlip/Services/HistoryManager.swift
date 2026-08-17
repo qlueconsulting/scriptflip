@@ -72,7 +72,7 @@ public final class HistoryManager: @unchecked Sendable {
             guard let data = userDefaults.data(forKey: storageKey) else { return [] }
             do {
                 let decoder = JSONDecoder()
-                let items = try decoder.decode([HistoryItem].self, data: data)
+                let items = try decoder.decode([HistoryItem].self, from: data)
                 return Array(items.prefix(maxHistoryCap))
             } catch {
                 DebugLogService.shared.log("[HistoryManager] Failed to decode history: \(error.localizedDescription)")
