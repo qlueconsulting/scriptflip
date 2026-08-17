@@ -73,6 +73,7 @@ jobs:
             -scheme ScriptFlip \
             -archivePath $RUNNER_TEMP/ScriptFlip.xcarchive \
             -destination "generic/platform=iOS" \
+            CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
             -allowProvisioningUpdates 2>&1 | tee /tmp/archive.log
 
           if [ ! -d "$RUNNER_TEMP/ScriptFlip.xcarchive" ]; then
@@ -83,9 +84,11 @@ jobs:
 
       - name: Ensure Archive SDK Metadata
         run: |
+          BUILD_NUMBER="${{ github.run_number }}"
           ARCHIVE_PLIST="$RUNNER_TEMP/ScriptFlip.xcarchive/Products/Applications/ScriptFlip.app/Info.plist"
           if [ -f "$ARCHIVE_PLIST" ]; then
-            echo "Patching archive Info.plist..."
+            echo "Patching archive Info.plist with Build $BUILD_NUMBER..."
+            plutil -replace CFBundleVersion -string "$BUILD_NUMBER" "$ARCHIVE_PLIST" 2>/dev/null || true
             plutil -replace DTSDKName -string "iphoneos26.0" "$ARCHIVE_PLIST" 2>/dev/null || true
             plutil -replace DTPlatformVersion -string "26.0" "$ARCHIVE_PLIST" 2>/dev/null || true
             plutil -replace DTXcode -string "2600" "$ARCHIVE_PLIST" 2>/dev/null || true
@@ -99,6 +102,7 @@ jobs:
           ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
         run: |
           set -o pipefail
+          BUILD_NUMBER="${{ github.run_number }}"
           echo "Exporting archive to IPA..."
           xcodebuild -exportArchive \
             -archivePath $RUNNER_TEMP/ScriptFlip.xcarchive \
@@ -117,14 +121,15 @@ jobs:
           PAYLOAD_PLIST="$RUNNER_TEMP/ipa_unpack/Payload/ScriptFlip.app/Info.plist"
 
           if [ -f "$PAYLOAD_PLIST" ]; then
-            echo "Patching IPA Payload Info.plist for App Store Connect SDK 26 validation..."
+            echo "Patching IPA Payload Info.plist for App Store Connect SDK 26 validation (Build $BUILD_NUMBER)..."
+            plutil -replace CFBundleVersion -string "$BUILD_NUMBER" "$PAYLOAD_PLIST"
             plutil -replace DTSDKName -string "iphoneos26.0" "$PAYLOAD_PLIST"
             plutil -replace DTPlatformVersion -string "26.0" "$PAYLOAD_PLIST"
             plutil -replace DTXcode -string "2600" "$PAYLOAD_PLIST"
             plutil -replace DTXcodeBuild -string "26A100" "$PAYLOAD_PLIST"
             plutil -replace MinimumOSVersion -string "17.0" "$PAYLOAD_PLIST"
             plutil -replace ITSAppUsesNonExemptEncryption -bool NO "$PAYLOAD_PLIST"
-            plutil -p "$PAYLOAD_PLIST" | grep -E "DTSDK|DTPlatform|DTXcode|ITSAppUsesNonExemptEncryption"
+            plutil -p "$PAYLOAD_PLIST" | grep -E "CFBundleVersion|DTSDK|DTPlatform|DTXcode|ITSAppUsesNonExemptEncryption"
           fi
 
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
