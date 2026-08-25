@@ -455,30 +455,30 @@ public final class ScriptAPIService: ScriptAPIServiceProtocol, @unchecked Sendab
         let allOptions = [
             Script(
                 dto: GeneratedScriptDTO(
-                    hook: "Stop scrolling if you're still relying on raw text for '\(snippet)...'!",
-                    body: "Most creators spend hours editing, but forget that retention drops in the first 3 seconds. Keep hooks short and add visual cues.",
-                    visualCue: "Point directly at camera with high-contrast text overlay.",
-                    cta: "Save this video right now for your next Short or Reel!"
+                    hook: "Wait, you guys have to see what this video about '\(snippet)...' claims!",
+                    body: "I was reviewing this content and here is the biggest mistake most creators make when looking at it. Let's break down what's actually happening and why you need to adjust your strategy.",
+                    visualCue: "Point directly at camera with high-contrast reaction headline overlay.",
+                    cta: "Save this breakdown for your next Short or Reel!"
                 ),
                 index: 1,
                 style: style
             ),
             Script(
                 dto: GeneratedScriptDTO(
-                    hook: "Here is how I turned '\(snippet)' into 100k views without showing my face.",
-                    body: "I structured every Short into three clear blocks: 3-second hook, core value delivery, and a comment-driven call to action.",
+                    hook: "Everyone in the comments is praising this take on '\(snippet)', but here's the truth.",
+                    body: "Let's react to the core argument: they claim you need complex workflows, but the data shows a 3-block reaction framework outperforms it every single time. Here is how to apply it.",
                     visualCue: "Show phone screen with viral view analytics animation.",
-                    cta: "Comment 'FLIP' below to get the full teleprompter template!"
+                    cta: "Comment 'FLIP' below to get the full reaction breakdown template!"
                 ),
                 index: 2,
                 style: style
             ),
             Script(
                 dto: GeneratedScriptDTO(
-                    hook: "3 tools that turn long videos into viral Shorts in 60 seconds.",
-                    body: "Tool 1 extracts the top hook. Tool 2 generates visual cues. Tool 3 streams directly to your teleprompter.",
-                    visualCue: "Fast cuts showing editing software timeline.",
-                    cta: "Follow @ScriptFlip for daily short-form video strategies!"
+                    hook: "3 massive takeaways from this clip on '\(snippet)' that you missed.",
+                    body: "Lesson 1: The hook pattern interrupt. Lesson 2: Pacing the core revelation. Lesson 3: Driving the comment engagement. Here is how you can use this in your next video.",
+                    visualCue: "Fast cuts showing reaction highlights timeline.",
+                    cta: "Follow @ScriptFlip for daily short-form reaction strategies!"
                 ),
                 index: 3,
                 style: style

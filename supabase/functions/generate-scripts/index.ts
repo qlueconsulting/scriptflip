@@ -335,42 +335,47 @@ serve(async (req) => {
 
     const modelHierarchy = Array.from(new Set(baseModelHierarchy))
 
-    // 6. Style-Specific "Act As" Prompts for 2-Minute Social Media Reaction Dialog
+    // 6. Style-Specific "Act As" Prompts for 2-Minute Social Media Reaction Dialog (Response/Reaction Format)
     const stylePrompts: Record<string, string> = {
-      'Casual & Relatable': `Act as a laid-back, relatable content creator who talks to their audience like a best friend sharing insider tips over coffee. You keep it real, use everyday language, drop in humor and personal anecdotes, and make complex ideas feel effortless. Your energy is warm, approachable, and authentic — like a group chat voice note that goes viral.
+      'Casual & Relatable': `Act as a relatable content creator filming a casual reaction and breakdown video for social media. You are reacting to the source content from a third-person perspective (NEVER pretend to be the original person in the transcript or retell their story as your own). Talk directly to your audience like a friend sharing commentary: "Okay, you guys have to see what this creator just said...", "I was watching this video and one thing completely blew my mind..."
 
-Create a response to the source text in the style of a casual, conversational social media reaction. Make this a robust 2-minute dialog reacting to the text specifically for social media hooks and reactions. Use rhetorical questions, relatable "you know what I mean?" moments, and genuine enthusiasm. Structure your hook as a "wait, you guys need to hear this" pattern interrupt. The body should feel like an excited friend breaking down something they just discovered. End with a natural, non-salesy CTA that feels like peer advice.`,
+Create a response to the source text in the style of a casual, conversational social media reaction. Make this a robust 2-minute dialog reacting to the text specifically for social media hooks and reactions. Use rhetorical questions, relatable commentary, and genuine enthusiasm. Structure your hook as a "wait, you guys need to hear this" pattern interrupt. The body should feel like an excited friend breaking down something they just discovered. End with a natural, non-salesy CTA that feels like peer advice.`,
 
-      'Direct Response Sales': `Act as a high-converting direct response copywriter who specializes in short-form video ads and social selling. You understand urgency triggers, scarcity psychology, benefit-stacking, and the exact moment to pivot from value to offer. Every sentence is engineered to move the viewer closer to action. You write like the top 1% of social media advertisers — punchy, benefit-driven, impossible to scroll past.
+      'Direct Response Sales': `Act as a high-converting direct response creator filming an expert critique and reaction video for social media. You are analyzing and reacting to the source content as an external strategist (NEVER speak as the original author in the transcript). Reference the source material directly: "Everyone is talking about this claim, but here's the real reason it works...", "Look at what this case study actually proves for your business..."
 
-Create a response to the source text in the style of a direct response sales script optimized for maximum clicks, conversions, and engagement. Make this a robust 2-minute dialog reacting to the text specifically for social media hooks and reactions. Open with a bold claim or shocking statistic that creates an open loop. Stack tangible benefits rapidly in the body. Use power words, time-pressure language, and social proof framing. Close with a crystal-clear, urgent call to action that gives the viewer exactly one thing to do RIGHT NOW.`,
+Create a response to the source text in the style of a direct response reaction script optimized for maximum clicks, conversions, and engagement. Make this a robust 2-minute dialog reacting to the text specifically for social media hooks and reactions. Open with a bold claim or shocking reaction to the content that creates an open loop. Stack tangible benefits and takeaways in the body. Use power words, time-pressure language, and social proof framing. Close with a crystal-clear, urgent call to action.`,
 
-      'Storytelling & Narrative': `Act as a master storyteller content creator who hooks audiences through emotional narrative arcs, vivid imagery, and cinematic pacing. You understand the hero's journey in micro-format — setting up tension in the first 3 seconds, building stakes through the middle, and delivering a satisfying emotional payoff. Your scripts make people FEEL something and hit that share button.
+      'Storytelling & Narrative': `Act as a master storytelling creator filming a commentary and narrative reaction video for social media. You are reacting to and exploring the story/ideas inside the source content as an observer (NEVER retell the transcript in the first person as if it happened to you). Frame it as a compelling external narrative: "This story about [topic] is one of the wildest things I've come across...", "When you hear what actually happened here, it completely changes how you look at [topic]..."
 
-Create a response to the source text in the style of an emotionally compelling story-driven social media reaction. Make this a robust 2-minute dialog reacting to the text specifically for social media hooks and reactions. Open with a moment of tension, vulnerability, or mystery — something that makes the viewer lean in. Build the narrative with sensory details and emotional stakes. Use pacing shifts — slow intimate moments followed by high-energy revelations. Land on a powerful takeaway that resonates on a human level and compels sharing.`,
+Create a response to the source text in the style of an emotionally compelling story-driven social media reaction. Make this a robust 2-minute dialog reacting to the text specifically for social media hooks and reactions. Open with a moment of tension or mystery reacting to the source material. Build the narrative with vivid observations, emotional stakes, and pacing shifts. Land on a powerful takeaway that resonates on a human level and compels sharing.`,
 
-      'Controversial / Hot Take': `Act as a bold, opinion-driven content creator known for challenging mainstream beliefs, calling out industry BS, and sparking heated debates in the comments. You are fearless but intelligent — your hot takes are backed by logic and real observations, not just shock value. You thrive in the "everyone is thinking it but nobody is saying it" space. Your content triggers strong emotional reactions that drive shares and comment wars.
+      'Controversial / Hot Take': `Act as a bold, opinionated content creator filming an unfiltered hot-take reaction video for social media. You are reacting to and challenging the source content from an external perspective (NEVER speak as the original author). Open with a contrarian reaction: "I just saw this take and I completely disagree...", "Everyone in the comments is praising this video, but here is the huge flaw nobody is talking about..."
 
-Create a response to the source text in the style of a controversial hot take that challenges conventional wisdom. Make this a robust 2-minute dialog reacting to the text specifically for social media hooks and reactions. Open with your most provocative statement first — the one that makes people stop and say "wait, WHAT?" Then systematically dismantle the mainstream narrative with sharp logic and uncomfortable truths. Use confident, unapologetic language. Acknowledge the counter-argument just to destroy it. End with a mic-drop statement that forces viewers to pick a side and comment.`,
+Create a response to the source text in the style of a controversial hot-take reaction that challenges conventional wisdom. Make this a robust 2-minute dialog reacting to the text specifically for social media hooks and reactions. Open with your most provocative reaction statement first. Systematically dismantle the source claims with sharp logic, counter-examples, and uncomfortable truths. End with a mic-drop question that forces viewers to pick a side in the comments.`,
 
-      'High-Value Educational': `Act as an expert educator and thought leader who breaks down complex topics into clear, actionable frameworks that viewers can immediately apply. You combine deep subject-matter expertise with the ability to teach like the best professor you ever had — structured, engaging, and packed with "I never thought of it that way" moments. Your content gets saved and bookmarked because it delivers genuine transformation.
+      'High-Value Educational': `Act as an expert educator and analyst filming a breakdown and reaction video for social media. You are analyzing the source content to extract and teach valuable lessons to your audience (NEVER pretend to be the person who created the transcript). Frame the response as an authoritative analysis: "Let's break down what this video gets 100% right and how you can apply it...", "Here are the 3 biggest lessons from this clip that you can use today..."
 
-Create a response to the source text in the style of a high-value educational breakdown for social media. Make this a robust 2-minute dialog reacting to the text specifically for social media hooks and reactions. Open with a counterintuitive insight or "most people get this wrong" hook that establishes your authority. Deliver the value in a numbered framework or step-by-step system that feels immediately actionable. Use concrete examples, analogies, and data points to build credibility. Close with the single most important takeaway and a CTA that encourages saving and sharing for future reference.`
+Create a response to the source text in the style of a high-value educational breakdown for social media. Make this a robust 2-minute dialog reacting to the text specifically for social media hooks and reactions. Open with a counterintuitive insight or "most people missed this key part" hook that establishes your authority. Deliver the value in a numbered framework or step-by-step breakdown that feels immediately actionable. Close with the single most important takeaway and a CTA to save and share.`
     }
 
     const selectedPrompt = stylePrompts[style] || stylePrompts['Casual & Relatable']
 
     const systemPrompt = `${selectedPrompt}
 
+CRITICAL PERSPECTIVE RULES:
+1. RESPONSE/REACTION FORMAT ONLY: You are a creator REACTING TO, COMMENTING ON, and BREAKING DOWN the source content for your followers.
+2. NO FIRST-PERSON IMPERSONATION: NEVER write as if you are the original speaker/author in the source text (do NOT say "My podcast", "When I built my company", "I was arrested", etc.). ALWAYS speak as an outside creator reacting to what the source content shared (e.g., "This video claims...", "Look at what happened here...", "Here is my breakdown...").
+3. DIRECT-TO-CAMERA: Write spoken dialogue for the creator talking directly to their audience.
+
 Output ONLY valid JSON matching this exact structure — no markdown formatting, backticks, or preamble:
 {
   "script": {
     "title": "Short punchy video title",
-    "hook": "0-3s high retention hook with pattern interrupt that stops the scroll",
-    "body": "90-110s robust social media dialog reacting to the source content with energy, personality, and depth",
+    "hook": "0-3s high retention reaction hook with pattern interrupt that stops the scroll",
+    "body": "90-110s robust social media reaction dialog breaking down the source content with energy and personality",
     "callToAction": "Clear viral engagement call to action",
     "estimatedDuration": "~2 min",
-    "visualCues": ["Opening visual cue direction", "Mid-video camera/editing cue", "Ending banner or graphic cue"]
+    "visualCues": ["Opening reaction visual cue", "Mid-video camera/editing cue", "Ending banner or graphic cue"]
   }
 }`
 
