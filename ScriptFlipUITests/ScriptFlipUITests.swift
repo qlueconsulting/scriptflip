@@ -10,8 +10,8 @@ final class ScriptFlipUITests: XCTestCase {
         let app = XCUIApplication()
         app.launch()
         
-        // 1. Verify Home Title exists
-        XCTAssertTrue(app.navigationBars["ScriptFlip"].exists)
+        // 1. Verify Home Title exists after splash transition
+        XCTAssertTrue(app.navigationBars["ScriptFlip"].waitForExistence(timeout: 5.0))
         
         // 2. Select Style
         let storytellingButton = app.buttons["Storytelling & Narrative"]
