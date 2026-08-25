@@ -56,7 +56,11 @@ public final class ScriptGeneratorViewModel {
     
     public func refreshUsage() {
         self.userUsage = usageTracker.getUsage()
-        DebugLogService.shared.log("[ViewModel] Usage refreshed: \(userUsage.usedCount)/3 used (\(userUsage.remainingFreeGenerations) remaining).")
+        if subscriptionManager.isProTierActive {
+            DebugLogService.shared.log("[ViewModel] Usage refreshed (PRO): \(userUsage.proUsedThisWeek)/50 weekly, \(userUsage.proUsedThisMonth)/250 monthly.")
+        } else {
+            DebugLogService.shared.log("[ViewModel] Usage refreshed (FREE): \(userUsage.usedCount)/3 used (\(userUsage.remainingFreeGenerations) remaining).")
+        }
     }
     
     public func getDiagnostics() -> NetworkDiagnosticInfo {
@@ -64,7 +68,11 @@ public final class ScriptGeneratorViewModel {
     }
     
     public var canGenerateFree: Bool {
-        subscriptionManager.isUnlimited || !userUsage.isLimitReached
+        if subscriptionManager.isProTierActive {
+            return !userUsage.isProLimitReached
+        } else {
+            return !userUsage.isLimitReached
+        }
     }
     
     public func generateScripts() async {
@@ -81,11 +89,25 @@ public final class ScriptGeneratorViewModel {
         
         refreshUsage()
         
-        let isUnlimited = subscriptionManager.isUnlimited
+        let isPro = subscriptionManager.isProTierActive
         
-        // Check if user has unlimited access (TestFlight, Debug, Tester override, or active Pro)
-        if isUnlimited {
-            DebugLogService.shared.log("[ViewModel] Unlimited mode active (TestFlight/Debug=\(SubscriptionManager.isTestFlightOrDebug), TesterOverride=\(SubscriptionManager.isTesterOverrideEnabled), isPro=\(subscriptionManager.isPro)). Bypassing quota check.")
+        // 1. Quota Verification
+        if isPro {
+            if userUsage.isProWeeklyLimitReached {
+                let limitMsg = "Weekly Pro Limit Reached: You have reached your 50 script generations for this week. Your weekly quota will automatically reset."
+                DebugLogService.shared.log("[ViewModel] Blocked early: \(limitMsg)")
+                self.errorMessage = limitMsg
+                self.showErrorAlert = true
+                return
+            }
+            if userUsage.isProMonthlyLimitReached {
+                let limitMsg = "Monthly Pro Limit Reached: You have reached your 250 script generations for this month. Your monthly quota will reset next month."
+                DebugLogService.shared.log("[ViewModel] Blocked early: \(limitMsg)")
+                self.errorMessage = limitMsg
+                self.showErrorAlert = true
+                return
+            }
+            DebugLogService.shared.log("[ViewModel] Pro tier active. Quota check passed (\(userUsage.remainingProWeeklyGenerations) weekly / \(userUsage.remainingProMonthlyGenerations) monthly left).")
         } else {
             let hasFreeCredits = !userUsage.isLimitReached
             
@@ -95,7 +117,7 @@ public final class ScriptGeneratorViewModel {
                 let hasLivePro = await subscriptionManager.fetchCustomerInfo()
                 
                 if !hasLivePro {
-                    let limitMsg = "Subscription required: You have used your 3 free generations for this month. Please subscribe to Pro for unlimited access."
+                    let limitMsg = "Subscription required: You have used your 3 free generations for this month. Upgrade to Pro for 50 scripts/week (250/month)."
                     DebugLogService.shared.log("[ViewModel] Blocked early: \(limitMsg)")
                     self.errorMessage = limitMsg
                     self.showPaywall = true
@@ -132,12 +154,12 @@ public final class ScriptGeneratorViewModel {
                 HistoryManager.shared.addScript(script)
             }
             
-            // Increment usage count only if NOT in Unlimited / TestFlight mode
-            if !subscriptionManager.isUnlimited {
-                self.userUsage = usageTracker.incrementUsage()
-                DebugLogService.shared.log("[ViewModel] Incremented usage: now \(self.userUsage.usedCount)/3.")
+            // Increment usage count for Free or Pro quota
+            self.userUsage = usageTracker.incrementUsage(isPro: subscriptionManager.isProTierActive)
+            if subscriptionManager.isProTierActive {
+                DebugLogService.shared.log("[ViewModel] Incremented Pro usage: \(self.userUsage.proUsedThisWeek)/50 weekly, \(self.userUsage.proUsedThisMonth)/250 monthly.")
             } else {
-                DebugLogService.shared.log("[ViewModel] Unlimited mode: free credit count not decremented.")
+                DebugLogService.shared.log("[ViewModel] Incremented Free usage: now \(self.userUsage.usedCount)/3.")
             }
             
             self.isLoading = false

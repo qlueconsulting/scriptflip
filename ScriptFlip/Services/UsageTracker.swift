@@ -1,6 +1,6 @@
 import Foundation
 
-/// Persistent monthly usage tracker enforcing the 3 free generations limit per month.
+/// Persistent usage tracker enforcing Free limits (3/mo) and Pro limits (50/wk, 250/mo).
 public final class UsageTracker: Sendable {
     public static let shared = UsageTracker()
     
@@ -8,7 +8,7 @@ public final class UsageTracker: Sendable {
     
     private init() {}
     
-    /// Get current usage, resetting count if a new calendar month has started.
+    /// Get current usage, resetting weekly / monthly quotas if calendar intervals have rolled over.
     public func getUsage() -> UserUsage {
         guard let data = UserDefaults.standard.data(forKey: userDefaultsKey) else {
             let initial = UserUsage()
@@ -17,14 +17,28 @@ public final class UsageTracker: Sendable {
         }
         
         do {
-            let usage = try JSONDecoder().decode(UserUsage.self, from: data)
+            var usage = try JSONDecoder().decode(UserUsage.self, from: data)
+            let calendar = Calendar.current
+            let now = Date()
+            var modified = false
             
             // Check if calendar month has changed
-            let calendar = Calendar.current
-            if !calendar.isDate(usage.lastResetDate, equalTo: Date(), toGranularity: .month) {
-                let resetUsage = UserUsage(usedCount: 0, lastResetDate: Date())
-                saveUsage(resetUsage)
-                return resetUsage
+            if !calendar.isDate(usage.lastResetDate, equalTo: now, toGranularity: .month) {
+                usage.usedCount = 0
+                usage.proUsedThisMonth = 0
+                usage.lastResetDate = now
+                modified = true
+            }
+            
+            // Check if calendar week has changed
+            if !calendar.isDate(usage.lastWeekResetDate, equalTo: now, toGranularity: .weekOfYear) {
+                usage.proUsedThisWeek = 0
+                usage.lastWeekResetDate = now
+                modified = true
+            }
+            
+            if modified {
+                saveUsage(usage)
             }
             
             return usage
@@ -36,18 +50,29 @@ public final class UsageTracker: Sendable {
         }
     }
     
-    /// Increment usage count after successful script generation.
+    /// Increment usage count after successful script generation based on active Pro status.
     @discardableResult
-    public func incrementUsage() -> UserUsage {
+    public func incrementUsage(isPro: Bool = false) -> UserUsage {
         var current = getUsage()
-        current.usedCount += 1
+        if isPro {
+            current.proUsedThisWeek += 1
+            current.proUsedThisMonth += 1
+        } else {
+            current.usedCount += 1
+        }
         saveUsage(current)
         return current
     }
     
-    /// Reset usage (useful for testing or Pro status upgrades).
+    /// Reset all Free and Pro usage quotas (useful for diagnostics or testing).
     public func resetUsage() {
-        let reset = UserUsage(usedCount: 0, lastResetDate: Date())
+        let reset = UserUsage(
+            usedCount: 0,
+            lastResetDate: Date(),
+            proUsedThisWeek: 0,
+            proUsedThisMonth: 0,
+            lastWeekResetDate: Date()
+        )
         saveUsage(reset)
     }
     

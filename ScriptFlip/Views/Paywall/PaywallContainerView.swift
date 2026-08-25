@@ -74,7 +74,7 @@ public struct PaywallContainerView: View {
             }
             
             VStack(alignment: .leading, spacing: 14) {
-                FeatureRow(icon: "infinite", title: "Unlimited Script Generations", subtitle: "No 3/month restrictions")
+                FeatureRow(icon: "sparkles", title: "50 Script Generations / Week", subtitle: "Up to 250 high-retention scripts / month")
                 FeatureRow(icon: "bolt.badge.clock.fill", title: "AI Timed Hooks (0-3s)", subtitle: "Maximize first 3 seconds retention")
                 FeatureRow(icon: "eye.fill", title: "Full-Screen Teleprompter", subtitle: "Custom scroll speed & auto-mirroring")
                 FeatureRow(icon: "square.and.arrow.up.fill", title: "Instant Export & Copy", subtitle: "Share directly to Notion, Notes, or team")

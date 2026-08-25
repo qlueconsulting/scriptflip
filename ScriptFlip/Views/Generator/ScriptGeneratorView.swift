@@ -196,17 +196,17 @@ public struct ScriptGeneratorView: View {
     private var usageBadge: some View {
         Button(action: { 
             DebugLogService.shared.log("[View] Usage badge tapped.")
-            if !subscriptionManager.isUnlimited {
+            if !subscriptionManager.isProTierActive {
                 viewModel.showPaywall = true 
             } else {
                 viewModel.showDiagnostics = true
             }
         }) {
             HStack(spacing: 6) {
-                if subscriptionManager.isUnlimited {
+                if subscriptionManager.isProTierActive {
                     Image(systemName: "crown.fill")
                         .foregroundStyle(.yellow)
-                    Text(SubscriptionManager.isTestFlightOrDebug ? "TESTFLIGHT UNLIMITED" : (SubscriptionManager.isTesterOverrideEnabled ? "TESTER UNLIMITED" : "PRO"))
+                    Text(SubscriptionManager.isTesterOverrideEnabled ? "TESTER PRO (\(viewModel.userUsage.remainingProWeeklyGenerations)/50)" : "PRO (\(viewModel.userUsage.remainingProWeeklyGenerations)/50)")
                         .font(.caption.bold())
                         .foregroundStyle(.yellow)
                 } else {

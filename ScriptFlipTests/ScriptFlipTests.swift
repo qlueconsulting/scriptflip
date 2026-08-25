@@ -32,6 +32,42 @@ final class ScriptFlipTests: XCTestCase {
         XCTAssertTrue(usageReached.isLimitReached)
     }
     
+    func testProUserUsageCalculations() {
+        let proUsage = UserUsage(proUsedThisWeek: 10, proUsedThisMonth: 40)
+        XCTAssertEqual(proUsage.remainingProWeeklyGenerations, 40)
+        XCTAssertEqual(proUsage.remainingProMonthlyGenerations, 210)
+        XCTAssertFalse(proUsage.isProWeeklyLimitReached)
+        XCTAssertFalse(proUsage.isProMonthlyLimitReached)
+        XCTAssertFalse(proUsage.isProLimitReached)
+        
+        let proWeeklyCap = UserUsage(proUsedThisWeek: 50, proUsedThisMonth: 50)
+        XCTAssertEqual(proWeeklyCap.remainingProWeeklyGenerations, 0)
+        XCTAssertTrue(proWeeklyCap.isProWeeklyLimitReached)
+        XCTAssertTrue(proWeeklyCap.isProLimitReached)
+        
+        let proMonthlyCap = UserUsage(proUsedThisWeek: 10, proUsedThisMonth: 250)
+        XCTAssertEqual(proMonthlyCap.remainingProMonthlyGenerations, 0)
+        XCTAssertTrue(proMonthlyCap.isProMonthlyLimitReached)
+        XCTAssertTrue(proMonthlyCap.isProLimitReached)
+    }
+    
+    func testUsageTrackerIncrementProAndFree() {
+        let tracker = UsageTracker.shared
+        tracker.resetUsage()
+        
+        let freeIncremented = tracker.incrementUsage(isPro: false)
+        XCTAssertEqual(freeIncremented.usedCount, 1)
+        XCTAssertEqual(freeIncremented.proUsedThisWeek, 0)
+        XCTAssertEqual(freeIncremented.proUsedThisMonth, 0)
+        
+        let proIncremented = tracker.incrementUsage(isPro: true)
+        XCTAssertEqual(proIncremented.usedCount, 1)
+        XCTAssertEqual(proIncremented.proUsedThisWeek, 1)
+        XCTAssertEqual(proIncremented.proUsedThisMonth, 1)
+        
+        tracker.resetUsage()
+    }
+    
     // MARK: - Mock API Response Handling
     
     func testMockAPIReturnsCorrectScriptCount() {

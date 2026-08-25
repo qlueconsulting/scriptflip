@@ -30,7 +30,7 @@ public final class SubscriptionManager {
         #endif
     }
     
-    /// User-persisted tester override to simulate unlimited Pro tier during QA / Diagnostics.
+    /// User-persisted tester override to simulate Pro tier during QA / Diagnostics.
     public static var isTesterOverrideEnabled: Bool {
         get {
             UserDefaults.standard.bool(forKey: "DEBUG_UNLIMITED_TESTER_MODE")
@@ -40,9 +40,14 @@ public final class SubscriptionManager {
         }
     }
     
-    /// Determines whether the user has unlimited generations (active Pro, TestFlight sandbox, or manual Tester override).
+    /// Determines whether the Pro tier is active (via live RevenueCat Pro entitlement or manual Tester override).
+    public var isProTierActive: Bool {
+        isPro || Self.isTesterOverrideEnabled
+    }
+    
+    /// Backward-compatible alias for Pro tier status.
     public var isUnlimited: Bool {
-        isPro || Self.isTestFlightOrDebug || Self.isTesterOverrideEnabled
+        isProTierActive
     }
     
     // MARK: - SDK Lifecycle

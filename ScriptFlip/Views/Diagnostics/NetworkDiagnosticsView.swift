@@ -117,15 +117,29 @@ public struct NetworkDiagnosticsView: View {
                 )
                 
                 diagnosticRow(
-                    title: "Unlimited Tester Mode Override",
-                    value: isTesterOverrideActive ? "ENABLED (Bypassing Free Limit)" : "DISABLED (Standard Quota Enforced)",
+                    title: "Pro Tier Status",
+                    value: SubscriptionManager.shared.isPro ? "ACTIVE (RevenueCat Pro Entitlement)" : (isTesterOverrideActive ? "ACTIVE (Tester Override Enabled)" : "INACTIVE (Free Tier Active)"),
+                    isMonospace: false,
+                    isSuccess: SubscriptionManager.shared.isProTierActive
+                )
+                
+                diagnosticRow(
+                    title: "Tester Pro Mode Override",
+                    value: isTesterOverrideActive ? "ENABLED (Pro 50/wk · 250/mo Active)" : "DISABLED (Standard Free 3/mo Enforced)",
                     isMonospace: false,
                     isSuccess: isTesterOverrideActive
                 )
                 
+                let usage = UsageTracker.shared.getUsage()
                 diagnosticRow(
-                    title: "Monthly Usage Counter",
-                    value: "\(currentUsedCount) of 3 Used (\(max(0, 3 - currentUsedCount)) Free Left)",
+                    title: "Free Quota",
+                    value: "\(usage.usedCount) of 3 Used (\(usage.remainingFreeGenerations) Free Left)",
+                    isMonospace: true
+                )
+                
+                diagnosticRow(
+                    title: "Pro Quota",
+                    value: "\(usage.proUsedThisWeek)/50 Weekly · \(usage.proUsedThisMonth)/250 Monthly",
                     isMonospace: true
                 )
                 
@@ -140,13 +154,13 @@ public struct NetworkDiagnosticsView: View {
                     Button(action: {
                         UsageTracker.shared.resetUsage()
                         currentUsedCount = 0
-                        DebugLogService.shared.log("[Diagnostics] Tester reset free credits to 3 (usedCount = 0).")
-                        testerActionMessage = "✅ Free Credits Reset to 3!"
+                        DebugLogService.shared.log("[Diagnostics] Tester reset quotas (Free 3/mo, Pro 50/wk, Pro 250/mo).")
+                        testerActionMessage = "✅ Quotas Reset (3 Free · 50/wk Pro · 250/mo Pro)"
                         self.logs = DebugLogService.shared.getLogs()
                     }) {
                         HStack(spacing: 6) {
                             Image(systemName: "arrow.counterclockwise")
-                            Text("Reset Free Credits to 3")
+                            Text("Reset All Quotas")
                         }
                         .font(.caption.bold())
                         .foregroundStyle(.white)
@@ -161,13 +175,13 @@ public struct NetworkDiagnosticsView: View {
                         let newValue = !SubscriptionManager.isTesterOverrideEnabled
                         SubscriptionManager.isTesterOverrideEnabled = newValue
                         isTesterOverrideActive = newValue
-                        DebugLogService.shared.log("[Diagnostics] Toggled Unlimited Tester Mode to \(newValue).")
-                        testerActionMessage = newValue ? "✨ Unlimited Mode Enabled" : "🔒 Unlimited Mode Disabled"
+                        DebugLogService.shared.log("[Diagnostics] Toggled Tester Pro Mode to \(newValue).")
+                        testerActionMessage = newValue ? "✨ Tester Pro Enabled (50/wk · 250/mo)" : "🔒 Free Tier Enforced (3/mo)"
                         self.logs = DebugLogService.shared.getLogs()
                     }) {
                         HStack(spacing: 6) {
                             Image(systemName: isTesterOverrideActive ? "checkmark.seal.fill" : "seal")
-                            Text(isTesterOverrideActive ? "Disable Unlimited" : "Enable Unlimited")
+                            Text(isTesterOverrideActive ? "Disable Pro" : "Enable Pro")
                         }
                         .font(.caption.bold())
                         .foregroundStyle(isTesterOverrideActive ? .black : .white)
