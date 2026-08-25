@@ -23,28 +23,13 @@ public struct AboutView: View {
                     VStack(spacing: 28) {
                         // App Icon & Header
                         VStack(spacing: 14) {
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 24)
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [.cyan, .mint],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
-                                    .frame(width: 88, height: 88)
-                                    .shadow(color: Color.cyan.opacity(0.4), radius: 16, y: 6)
-                                
-                                Image(systemName: "sparkles.tv.fill")
-                                    .font(.system(size: 44, weight: .bold))
-                                    .foregroundStyle(.black)
-                            }
+                            Image("ScriptFlipLogo")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(maxWidth: 240, maxHeight: 110)
+                                .shadow(color: Color.cyan.opacity(0.35), radius: 16, y: 4)
                             
                             VStack(spacing: 4) {
-                                Text("ScriptFlip")
-                                    .font(.title2.bold())
-                                    .foregroundStyle(.white)
-                                
                                 Text("Version \(appVersion) (Build \(buildNumber))")
                                     .font(.footnote.monospaced())
                                     .foregroundStyle(.gray)

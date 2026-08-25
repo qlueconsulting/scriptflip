@@ -35,36 +35,14 @@ public struct SplashScreenView<Content: View>: View {
             VStack(spacing: 24) {
                 Spacer()
                 
-                // Branded Logo Icon
-                ZStack {
-                    Circle()
-                        .fill(
-                            RadialGradient(
-                                colors: [Color.cyan.opacity(0.35), Color.clear],
-                                center: .center,
-                                startRadius: 10,
-                                endRadius: 90
-                            )
-                        )
-                        .frame(width: 180, height: 180)
-                    
-                    RoundedRectangle(cornerRadius: 32)
-                        .fill(
-                            LinearGradient(
-                                colors: [.cyan, .mint],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 104, height: 104)
-                        .shadow(color: Color.cyan.opacity(0.5), radius: 24, y: 8)
-                    
-                    Image(systemName: "sparkles.tv.fill")
-                        .font(.system(size: 52, weight: .bold))
-                        .foregroundStyle(.black)
-                }
-                .scaleEffect(logoScale)
-                .opacity(logoOpacity)
+                // Branded Logo
+                Image("ScriptFlipLogo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: 280, maxHeight: 140)
+                    .shadow(color: Color.cyan.opacity(0.35), radius: 24, y: 8)
+                    .scaleEffect(logoScale)
+                    .opacity(logoOpacity)
                 
                 // App Title & Tagline
                 VStack(spacing: 8) {

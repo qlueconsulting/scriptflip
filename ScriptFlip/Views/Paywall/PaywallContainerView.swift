@@ -55,15 +55,11 @@ public struct PaywallContainerView: View {
         VStack(spacing: 24) {
             Spacer()
             
-            Image(systemName: "sparkles.tv.fill")
-                .font(.system(size: 64))
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [.cyan, .purple],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+            Image("ScriptFlipLogo")
+                .resizable()
+                .scaledToFit()
+                .frame(maxWidth: 240, maxHeight: 100)
+                .shadow(color: Color.cyan.opacity(0.35), radius: 16, y: 4)
             
             VStack(spacing: 8) {
                 Text("Unlock ScriptFlip Pro")
