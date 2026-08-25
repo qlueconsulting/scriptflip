@@ -8,7 +8,7 @@ const corsHeaders = {
 
 const ANTHROPIC_ENDPOINT = "https://api.anthropic.com/v1/messages"
 const ANTHROPIC_MODELS_ENDPOINT = "https://api.anthropic.com/v1/models"
-const MAX_INPUT_CHARS = 2800
+const MAX_INPUT_CHARS = 4000
 
 /**
  * Robustly extract clean 11-character YouTube video IDs from any URL format,
@@ -335,23 +335,46 @@ serve(async (req) => {
 
     const modelHierarchy = Array.from(new Set(baseModelHierarchy))
 
-    const style = scriptStyle || 'Casual & Relatable'
+    // 6. Style-Specific "Act As" Prompts for 2-Minute Social Media Reaction Dialog
+    const stylePrompts: Record<string, string> = {
+      'Casual & Relatable': `Act as a laid-back, relatable content creator who talks to their audience like a best friend sharing insider tips over coffee. You keep it real, use everyday language, drop in humor and personal anecdotes, and make complex ideas feel effortless. Your energy is warm, approachable, and authentic — like a group chat voice note that goes viral.
 
-    // 6. Single Universal Script Prompt with structured schema
-    const systemPrompt = `Expert viral video scriptwriter. Output ONLY valid JSON matching this exact structure:
+Create a response to the source text in the style of a casual, conversational social media reaction. Make this a robust 2-minute dialog reacting to the text specifically for social media hooks and reactions. Use rhetorical questions, relatable "you know what I mean?" moments, and genuine enthusiasm. Structure your hook as a "wait, you guys need to hear this" pattern interrupt. The body should feel like an excited friend breaking down something they just discovered. End with a natural, non-salesy CTA that feels like peer advice.`,
+
+      'Direct Response Sales': `Act as a high-converting direct response copywriter who specializes in short-form video ads and social selling. You understand urgency triggers, scarcity psychology, benefit-stacking, and the exact moment to pivot from value to offer. Every sentence is engineered to move the viewer closer to action. You write like the top 1% of social media advertisers — punchy, benefit-driven, impossible to scroll past.
+
+Create a response to the source text in the style of a direct response sales script optimized for maximum clicks, conversions, and engagement. Make this a robust 2-minute dialog reacting to the text specifically for social media hooks and reactions. Open with a bold claim or shocking statistic that creates an open loop. Stack tangible benefits rapidly in the body. Use power words, time-pressure language, and social proof framing. Close with a crystal-clear, urgent call to action that gives the viewer exactly one thing to do RIGHT NOW.`,
+
+      'Storytelling & Narrative': `Act as a master storyteller content creator who hooks audiences through emotional narrative arcs, vivid imagery, and cinematic pacing. You understand the hero's journey in micro-format — setting up tension in the first 3 seconds, building stakes through the middle, and delivering a satisfying emotional payoff. Your scripts make people FEEL something and hit that share button.
+
+Create a response to the source text in the style of an emotionally compelling story-driven social media reaction. Make this a robust 2-minute dialog reacting to the text specifically for social media hooks and reactions. Open with a moment of tension, vulnerability, or mystery — something that makes the viewer lean in. Build the narrative with sensory details and emotional stakes. Use pacing shifts — slow intimate moments followed by high-energy revelations. Land on a powerful takeaway that resonates on a human level and compels sharing.`,
+
+      'Controversial / Hot Take': `Act as a bold, opinion-driven content creator known for challenging mainstream beliefs, calling out industry BS, and sparking heated debates in the comments. You are fearless but intelligent — your hot takes are backed by logic and real observations, not just shock value. You thrive in the "everyone is thinking it but nobody is saying it" space. Your content triggers strong emotional reactions that drive shares and comment wars.
+
+Create a response to the source text in the style of a controversial hot take that challenges conventional wisdom. Make this a robust 2-minute dialog reacting to the text specifically for social media hooks and reactions. Open with your most provocative statement first — the one that makes people stop and say "wait, WHAT?" Then systematically dismantle the mainstream narrative with sharp logic and uncomfortable truths. Use confident, unapologetic language. Acknowledge the counter-argument just to destroy it. End with a mic-drop statement that forces viewers to pick a side and comment.`,
+
+      'High-Value Educational': `Act as an expert educator and thought leader who breaks down complex topics into clear, actionable frameworks that viewers can immediately apply. You combine deep subject-matter expertise with the ability to teach like the best professor you ever had — structured, engaging, and packed with "I never thought of it that way" moments. Your content gets saved and bookmarked because it delivers genuine transformation.
+
+Create a response to the source text in the style of a high-value educational breakdown for social media. Make this a robust 2-minute dialog reacting to the text specifically for social media hooks and reactions. Open with a counterintuitive insight or "most people get this wrong" hook that establishes your authority. Deliver the value in a numbered framework or step-by-step system that feels immediately actionable. Use concrete examples, analogies, and data points to build credibility. Close with the single most important takeaway and a CTA that encourages saving and sharing for future reference.`
+    }
+
+    const selectedPrompt = stylePrompts[style] || stylePrompts['Casual & Relatable']
+
+    const systemPrompt = `${selectedPrompt}
+
+Output ONLY valid JSON matching this exact structure — no markdown formatting, backticks, or preamble:
 {
   "script": {
     "title": "Short punchy video title",
-    "hook": "0-3s high retention hook with pattern interrupt",
-    "body": "15-25s fast-paced high value delivery",
+    "hook": "0-3s high retention hook with pattern interrupt that stops the scroll",
+    "body": "90-110s robust social media dialog reacting to the source content with energy, personality, and depth",
     "callToAction": "Clear viral engagement call to action",
-    "estimatedDuration": "30-45s",
-    "visualCues": ["Opening visual cue direction", "Mid-video camera movement cue", "Ending banner cue"]
+    "estimatedDuration": "~2 min",
+    "visualCues": ["Opening visual cue direction", "Mid-video camera/editing cue", "Ending banner or graphic cue"]
   }
-}
-Write 1 Universal Short-Form Video Script (optimized for TikTok, Instagram Reels, and YouTube Shorts) in ${style} tone. No markdown formatting, backticks, or preamble.`
+}`
 
-    const maxTokensBudget = 550
+    const maxTokensBudget = 1800
 
     const maskedKey = anthropicApiKey.length > 10 
       ? `${anthropicApiKey.substring(0, 7)}...${anthropicApiKey.substring(anthropicApiKey.length - 4)}` 

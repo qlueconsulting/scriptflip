@@ -107,10 +107,10 @@ public struct Script: Codable, Identifiable, Hashable, Sendable {
         self.id = UUID()
         self.title = dto.title?.isEmpty == false ? dto.title! : "Universal Script: \(style.rawValue) Angle"
         self.hookDurationSeconds = 3
-        self.estimatedTotalDurationSeconds = 35
+        self.estimatedTotalDurationSeconds = 120
         self.style = style
         self.targetPlatform = .universal
-        self.estimatedDuration = dto.estimatedDuration ?? "30-45s"
+        self.estimatedDuration = dto.estimatedDuration ?? "~2 min"
         
         let primaryVisualCue = dto.visualCues?.first ?? dto.visualCue ?? "Direct camera eye-contact with high-contrast text overlay"
         let bodyVisualCue = (dto.visualCues != nil && dto.visualCues!.count > 1) ? dto.visualCues![1] : "Dynamic camera cuts and text overlays"
@@ -125,13 +125,13 @@ public struct Script: Codable, Identifiable, Hashable, Sendable {
                 audioCue: "High energy audio punch"
             ),
             ScriptSection(
-                timeRange: "0:03 - 0:25",
+                timeRange: "0:03 - 1:50",
                 sectionType: .body,
                 spokenText: dto.body,
                 visualCue: bodyVisualCue
             ),
             ScriptSection(
-                timeRange: "0:25 - 0:30",
+                timeRange: "1:50 - 2:00",
                 sectionType: .callToAction,
                 spokenText: dto.resolvedCTA,
                 visualCue: ctaVisualCue
@@ -139,7 +139,7 @@ public struct Script: Codable, Identifiable, Hashable, Sendable {
         ]
         
         self.viralityScore = 95
-        self.keyTakeaway = "Universal 3-second pattern interrupt & high-retention pacing engineered for TikTok, Reels, and Shorts algorithms."
+        self.keyTakeaway = "2-minute social media reaction dialog with 3-second pattern interrupt hook engineered for TikTok, Reels, and Shorts algorithms."
     }
     
     /// Initialize full `Script` model from legacy `GeneratedScriptDTO`
