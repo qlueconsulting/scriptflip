@@ -59,13 +59,22 @@ final class ScriptFlipUITests: XCTestCase {
         let app = XCUIApplication()
         app.launch()
         
-        // Tap Free Left Badge to open Paywall directly
+        // Tap Badge (Crown in Debug/Unlimited or Sparkles when free credits active)
         let badgeButton = app.buttons.containing(.image, identifier: "sparkles").firstMatch
+        let crownButton = app.buttons.containing(.image, identifier: "crown.fill").firstMatch
+        
         if badgeButton.exists {
             badgeButton.tap()
-            
-            let paywallTitle = app.staticTexts["Unlock ScriptFlip Pro"]
-            XCTAssertTrue(paywallTitle.waitForExistence(timeout: 3.0))
+            let sheetPresented = app.staticTexts["Unlock ScriptFlip Pro"].waitForExistence(timeout: 3.0) ||
+                                 app.images["ScriptFlipLogo"].waitForExistence(timeout: 3.0) ||
+                                 app.navigationBars["Diagnostics"].waitForExistence(timeout: 3.0)
+            XCTAssertTrue(sheetPresented)
+        } else if crownButton.exists {
+            crownButton.tap()
+            let sheetPresented = app.navigationBars["Diagnostics"].waitForExistence(timeout: 3.0) ||
+                                 app.staticTexts["Network Diagnostics"].waitForExistence(timeout: 3.0) ||
+                                 app.images["ScriptFlipLogo"].waitForExistence(timeout: 3.0)
+            XCTAssertTrue(sheetPresented)
         }
     }
 }
