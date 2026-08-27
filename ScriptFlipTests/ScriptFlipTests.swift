@@ -77,6 +77,9 @@ final class ScriptFlipTests: XCTestCase {
         XCTAssertEqual(monthlyInc.proUsedThisWeek, 1)
         XCTAssertEqual(monthlyInc.proUsedThisMonth, 1)
         
+        tracker.resetUsage()
+    }
+    
     func testPublicGMReleaseConfigurationSettings() {
         // Verify Live Public API Configuration
         let key = AppEnvironment.revenueCatAPIKey

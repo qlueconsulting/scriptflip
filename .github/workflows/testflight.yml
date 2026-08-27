@@ -15,11 +15,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Select Xcode Version
+      - name: Select Xcode Version (Strict GM Only)
         run: |
           sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
-          xcodebuild -version
-          xcrun --sdk iphoneos --show-sdk-version
+          XCODE_VER=$(xcodebuild -version | head -n 1)
+          SDK_VER=$(xcrun --sdk iphoneos --show-sdk-version)
+          echo "Selected Xcode: $XCODE_VER"
+          echo "Selected SDK: $SDK_VER"
+          if echo "$XCODE_VER" | grep -qi "beta"; then
+            echo "Error: Detected beta version of Xcode in TestFlight pipeline ($XCODE_VER). Only public GM releases are permitted."
+            exit 1
+          fi
 
       - name: Install Apple Certificate and Provisioning Profile
         env:
