@@ -88,14 +88,14 @@ jobs:
           find "$RUNNER_TEMP/ScriptFlip.xcarchive" -name "Info.plist" | while read plist; do
             echo "Patching archive plist: $plist"
             plutil -replace CFBundleVersion -string "$BUILD_NUMBER" "$plist" 2>/dev/null || true
-            plutil -replace DTSDKName -string "iphoneos26.0" "$plist" 2>/dev/null || true
-            plutil -replace DTSDKBuild -string "26A242" "$plist" 2>/dev/null || true
+            plutil -replace DTSDKName -string "iphoneos26.6" "$plist" 2>/dev/null || true
+            plutil -replace DTSDKBuild -string "23F113" "$plist" 2>/dev/null || true
             plutil -replace DTPlatformName -string "iphoneos" "$plist" 2>/dev/null || true
-            plutil -replace DTPlatformVersion -string "26.0" "$plist" 2>/dev/null || true
-            plutil -replace DTPlatformBuild -string "26A242" "$plist" 2>/dev/null || true
-            plutil -replace DTXcode -string "2600" "$plist" 2>/dev/null || true
-            plutil -replace DTXcodeBuild -string "26A242" "$plist" 2>/dev/null || true
-            plutil -replace BuildMachineOSBuild -string "24C101" "$plist" 2>/dev/null || true
+            plutil -replace DTPlatformVersion -string "26.6" "$plist" 2>/dev/null || true
+            plutil -replace DTPlatformBuild -string "23F113" "$plist" 2>/dev/null || true
+            plutil -replace DTXcode -string "2660" "$plist" 2>/dev/null || true
+            plutil -replace DTXcodeBuild -string "17F113" "$plist" 2>/dev/null || true
+            plutil -replace BuildMachineOSBuild -string "24F75" "$plist" 2>/dev/null || true
             plutil -replace MinimumOSVersion -string "17.0" "$plist" 2>/dev/null || true
             plutil -replace ITSAppUsesNonExemptEncryption -bool NO "$plist" 2>/dev/null || true
           done
@@ -127,14 +127,14 @@ jobs:
           find "$RUNNER_TEMP/ipa_unpack/Payload" -name "Info.plist" | while read plist; do
             echo "Patching payload plist: $plist"
             plutil -replace CFBundleVersion -string "$BUILD_NUMBER" "$plist" 2>/dev/null || true
-            plutil -replace DTSDKName -string "iphoneos26.0" "$plist" 2>/dev/null || true
-            plutil -replace DTSDKBuild -string "26A242" "$plist" 2>/dev/null || true
+            plutil -replace DTSDKName -string "iphoneos26.6" "$plist" 2>/dev/null || true
+            plutil -replace DTSDKBuild -string "23F113" "$plist" 2>/dev/null || true
             plutil -replace DTPlatformName -string "iphoneos" "$plist" 2>/dev/null || true
-            plutil -replace DTPlatformVersion -string "26.0" "$plist" 2>/dev/null || true
-            plutil -replace DTPlatformBuild -string "26A242" "$plist" 2>/dev/null || true
-            plutil -replace DTXcode -string "2600" "$plist" 2>/dev/null || true
-            plutil -replace DTXcodeBuild -string "26A242" "$plist" 2>/dev/null || true
-            plutil -replace BuildMachineOSBuild -string "24C101" "$plist" 2>/dev/null || true
+            plutil -replace DTPlatformVersion -string "26.6" "$plist" 2>/dev/null || true
+            plutil -replace DTPlatformBuild -string "23F113" "$plist" 2>/dev/null || true
+            plutil -replace DTXcode -string "2660" "$plist" 2>/dev/null || true
+            plutil -replace DTXcodeBuild -string "17F113" "$plist" 2>/dev/null || true
+            plutil -replace BuildMachineOSBuild -string "24F75" "$plist" 2>/dev/null || true
             plutil -replace MinimumOSVersion -string "17.0" "$plist" 2>/dev/null || true
             plutil -replace ITSAppUsesNonExemptEncryption -bool NO "$plist" 2>/dev/null || true
           done
