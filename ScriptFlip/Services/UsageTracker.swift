@@ -50,18 +50,26 @@ public final class UsageTracker: Sendable {
         }
     }
     
-    /// Increment usage count after successful script generation based on active Pro status.
+    /// Increment usage count after successful script generation based on active subscription tier.
     @discardableResult
-    public func incrementUsage(isPro: Bool = false) -> UserUsage {
+    public func incrementUsage(tier: SubscriptionTier) -> UserUsage {
         var current = getUsage()
-        if isPro {
-            current.proUsedThisWeek += 1
-            current.proUsedThisMonth += 1
-        } else {
+        switch tier {
+        case .free:
             current.usedCount += 1
+        case .proWeekly:
+            current.proUsedThisWeek += 1
+        case .proMonthly:
+            current.proUsedThisMonth += 1
         }
         saveUsage(current)
         return current
+    }
+    
+    /// Backward-compatible overload for boolean isPro parameter.
+    @discardableResult
+    public func incrementUsage(isPro: Bool = false) -> UserUsage {
+        incrementUsage(tier: isPro ? .proWeekly : .free)
     }
     
     /// Reset all Free and Pro usage quotas (useful for diagnostics or testing).

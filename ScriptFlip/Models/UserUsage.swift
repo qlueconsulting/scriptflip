@@ -1,6 +1,21 @@
 import Foundation
 
-/// Models Free tier (3/mo) and Pro tier (50/wk, 250/mo) user quotas and limits.
+/// Subscription tiers supported by ScriptFlip with distinct quota limits.
+public enum SubscriptionTier: String, Codable, Sendable, CaseIterable {
+    case free = "Free"
+    case proWeekly = "Pro Weekly"
+    case proMonthly = "Pro Monthly"
+    
+    public var displayName: String {
+        switch self {
+        case .free: return "Free (3 / month)"
+        case .proWeekly: return "Pro Weekly (50 / week)"
+        case .proMonthly: return "Pro Monthly (250 / month)"
+        }
+    }
+}
+
+/// Models Free tier (3/mo), Pro Weekly (50/wk), and Pro Monthly (250/mo) user quotas and limits.
 public struct UserUsage: Codable, Sendable {
     public static let freeMonthlyLimit: Int = 3
     public static let proWeeklyLimit: Int = 50
@@ -27,6 +42,30 @@ public struct UserUsage: Codable, Sendable {
         self.proUsedThisWeek = proUsedThisWeek
         self.proUsedThisMonth = proUsedThisMonth
         self.lastWeekResetDate = lastWeekResetDate
+    }
+    
+    // MARK: - Tier-Specific Quota Evaluation
+    
+    public func remainingGenerations(for tier: SubscriptionTier) -> Int {
+        switch tier {
+        case .free:
+            return remainingFreeGenerations
+        case .proWeekly:
+            return remainingProWeeklyGenerations
+        case .proMonthly:
+            return remainingProMonthlyGenerations
+        }
+    }
+    
+    public func isLimitReached(for tier: SubscriptionTier) -> Bool {
+        switch tier {
+        case .free:
+            return isLimitReached
+        case .proWeekly:
+            return isProWeeklyLimitReached
+        case .proMonthly:
+            return isProMonthlyLimitReached
+        }
     }
     
     // MARK: - Free Tier Computations

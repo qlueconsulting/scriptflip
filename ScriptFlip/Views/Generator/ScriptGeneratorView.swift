@@ -203,13 +203,20 @@ public struct ScriptGeneratorView: View {
             }
         }) {
             HStack(spacing: 6) {
-                if subscriptionManager.isProTierActive {
+                switch subscriptionManager.activeTier {
+                case .proWeekly:
                     Image(systemName: "crown.fill")
                         .foregroundStyle(.yellow)
-                    Text(SubscriptionManager.isTesterOverrideEnabled ? "TESTER PRO (\(viewModel.userUsage.remainingProWeeklyGenerations)/50)" : "PRO (\(viewModel.userUsage.remainingProWeeklyGenerations)/50)")
+                    Text("PRO (\(viewModel.userUsage.remainingProWeeklyGenerations)/50 Wk)")
                         .font(.caption.bold())
                         .foregroundStyle(.yellow)
-                } else {
+                case .proMonthly:
+                    Image(systemName: "crown.fill")
+                        .foregroundStyle(.yellow)
+                    Text("PRO (\(viewModel.userUsage.remainingProMonthlyGenerations)/250 Mo)")
+                        .font(.caption.bold())
+                        .foregroundStyle(.yellow)
+                case .free:
                     Image(systemName: "sparkles")
                         .foregroundStyle(.cyan)
                     Text("\(viewModel.userUsage.remainingFreeGenerations) Free Left")

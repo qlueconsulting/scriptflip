@@ -117,29 +117,28 @@ public struct NetworkDiagnosticsView: View {
                 )
                 
                 diagnosticRow(
-                    title: "Pro Tier Status",
-                    value: SubscriptionManager.shared.isPro ? "ACTIVE (RevenueCat Pro Entitlement)" : (isTesterOverrideActive ? "ACTIVE (Tester Override Enabled)" : "INACTIVE (Free Tier Active)"),
+                    title: "Active Subscription Tier",
+                    value: SubscriptionManager.shared.activeTier.displayName,
                     isMonospace: false,
                     isSuccess: SubscriptionManager.shared.isProTierActive
                 )
                 
-                diagnosticRow(
-                    title: "Tester Pro Mode Override",
-                    value: isTesterOverrideActive ? "ENABLED (Pro 50/wk · 250/mo Active)" : "DISABLED (Standard Free 3/mo Enforced)",
-                    isMonospace: false,
-                    isSuccess: isTesterOverrideActive
-                )
-                
                 let usage = UsageTracker.shared.getUsage()
                 diagnosticRow(
-                    title: "Free Quota",
+                    title: "Free Quota (3/mo)",
                     value: "\(usage.usedCount) of 3 Used (\(usage.remainingFreeGenerations) Free Left)",
                     isMonospace: true
                 )
                 
                 diagnosticRow(
-                    title: "Pro Quota",
-                    value: "\(usage.proUsedThisWeek)/50 Weekly · \(usage.proUsedThisMonth)/250 Monthly",
+                    title: "Pro Weekly Quota (50/wk)",
+                    value: "\(usage.proUsedThisWeek) of 50 Used (\(usage.remainingProWeeklyGenerations) Left)",
+                    isMonospace: true
+                )
+                
+                diagnosticRow(
+                    title: "Pro Monthly Quota (250/mo)",
+                    value: "\(usage.proUsedThisMonth) of 250 Used (\(usage.remainingProMonthlyGenerations) Left)",
                     isMonospace: true
                 )
                 
@@ -150,7 +149,59 @@ public struct NetworkDiagnosticsView: View {
                         .padding(.vertical, 2)
                 }
                 
-                HStack(spacing: 10) {
+                VStack(spacing: 8) {
+                    HStack(spacing: 8) {
+                        Button(action: {
+                            SubscriptionManager.isTesterOverrideEnabled = false
+                            isTesterOverrideActive = false
+                            DebugLogService.shared.log("[Diagnostics] Switched to Free Tier (3/mo).")
+                            testerActionMessage = "🔒 Free Tier Active (3/mo)"
+                            self.logs = DebugLogService.shared.getLogs()
+                        }) {
+                            Text("Set Free (3/mo)")
+                                .font(.caption.bold())
+                                .foregroundStyle(SubscriptionManager.shared.activeTier == .free ? .black : .white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 38)
+                                .background(SubscriptionManager.shared.activeTier == .free ? Color.cyan : Color.white.opacity(0.12))
+                                .cornerRadius(8)
+                        }
+                        
+                        Button(action: {
+                            SubscriptionManager.isTesterOverrideEnabled = true
+                            SubscriptionManager.testerOverrideTier = .proWeekly
+                            isTesterOverrideActive = true
+                            DebugLogService.shared.log("[Diagnostics] Switched to Pro Weekly (50/wk).")
+                            testerActionMessage = "✨ Pro Weekly Active (50/wk)"
+                            self.logs = DebugLogService.shared.getLogs()
+                        }) {
+                            Text("Set Pro 50/wk")
+                                .font(.caption.bold())
+                                .foregroundStyle(SubscriptionManager.shared.activeTier == .proWeekly ? .black : .white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 38)
+                                .background(SubscriptionManager.shared.activeTier == .proWeekly ? Color.yellow : Color.white.opacity(0.12))
+                                .cornerRadius(8)
+                        }
+                        
+                        Button(action: {
+                            SubscriptionManager.isTesterOverrideEnabled = true
+                            SubscriptionManager.testerOverrideTier = .proMonthly
+                            isTesterOverrideActive = true
+                            DebugLogService.shared.log("[Diagnostics] Switched to Pro Monthly (250/mo).")
+                            testerActionMessage = "✨ Pro Monthly Active (250/mo)"
+                            self.logs = DebugLogService.shared.getLogs()
+                        }) {
+                            Text("Set Pro 250/mo")
+                                .font(.caption.bold())
+                                .foregroundStyle(SubscriptionManager.shared.activeTier == .proMonthly ? .black : .white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 38)
+                                .background(SubscriptionManager.shared.activeTier == .proMonthly ? Color.yellow : Color.white.opacity(0.12))
+                                .cornerRadius(8)
+                        }
+                    }
+                    
                     Button(action: {
                         UsageTracker.shared.resetUsage()
                         currentUsedCount = 0
@@ -164,32 +215,10 @@ public struct NetworkDiagnosticsView: View {
                         }
                         .font(.caption.bold())
                         .foregroundStyle(.white)
-                        .padding(.horizontal, 10)
                         .frame(maxWidth: .infinity)
-                        .frame(height: 40)
+                        .frame(height: 38)
                         .background(Color.white.opacity(0.12))
-                        .cornerRadius(10)
-                    }
-                    
-                    Button(action: {
-                        let newValue = !SubscriptionManager.isTesterOverrideEnabled
-                        SubscriptionManager.isTesterOverrideEnabled = newValue
-                        isTesterOverrideActive = newValue
-                        DebugLogService.shared.log("[Diagnostics] Toggled Tester Pro Mode to \(newValue).")
-                        testerActionMessage = newValue ? "✨ Tester Pro Enabled (50/wk · 250/mo)" : "🔒 Free Tier Enforced (3/mo)"
-                        self.logs = DebugLogService.shared.getLogs()
-                    }) {
-                        HStack(spacing: 6) {
-                            Image(systemName: isTesterOverrideActive ? "checkmark.seal.fill" : "seal")
-                            Text(isTesterOverrideActive ? "Disable Pro" : "Enable Pro")
-                        }
-                        .font(.caption.bold())
-                        .foregroundStyle(isTesterOverrideActive ? .black : .white)
-                        .padding(.horizontal, 10)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 40)
-                        .background(isTesterOverrideActive ? Color.yellow : Color.white.opacity(0.12))
-                        .cornerRadius(10)
+                        .cornerRadius(8)
                     }
                 }
                 .padding(.top, 4)

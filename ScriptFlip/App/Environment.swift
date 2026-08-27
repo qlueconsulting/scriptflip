@@ -31,7 +31,7 @@ public enum AppEnvironment {
         if let key = Bundle.main.object(forInfoDictionaryKey: "REVENUECAT_API_KEY") as? String, !key.isEmpty && !key.contains("$(") {
             return key
         }
-        return "test_bhvwLSsozoeDelykSuyQQFMyzgr"
+        return "appl_pcnOuyAgmkrXhYeYebsKaeqhlaF"
     }()
     
     /// Supabase Edge Function live URL for script generation

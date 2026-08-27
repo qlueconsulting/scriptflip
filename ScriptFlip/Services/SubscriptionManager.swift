@@ -10,6 +10,7 @@ public final class SubscriptionManager {
     public static let shared = SubscriptionManager()
     
     public var isPro: Bool = false
+    public var activeProductIdentifier: String? = nil
     public var currentOffering: Offering? = nil
     public var isPurchasing: Bool = false
     public var errorMessage: String? = nil
@@ -40,9 +41,40 @@ public final class SubscriptionManager {
         }
     }
     
+    /// User-selected tester override tier (Pro Weekly vs Pro Monthly) for testing specific limits.
+    public static var testerOverrideTier: SubscriptionTier {
+        get {
+            if let saved = UserDefaults.standard.string(forKey: "DEBUG_TESTER_TIER"),
+               let tier = SubscriptionTier(rawValue: saved) {
+                return tier
+            }
+            return .proWeekly
+        }
+        set {
+            UserDefaults.standard.set(newValue.rawValue, forKey: "DEBUG_TESTER_TIER")
+        }
+    }
+    
+    /// Resolves the user's active subscription tier (Free, Pro Weekly 50/wk, or Pro Monthly 250/mo).
+    public var activeTier: SubscriptionTier {
+        if Self.isTesterOverrideEnabled {
+            return Self.testerOverrideTier
+        }
+        guard isPro else {
+            return .free
+        }
+        let prodId = (activeProductIdentifier ?? "").lowercased()
+        if prodId.contains("weekly") || prodId.contains("week") {
+            return .proWeekly
+        } else if prodId.contains("monthly") || prodId.contains("month") {
+            return .proMonthly
+        }
+        return .proWeekly // Default Pro tier
+    }
+    
     /// Determines whether the Pro tier is active (via live RevenueCat Pro entitlement or manual Tester override).
     public var isProTierActive: Bool {
-        isPro || Self.isTesterOverrideEnabled
+        activeTier != .free
     }
     
     /// Backward-compatible alias for Pro tier status.
@@ -88,7 +120,9 @@ public final class SubscriptionManager {
         
         do {
             let customerInfo = try await Purchases.shared.customerInfo()
-            self.isPro = customerInfo.entitlements["pro"]?.isActive ?? false
+            let proEntitlement = customerInfo.entitlements["pro"]
+            self.isPro = proEntitlement?.isActive ?? false
+            self.activeProductIdentifier = proEntitlement?.productIdentifier
             await fetchOfferings()
             return self.isUnlimited
         } catch {
@@ -132,7 +166,9 @@ public final class SubscriptionManager {
         do {
             let result = try await Purchases.shared.purchase(package: package)
             if !result.userCancelled {
-                self.isPro = result.customerInfo.entitlements["pro"]?.isActive ?? false
+                let proEntitlement = result.customerInfo.entitlements["pro"]
+                self.isPro = proEntitlement?.isActive ?? false
+                self.activeProductIdentifier = proEntitlement?.productIdentifier
                 return self.isUnlimited
             }
         } catch {
@@ -156,7 +192,9 @@ public final class SubscriptionManager {
         
         do {
             let customerInfo = try await Purchases.shared.restorePurchases()
-            self.isPro = customerInfo.entitlements["pro"]?.isActive ?? false
+            let proEntitlement = customerInfo.entitlements["pro"]
+            self.isPro = proEntitlement?.isActive ?? false
+            self.activeProductIdentifier = proEntitlement?.productIdentifier
             return self.isUnlimited
         } catch {
             self.errorMessage = error.localizedDescription

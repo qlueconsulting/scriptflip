@@ -32,38 +32,50 @@ final class ScriptFlipTests: XCTestCase {
         XCTAssertTrue(usageReached.isLimitReached)
     }
     
-    func testProUserUsageCalculations() {
-        let proUsage = UserUsage(proUsedThisWeek: 10, proUsedThisMonth: 40)
-        XCTAssertEqual(proUsage.remainingProWeeklyGenerations, 40)
-        XCTAssertEqual(proUsage.remainingProMonthlyGenerations, 210)
-        XCTAssertFalse(proUsage.isProWeeklyLimitReached)
-        XCTAssertFalse(proUsage.isProMonthlyLimitReached)
-        XCTAssertFalse(proUsage.isProLimitReached)
+    func testTierSpecificQuotaCalculations() {
+        let usage = UserUsage(usedCount: 2, proUsedThisWeek: 45, proUsedThisMonth: 200)
         
-        let proWeeklyCap = UserUsage(proUsedThisWeek: 50, proUsedThisMonth: 50)
-        XCTAssertEqual(proWeeklyCap.remainingProWeeklyGenerations, 0)
-        XCTAssertTrue(proWeeklyCap.isProWeeklyLimitReached)
-        XCTAssertTrue(proWeeklyCap.isProLimitReached)
+        // Free tier
+        XCTAssertEqual(usage.remainingGenerations(for: .free), 1)
+        XCTAssertFalse(usage.isLimitReached(for: .free))
         
-        let proMonthlyCap = UserUsage(proUsedThisWeek: 10, proUsedThisMonth: 250)
-        XCTAssertEqual(proMonthlyCap.remainingProMonthlyGenerations, 0)
-        XCTAssertTrue(proMonthlyCap.isProMonthlyLimitReached)
-        XCTAssertTrue(proMonthlyCap.isProLimitReached)
+        // Pro Weekly tier (50/week limit)
+        XCTAssertEqual(usage.remainingGenerations(for: .proWeekly), 5)
+        XCTAssertFalse(usage.isLimitReached(for: .proWeekly))
+        
+        // Pro Monthly tier (250/month limit)
+        XCTAssertEqual(usage.remainingGenerations(for: .proMonthly), 50)
+        XCTAssertFalse(usage.isLimitReached(for: .proMonthly))
+        
+        // Pro Weekly limit reached
+        let weeklyMax = UserUsage(proUsedThisWeek: 50)
+        XCTAssertEqual(weeklyMax.remainingGenerations(for: .proWeekly), 0)
+        XCTAssertTrue(weeklyMax.isLimitReached(for: .proWeekly))
+        
+        // Pro Monthly limit reached
+        let monthlyMax = UserUsage(proUsedThisMonth: 250)
+        XCTAssertEqual(monthlyMax.remainingGenerations(for: .proMonthly), 0)
+        XCTAssertTrue(monthlyMax.isLimitReached(for: .proMonthly))
     }
     
-    func testUsageTrackerIncrementProAndFree() {
+    func testUsageTrackerIncrementByTier() {
         let tracker = UsageTracker.shared
         tracker.resetUsage()
         
-        let freeIncremented = tracker.incrementUsage(isPro: false)
-        XCTAssertEqual(freeIncremented.usedCount, 1)
-        XCTAssertEqual(freeIncremented.proUsedThisWeek, 0)
-        XCTAssertEqual(freeIncremented.proUsedThisMonth, 0)
+        let freeInc = tracker.incrementUsage(tier: .free)
+        XCTAssertEqual(freeInc.usedCount, 1)
+        XCTAssertEqual(freeInc.proUsedThisWeek, 0)
+        XCTAssertEqual(freeInc.proUsedThisMonth, 0)
         
-        let proIncremented = tracker.incrementUsage(isPro: true)
-        XCTAssertEqual(proIncremented.usedCount, 1)
-        XCTAssertEqual(proIncremented.proUsedThisWeek, 1)
-        XCTAssertEqual(proIncremented.proUsedThisMonth, 1)
+        let weeklyInc = tracker.incrementUsage(tier: .proWeekly)
+        XCTAssertEqual(weeklyInc.usedCount, 1)
+        XCTAssertEqual(weeklyInc.proUsedThisWeek, 1)
+        XCTAssertEqual(weeklyInc.proUsedThisMonth, 0)
+        
+        let monthlyInc = tracker.incrementUsage(tier: .proMonthly)
+        XCTAssertEqual(monthlyInc.usedCount, 1)
+        XCTAssertEqual(monthlyInc.proUsedThisWeek, 1)
+        XCTAssertEqual(monthlyInc.proUsedThisMonth, 1)
         
         tracker.resetUsage()
     }
