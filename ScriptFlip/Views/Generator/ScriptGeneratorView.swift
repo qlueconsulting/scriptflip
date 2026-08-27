@@ -79,14 +79,16 @@ public struct ScriptGeneratorView: View {
                                 .foregroundStyle(.cyan)
                         }
                         
-                        // Diagnostics Button
-                        Button(action: { 
-                            DebugLogService.shared.log("[View] Diagnostics button tapped from toolbar.")
-                            viewModel.showDiagnostics = true 
-                        }) {
-                            Image(systemName: "wrench.and.screwdriver")
-                                .font(.subheadline)
-                                .foregroundStyle(.gray)
+                        // Diagnostics Button (Visible only in TestFlight and Debug builds)
+                        if SubscriptionManager.isTestFlightOrDebug {
+                            Button(action: { 
+                                DebugLogService.shared.log("[View] Diagnostics button tapped from toolbar.")
+                                viewModel.showDiagnostics = true 
+                            }) {
+                                Image(systemName: "wrench.and.screwdriver")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.gray)
+                            }
                         }
                         
                         // About App Button
@@ -106,16 +108,20 @@ public struct ScriptGeneratorView: View {
                 }
             }
             .alert("Configuration Error", isPresented: $viewModel.showConfigAlert) {
-                Button("Open Diagnostics") {
-                    viewModel.showDiagnostics = true
+                if SubscriptionManager.isTestFlightOrDebug {
+                    Button("Open Diagnostics") {
+                        viewModel.showDiagnostics = true
+                    }
                 }
                 Button("OK", role: .cancel) { }
             } message: {
                 Text(viewModel.configurationAlertMessage ?? "Invalid Supabase URL or Anon Key.")
             }
             .alert("Script Generation Alert", isPresented: $viewModel.showErrorAlert) {
-                Button("Inspect Diagnostics") {
-                    viewModel.showDiagnostics = true
+                if SubscriptionManager.isTestFlightOrDebug {
+                    Button("Inspect Diagnostics") {
+                        viewModel.showDiagnostics = true
+                    }
                 }
                 Button("OK", role: .cancel) { }
             } message: {
@@ -198,8 +204,10 @@ public struct ScriptGeneratorView: View {
             DebugLogService.shared.log("[View] Usage badge tapped.")
             if !subscriptionManager.isProTierActive {
                 viewModel.showPaywall = true 
-            } else {
+            } else if SubscriptionManager.isTestFlightOrDebug {
                 viewModel.showDiagnostics = true
+            } else {
+                viewModel.showAbout = true
             }
         }) {
             HStack(spacing: 6) {
