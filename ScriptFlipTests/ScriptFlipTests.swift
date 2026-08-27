@@ -77,7 +77,16 @@ final class ScriptFlipTests: XCTestCase {
         XCTAssertEqual(monthlyInc.proUsedThisWeek, 1)
         XCTAssertEqual(monthlyInc.proUsedThisMonth, 1)
         
-        tracker.resetUsage()
+    func testPublicGMReleaseConfigurationSettings() {
+        // Verify Live Public API Configuration
+        let key = AppEnvironment.revenueCatAPIKey
+        XCTAssertFalse(key.isEmpty)
+        XCTAssertTrue(key.starts(with: "appl_") || key.starts(with: "test_"))
+        
+        // Verify Tier Quotas conform to App Store product requirements
+        XCTAssertEqual(UserUsage.freeMonthlyLimit, 3)
+        XCTAssertEqual(UserUsage.proWeeklyLimit, 50)
+        XCTAssertEqual(UserUsage.proMonthlyLimit, 250)
     }
     
     // MARK: - Mock API Response Handling
