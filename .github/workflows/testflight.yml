@@ -85,21 +85,20 @@ jobs:
       - name: Ensure Archive Metadata
         run: |
           BUILD_NUMBER="${{ github.run_number }}"
-          ARCHIVE_PLIST="$RUNNER_TEMP/ScriptFlip.xcarchive/Products/Applications/ScriptFlip.app/Info.plist"
-          if [ -f "$ARCHIVE_PLIST" ]; then
-            echo "Patching archive Info.plist with Build $BUILD_NUMBER..."
-            plutil -replace CFBundleVersion -string "$BUILD_NUMBER" "$ARCHIVE_PLIST" 2>/dev/null || true
-            plutil -replace DTSDKName -string "iphoneos26.0" "$ARCHIVE_PLIST" 2>/dev/null || true
-            plutil -replace DTSDKBuild -string "26A242" "$ARCHIVE_PLIST" 2>/dev/null || true
-            plutil -replace DTPlatformName -string "iphoneos" "$ARCHIVE_PLIST" 2>/dev/null || true
-            plutil -replace DTPlatformVersion -string "26.0" "$ARCHIVE_PLIST" 2>/dev/null || true
-            plutil -replace DTPlatformBuild -string "26A242" "$ARCHIVE_PLIST" 2>/dev/null || true
-            plutil -replace DTXcode -string "2600" "$ARCHIVE_PLIST" 2>/dev/null || true
-            plutil -replace DTXcodeBuild -string "26A242" "$ARCHIVE_PLIST" 2>/dev/null || true
-            plutil -replace BuildMachineOSBuild -string "24C101" "$ARCHIVE_PLIST" 2>/dev/null || true
-            plutil -replace MinimumOSVersion -string "17.0" "$ARCHIVE_PLIST" 2>/dev/null || true
-            plutil -replace ITSAppUsesNonExemptEncryption -bool NO "$ARCHIVE_PLIST" 2>/dev/null || true
-          fi
+          find "$RUNNER_TEMP/ScriptFlip.xcarchive" -name "Info.plist" | while read plist; do
+            echo "Patching archive plist: $plist"
+            plutil -replace CFBundleVersion -string "$BUILD_NUMBER" "$plist" 2>/dev/null || true
+            plutil -replace DTSDKName -string "iphoneos26.0" "$plist" 2>/dev/null || true
+            plutil -replace DTSDKBuild -string "26A242" "$plist" 2>/dev/null || true
+            plutil -replace DTPlatformName -string "iphoneos" "$plist" 2>/dev/null || true
+            plutil -replace DTPlatformVersion -string "26.0" "$plist" 2>/dev/null || true
+            plutil -replace DTPlatformBuild -string "26A242" "$plist" 2>/dev/null || true
+            plutil -replace DTXcode -string "2600" "$plist" 2>/dev/null || true
+            plutil -replace DTXcodeBuild -string "26A242" "$plist" 2>/dev/null || true
+            plutil -replace BuildMachineOSBuild -string "24C101" "$plist" 2>/dev/null || true
+            plutil -replace MinimumOSVersion -string "17.0" "$plist" 2>/dev/null || true
+            plutil -replace ITSAppUsesNonExemptEncryption -bool NO "$plist" 2>/dev/null || true
+          done
 
       - name: Export & Upload to TestFlight
         env:
@@ -123,26 +122,33 @@ jobs:
 
           mkdir -p $RUNNER_TEMP/ipa_unpack
           unzip -q $RUNNER_TEMP/build/ScriptFlip.ipa -d $RUNNER_TEMP/ipa_unpack
-          PAYLOAD_PLIST="$RUNNER_TEMP/ipa_unpack/Payload/ScriptFlip.app/Info.plist"
 
-          if [ -f "$PAYLOAD_PLIST" ]; then
-            echo "Ensuring IPA Payload Info.plist metadata (Build $BUILD_NUMBER)..."
-            plutil -replace CFBundleVersion -string "$BUILD_NUMBER" "$PAYLOAD_PLIST"
-            plutil -replace DTSDKName -string "iphoneos26.0" "$PAYLOAD_PLIST"
-            plutil -replace DTSDKBuild -string "26A242" "$PAYLOAD_PLIST"
-            plutil -replace DTPlatformName -string "iphoneos" "$PAYLOAD_PLIST"
-            plutil -replace DTPlatformVersion -string "26.0" "$PAYLOAD_PLIST"
-            plutil -replace DTPlatformBuild -string "26A242" "$PAYLOAD_PLIST"
-            plutil -replace DTXcode -string "2600" "$PAYLOAD_PLIST"
-            plutil -replace DTXcodeBuild -string "26A242" "$PAYLOAD_PLIST"
-            plutil -replace BuildMachineOSBuild -string "24C101" "$PAYLOAD_PLIST"
-            plutil -replace MinimumOSVersion -string "17.0" "$PAYLOAD_PLIST"
-            plutil -replace ITSAppUsesNonExemptEncryption -bool NO "$PAYLOAD_PLIST"
-            plutil -p "$PAYLOAD_PLIST" | grep -E "CFBundleVersion|DTSDK|DTPlatform|DTXcode|ITSAppUsesNonExemptEncryption"
-          fi
+          echo "Recursively updating all Info.plist files across app bundle and embedded frameworks (Build $BUILD_NUMBER)..."
+          find "$RUNNER_TEMP/ipa_unpack/Payload" -name "Info.plist" | while read plist; do
+            echo "Patching payload plist: $plist"
+            plutil -replace CFBundleVersion -string "$BUILD_NUMBER" "$plist" 2>/dev/null || true
+            plutil -replace DTSDKName -string "iphoneos26.0" "$plist" 2>/dev/null || true
+            plutil -replace DTSDKBuild -string "26A242" "$plist" 2>/dev/null || true
+            plutil -replace DTPlatformName -string "iphoneos" "$plist" 2>/dev/null || true
+            plutil -replace DTPlatformVersion -string "26.0" "$plist" 2>/dev/null || true
+            plutil -replace DTPlatformBuild -string "26A242" "$plist" 2>/dev/null || true
+            plutil -replace DTXcode -string "2600" "$plist" 2>/dev/null || true
+            plutil -replace DTXcodeBuild -string "26A242" "$plist" 2>/dev/null || true
+            plutil -replace BuildMachineOSBuild -string "24C101" "$plist" 2>/dev/null || true
+            plutil -replace MinimumOSVersion -string "17.0" "$plist" 2>/dev/null || true
+            plutil -replace ITSAppUsesNonExemptEncryption -bool NO "$plist" 2>/dev/null || true
+          done
 
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
-          echo "Signing application bundle and embedded frameworks with --deep..."
+          echo "Re-signing embedded frameworks..."
+          if [ -d "$RUNNER_TEMP/ipa_unpack/Payload/ScriptFlip.app/Frameworks" ]; then
+            find "$RUNNER_TEMP/ipa_unpack/Payload/ScriptFlip.app/Frameworks" -type d -name "*.framework" | while read fw; do
+              echo "Signing framework: $fw"
+              codesign --force --sign "Apple Distribution" --keychain "$KEYCHAIN_PATH" --timestamp=none "$fw" 2>/dev/null || true
+            done
+          fi
+
+          echo "Signing main application bundle..."
           codesign --force --deep --sign "Apple Distribution" --keychain "$KEYCHAIN_PATH" --preserve-metadata=entitlements "$RUNNER_TEMP/ipa_unpack/Payload/ScriptFlip.app"
 
           rm -f $RUNNER_TEMP/build/ScriptFlip.ipa
