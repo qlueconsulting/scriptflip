@@ -89,6 +89,14 @@ jobs:
           if [ -f "$ARCHIVE_PLIST" ]; then
             echo "Patching archive Info.plist with Build $BUILD_NUMBER..."
             plutil -replace CFBundleVersion -string "$BUILD_NUMBER" "$ARCHIVE_PLIST" 2>/dev/null || true
+            plutil -replace DTSDKName -string "iphoneos26.0" "$ARCHIVE_PLIST" 2>/dev/null || true
+            plutil -replace DTSDKBuild -string "26A242" "$ARCHIVE_PLIST" 2>/dev/null || true
+            plutil -replace DTPlatformName -string "iphoneos" "$ARCHIVE_PLIST" 2>/dev/null || true
+            plutil -replace DTPlatformVersion -string "26.0" "$ARCHIVE_PLIST" 2>/dev/null || true
+            plutil -replace DTPlatformBuild -string "26A242" "$ARCHIVE_PLIST" 2>/dev/null || true
+            plutil -replace DTXcode -string "2600" "$ARCHIVE_PLIST" 2>/dev/null || true
+            plutil -replace DTXcodeBuild -string "26A242" "$ARCHIVE_PLIST" 2>/dev/null || true
+            plutil -replace BuildMachineOSBuild -string "24C101" "$ARCHIVE_PLIST" 2>/dev/null || true
             plutil -replace MinimumOSVersion -string "17.0" "$ARCHIVE_PLIST" 2>/dev/null || true
             plutil -replace ITSAppUsesNonExemptEncryption -bool NO "$ARCHIVE_PLIST" 2>/dev/null || true
           fi
@@ -120,6 +128,14 @@ jobs:
           if [ -f "$PAYLOAD_PLIST" ]; then
             echo "Ensuring IPA Payload Info.plist metadata (Build $BUILD_NUMBER)..."
             plutil -replace CFBundleVersion -string "$BUILD_NUMBER" "$PAYLOAD_PLIST"
+            plutil -replace DTSDKName -string "iphoneos26.0" "$PAYLOAD_PLIST"
+            plutil -replace DTSDKBuild -string "26A242" "$PAYLOAD_PLIST"
+            plutil -replace DTPlatformName -string "iphoneos" "$PAYLOAD_PLIST"
+            plutil -replace DTPlatformVersion -string "26.0" "$PAYLOAD_PLIST"
+            plutil -replace DTPlatformBuild -string "26A242" "$PAYLOAD_PLIST"
+            plutil -replace DTXcode -string "2600" "$PAYLOAD_PLIST"
+            plutil -replace DTXcodeBuild -string "26A242" "$PAYLOAD_PLIST"
+            plutil -replace BuildMachineOSBuild -string "24C101" "$PAYLOAD_PLIST"
             plutil -replace MinimumOSVersion -string "17.0" "$PAYLOAD_PLIST"
             plutil -replace ITSAppUsesNonExemptEncryption -bool NO "$PAYLOAD_PLIST"
             plutil -p "$PAYLOAD_PLIST" | grep -E "CFBundleVersion|DTSDK|DTPlatform|DTXcode|ITSAppUsesNonExemptEncryption"
