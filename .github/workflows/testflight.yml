@@ -17,7 +17,15 @@ jobs:
 
       - name: Select Xcode Version
         run: |
-          sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+          if [ -d "/Applications/Xcode_16.2.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
+          elif [ -d "/Applications/Xcode_16.1.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
+          elif [ -d "/Applications/Xcode_16.0.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_16.0.app/Contents/Developer
+          else
+            sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+          fi
           xcodebuild -version
           xcrun --sdk iphoneos --show-sdk-version
 
@@ -82,17 +90,14 @@ jobs:
             exit 1
           fi
 
-      - name: Ensure Archive SDK Metadata
+      - name: Ensure Archive Metadata
         run: |
           BUILD_NUMBER="${{ github.run_number }}"
           ARCHIVE_PLIST="$RUNNER_TEMP/ScriptFlip.xcarchive/Products/Applications/ScriptFlip.app/Info.plist"
           if [ -f "$ARCHIVE_PLIST" ]; then
             echo "Patching archive Info.plist with Build $BUILD_NUMBER..."
             plutil -replace CFBundleVersion -string "$BUILD_NUMBER" "$ARCHIVE_PLIST" 2>/dev/null || true
-            plutil -replace DTSDKName -string "iphoneos26.0" "$ARCHIVE_PLIST" 2>/dev/null || true
-            plutil -replace DTPlatformVersion -string "26.0" "$ARCHIVE_PLIST" 2>/dev/null || true
-            plutil -replace DTXcode -string "2600" "$ARCHIVE_PLIST" 2>/dev/null || true
-            plutil -replace DTXcodeBuild -string "26A100" "$ARCHIVE_PLIST" 2>/dev/null || true
+            plutil -replace MinimumOSVersion -string "17.0" "$ARCHIVE_PLIST" 2>/dev/null || true
             plutil -replace ITSAppUsesNonExemptEncryption -bool NO "$ARCHIVE_PLIST" 2>/dev/null || true
           fi
 
@@ -121,12 +126,8 @@ jobs:
           PAYLOAD_PLIST="$RUNNER_TEMP/ipa_unpack/Payload/ScriptFlip.app/Info.plist"
 
           if [ -f "$PAYLOAD_PLIST" ]; then
-            echo "Patching IPA Payload Info.plist for App Store Connect SDK 26 validation (Build $BUILD_NUMBER)..."
+            echo "Ensuring IPA Payload Info.plist metadata (Build $BUILD_NUMBER)..."
             plutil -replace CFBundleVersion -string "$BUILD_NUMBER" "$PAYLOAD_PLIST"
-            plutil -replace DTSDKName -string "iphoneos26.0" "$PAYLOAD_PLIST"
-            plutil -replace DTPlatformVersion -string "26.0" "$PAYLOAD_PLIST"
-            plutil -replace DTXcode -string "2600" "$PAYLOAD_PLIST"
-            plutil -replace DTXcodeBuild -string "26A100" "$PAYLOAD_PLIST"
             plutil -replace MinimumOSVersion -string "17.0" "$PAYLOAD_PLIST"
             plutil -replace ITSAppUsesNonExemptEncryption -bool NO "$PAYLOAD_PLIST"
             plutil -p "$PAYLOAD_PLIST" | grep -E "CFBundleVersion|DTSDK|DTPlatform|DTXcode|ITSAppUsesNonExemptEncryption"
