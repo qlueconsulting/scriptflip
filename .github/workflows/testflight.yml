@@ -15,31 +15,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Select & Verify Clean Public GM Xcode Environment
+      - name: Select Xcode 26.5 GM (Build 17F42 / SDK 23F73)
         run: |
-          BEST_XCODE=""
-          echo "Scanning all installed Xcode versions for target build 17F113 or verified Public GM release..."
-          for xc in /Applications/Xcode*.app; do
-            if [ -d "$xc" ]; then
-              DEV_PATH="$xc/Contents/Developer"
-              X_INFO=$(DEVELOPER_DIR="$DEV_PATH" xcrun xcodebuild -version 2>/dev/null || true)
-              X_BUILD=$(echo "$X_INFO" | grep -i "Build version" | awk '{print $3}')
-              X_VER=$(echo "$X_INFO" | head -n 1)
-              SDK_BLD=$(DEVELOPER_DIR="$DEV_PATH" xcrun --sdk iphoneos --show-sdk-build-version 2>/dev/null || true)
-              echo "Inspecting $xc -> $X_VER (Build: $X_BUILD, SDK Build: $SDK_BLD)"
-              if [ "$X_BUILD" = "17F113" ]; then
-                BEST_XCODE="$DEV_PATH"
-                echo ">>> Explicitly selected target Xcode build 17F113: $xc"
-                break
-              fi
-              if [ -z "$BEST_XCODE" ] && [ -n "$SDK_BLD" ] && ! echo "$X_VER" | grep -qiE "beta|rc|seed" && ! echo "$SDK_BLD" | grep -qE "[a-z]$"; then
-                BEST_XCODE="$DEV_PATH"
-              fi
-            fi
-          done
-
-          if [ -n "$BEST_XCODE" ]; then
-            sudo xcode-select -s "$BEST_XCODE"
+          if [ -d "/Applications/Xcode_26.5.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_26.5.app/Contents/Developer
+          elif [ -d "/Applications/Xcode_26.5.0.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_26.5.0.app/Contents/Developer
           else
             sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
           fi
