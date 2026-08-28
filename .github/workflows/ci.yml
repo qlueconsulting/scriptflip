@@ -16,18 +16,33 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Select & Verify Clean Xcode 26.6 GM Environment
+      - name: Select & Verify Clean Public GM Xcode Environment
         run: |
-          if [ -d "/Applications/Xcode_26.6.app" ]; then
-            sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
+          BEST_XCODE=""
+          echo "Scanning all installed Xcode versions for official Public GM releases..."
+          for xc in $(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V -r); do
+            DEV_PATH="$xc/Contents/Developer"
+            X_VER=$("$DEV_PATH/usr/bin/xcodebuild" -version 2>/dev/null | head -n 1)
+            SDK_BLD=$("$DEV_PATH/usr/bin/xcrun" --sdk iphoneos --show-sdk-build-version 2>/dev/null)
+            echo "Inspecting $xc -> $X_VER (SDK Build: $SDK_BLD)"
+            if [[ -n "$SDK_BLD" ]] && ! echo "$X_VER" | grep -qiE "beta|rc|seed" && ! echo "$SDK_BLD" | grep -qE "[a-z]$"; then
+              BEST_XCODE="$DEV_PATH"
+              echo ">>> Selected Public GM Release: $xc ($X_VER, SDK Build: $SDK_BLD)"
+              break
+            fi
+          done
+
+          if [ -n "$BEST_XCODE" ]; then
+            sudo xcode-select -s "$BEST_XCODE"
           else
             sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
           fi
+
           XCODE_INFO=$(xcodebuild -version)
           SDK_BUILD=$(xcrun --sdk iphoneos --show-sdk-build-version)
           echo "========================================="
-          echo "$XCODE_INFO"
-          echo "iOS SDK Build: $SDK_BUILD"
+          echo "Active Xcode: $XCODE_INFO"
+          echo "Active iOS SDK Build: $SDK_BUILD"
           echo "Developer Path: $(xcode-select -p)"
           echo "========================================="
           if echo "$XCODE_INFO" | grep -qiE "beta|rc|seed"; then
