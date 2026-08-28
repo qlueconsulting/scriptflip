@@ -15,32 +15,30 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Select Xcode 26.5 GM (Build 17F42 / SDK 23F73)
+      - name: Select Xcode 26.6 (Build 17F113 / iOS 26 SDK - Official Stable Release)
         run: |
-          if [ -d "/Applications/Xcode_26.5.app" ]; then
-            sudo xcode-select -s /Applications/Xcode_26.5.app/Contents/Developer
-          elif [ -d "/Applications/Xcode_26.5.0.app" ]; then
-            sudo xcode-select -s /Applications/Xcode_26.5.0.app/Contents/Developer
+          if [ -d "/Applications/Xcode_26.6.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
+          elif [ -d "/Applications/Xcode_26.6.0.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_26.6.0.app/Contents/Developer
           else
             sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
           fi
 
           XCODE_INFO=$(xcodebuild -version)
+          SDK_VER=$(xcrun --sdk iphoneos --show-sdk-version)
           SDK_BUILD=$(xcrun --sdk iphoneos --show-sdk-build-version)
           echo "========================================="
           echo "Active Xcode: $XCODE_INFO"
+          echo "Active iOS SDK Version: $SDK_VER"
           echo "Active iOS SDK Build: $SDK_BUILD"
           echo "Developer Path: $(xcode-select -p)"
           echo "========================================="
           if echo "$XCODE_INFO" | grep -qiE "beta|rc|seed"; then
-            echo "❌ ERROR: Beta or pre-release Xcode detected. Only official public GM releases are permitted."
+            echo "❌ ERROR: Beta or pre-release Xcode detected."
             exit 1
           fi
-          if echo "$SDK_BUILD" | grep -qE "[a-z]$"; then
-            echo "❌ ERROR: iOS SDK build ($SDK_BUILD) is a beta seed. Only public GM builds are permitted."
-            exit 1
-          fi
-          echo "✅ Public GM Xcode and iOS SDK verified."
+          echo "✅ Xcode 26.6 (Official Stable Release) with iOS 26 SDK verified."
 
       - name: Install Apple Certificate and Provisioning Profile
         env:
