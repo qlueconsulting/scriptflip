@@ -8,19 +8,21 @@ on:
 
 jobs:
   deploy:
-    name: Build & Upload to TestFlight (macOS 26 & Xcode 26 GM)
-    runs-on: macos-26
+    name: Build & Upload to TestFlight (macOS 15 & Xcode GA)
+    runs-on: macos-15
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Select Xcode 26.4.1 GA (Build 17E202 / iOS 26 SDK - Official Public Release)
+      - name: Select Official GA Xcode Environment on macOS 15
         run: |
-          if [ -d "/Applications/Xcode_26.4.1.app" ]; then
-            sudo xcode-select -s /Applications/Xcode_26.4.1.app/Contents/Developer
-          elif [ -d "/Applications/Xcode_26.4.app" ]; then
-            sudo xcode-select -s /Applications/Xcode_26.4.app/Contents/Developer
+          if [ -d "/Applications/Xcode_16.4.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
+          elif [ -d "/Applications/Xcode_16.3.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_16.3.app/Contents/Developer
+          elif [ -d "/Applications/Xcode_16.2.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
           else
             sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
           fi
@@ -32,13 +34,14 @@ jobs:
           echo "Active Xcode: $XCODE_INFO"
           echo "Active iOS SDK Version: $SDK_VER"
           echo "Active iOS SDK Build: $SDK_BUILD"
+          echo "Host macOS Version: $(sw_vers -productVersion) ($(sw_vers -buildVersion))"
           echo "Developer Path: $(xcode-select -p)"
           echo "========================================="
           if echo "$XCODE_INFO" | grep -qiE "beta|rc|seed"; then
             echo "❌ ERROR: Beta or pre-release Xcode detected."
             exit 1
           fi
-          echo "✅ Xcode 26.4.1 GA verified."
+          echo "✅ Production GA Xcode on macOS 15 verified."
 
       - name: Install Apple Certificate and Provisioning Profile
         env:
