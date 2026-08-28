@@ -9,5 +9,3 @@ SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSI
 REVENUECAT_API_KEY = appl_pcnOuyAgmkrXhYeYebsKaeqhlaF
 
 OTHER_LDFLAGS = $(inherited)
-OTHER_LDFLAGS[sdk=iphoneos*] = $(inherited) -Wl,-platform_version,ios,17.0,26.6
-OTHER_LDFLAGS[sdk=iphonesimulator*] = $(inherited)

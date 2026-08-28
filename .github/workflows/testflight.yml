@@ -88,86 +88,22 @@ jobs:
             exit 1
           fi
 
-      - name: Ensure Archive Metadata
-        run: |
-          BUILD_NUMBER="${{ github.run_number }}"
-          find "$RUNNER_TEMP/ScriptFlip.xcarchive" -name "Info.plist" | while read plist; do
-            echo "Patching archive plist: $plist"
-            plutil -replace CFBundleVersion -string "$BUILD_NUMBER" "$plist" 2>/dev/null || true
-            plutil -replace DTSDKName -string "iphoneos26.6" "$plist" 2>/dev/null || true
-            plutil -replace DTSDKBuild -string "23F113" "$plist" 2>/dev/null || true
-            plutil -replace DTPlatformName -string "iphoneos" "$plist" 2>/dev/null || true
-            plutil -replace DTPlatformVersion -string "26.6" "$plist" 2>/dev/null || true
-            plutil -replace DTPlatformBuild -string "23F113" "$plist" 2>/dev/null || true
-            plutil -replace DTXcode -string "2660" "$plist" 2>/dev/null || true
-            plutil -replace DTXcodeBuild -string "17F113" "$plist" 2>/dev/null || true
-            plutil -replace BuildMachineOSBuild -string "24F75" "$plist" 2>/dev/null || true
-            plutil -replace MinimumOSVersion -string "17.0" "$plist" 2>/dev/null || true
-            plutil -replace ITSAppUsesNonExemptEncryption -bool NO "$plist" 2>/dev/null || true
-          done
-
-      - name: Export & Upload to TestFlight
+      - name: Export & Upload to TestFlight (Native Apple Xcode Pipeline)
         env:
           KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
         run: |
           set -o pipefail
           BUILD_NUMBER="${{ github.run_number }}"
-          echo "Exporting archive to IPA..."
+          echo "Exporting archive and uploading directly to TestFlight / App Store Connect (Build $BUILD_NUMBER)..."
           xcodebuild -exportArchive \
             -archivePath $RUNNER_TEMP/ScriptFlip.xcarchive \
             -exportOptionsPlist exportOptions.plist \
             -exportPath $RUNNER_TEMP/build \
-            -allowProvisioningUpdates 2>&1 | tee /tmp/export.log
-
-          if [ ! -f "$RUNNER_TEMP/build/ScriptFlip.ipa" ]; then
-            echo "Error: Exported IPA not found!"
-            cat /tmp/export.log
-            exit 1
-          fi
-
-          mkdir -p $RUNNER_TEMP/ipa_unpack
-          unzip -q $RUNNER_TEMP/build/ScriptFlip.ipa -d $RUNNER_TEMP/ipa_unpack
-
-          echo "Recursively updating all Info.plist files across app bundle and embedded frameworks (Build $BUILD_NUMBER)..."
-          find "$RUNNER_TEMP/ipa_unpack/Payload" -name "Info.plist" | while read plist; do
-            echo "Patching payload plist: $plist"
-            plutil -replace CFBundleVersion -string "$BUILD_NUMBER" "$plist" 2>/dev/null || true
-            plutil -replace DTSDKName -string "iphoneos26.6" "$plist" 2>/dev/null || true
-            plutil -replace DTSDKBuild -string "23F113" "$plist" 2>/dev/null || true
-            plutil -replace DTPlatformName -string "iphoneos" "$plist" 2>/dev/null || true
-            plutil -replace DTPlatformVersion -string "26.6" "$plist" 2>/dev/null || true
-            plutil -replace DTPlatformBuild -string "23F113" "$plist" 2>/dev/null || true
-            plutil -replace DTXcode -string "2660" "$plist" 2>/dev/null || true
-            plutil -replace DTXcodeBuild -string "17F113" "$plist" 2>/dev/null || true
-            plutil -replace BuildMachineOSBuild -string "24F75" "$plist" 2>/dev/null || true
-            plutil -replace MinimumOSVersion -string "17.0" "$plist" 2>/dev/null || true
-            plutil -replace ITSAppUsesNonExemptEncryption -bool NO "$plist" 2>/dev/null || true
-          done
-
-          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
-          echo "Re-signing embedded frameworks..."
-          if [ -d "$RUNNER_TEMP/ipa_unpack/Payload/ScriptFlip.app/Frameworks" ]; then
-            find "$RUNNER_TEMP/ipa_unpack/Payload/ScriptFlip.app/Frameworks" -type d -name "*.framework" | while read fw; do
-              echo "Signing framework: $fw"
-              codesign --force --sign "Apple Distribution" --keychain "$KEYCHAIN_PATH" --timestamp=none "$fw" 2>/dev/null || true
-            done
-          fi
-
-          echo "Signing main application bundle..."
-          codesign --force --deep --sign "Apple Distribution" --keychain "$KEYCHAIN_PATH" --preserve-metadata=entitlements "$RUNNER_TEMP/ipa_unpack/Payload/ScriptFlip.app"
-
-          rm -f $RUNNER_TEMP/build/ScriptFlip.ipa
-          cd $RUNNER_TEMP/ipa_unpack
-          zip -qr -9 "$RUNNER_TEMP/build/ScriptFlip.ipa" Payload
-          cd -
-
-          echo "Uploading IPA to TestFlight via altool..."
-          xcrun altool --upload-app \
-            -f $RUNNER_TEMP/build/ScriptFlip.ipa \
-            -t ios \
-            --apiKey "$KEY_ID" \
-            --apiIssuer "$ISSUER_ID" 2>&1 | tee /tmp/upload.log
+            -allowProvisioningUpdates \
+            -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8 \
+            -authenticationKeyID "$KEY_ID" \
+            -authenticationKeyIssuerID "$ISSUER_ID" 2>&1 | tee /tmp/export.log
 
       - name: Upload Build & Archive Log
         if: always()
