@@ -15,17 +15,29 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Select Xcode 26.6 GM (iOS 26 SDK)
+      - name: Select & Verify Clean Xcode 26.6 GM Environment
         run: |
           if [ -d "/Applications/Xcode_26.6.app" ]; then
             sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
           else
             sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
           fi
-          XCODE_VER=$(xcodebuild -version | head -n 1)
-          SDK_VER=$(xcrun --sdk iphoneos --show-sdk-version)
-          echo "Active Xcode Version: $XCODE_VER"
-          echo "Active iOS SDK Version: $SDK_VER"
+          XCODE_INFO=$(xcodebuild -version)
+          SDK_BUILD=$(xcrun --sdk iphoneos --show-sdk-build-version)
+          echo "========================================="
+          echo "$XCODE_INFO"
+          echo "iOS SDK Build: $SDK_BUILD"
+          echo "Developer Path: $(xcode-select -p)"
+          echo "========================================="
+          if echo "$XCODE_INFO" | grep -qiE "beta|rc|seed"; then
+            echo "❌ ERROR: Beta or pre-release Xcode detected. Only official public GM releases are permitted."
+            exit 1
+          fi
+          if echo "$SDK_BUILD" | grep -qE "[a-z]$"; then
+            echo "❌ ERROR: iOS SDK build ($SDK_BUILD) is a beta seed. Only public GM builds are permitted."
+            exit 1
+          fi
+          echo "✅ Public GM Xcode and iOS SDK verified."
 
       - name: Install Apple Certificate and Provisioning Profile
         env:
@@ -79,6 +91,7 @@ jobs:
             -scheme ScriptFlip \
             -archivePath $RUNNER_TEMP/ScriptFlip.xcarchive \
             -destination "generic/platform=iOS" \
+            -derivedDataPath $RUNNER_TEMP/DerivedData \
             CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
             -allowProvisioningUpdates 2>&1 | tee /tmp/archive.log
 
