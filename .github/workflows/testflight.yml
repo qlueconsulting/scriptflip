@@ -8,21 +8,19 @@ on:
 
 jobs:
   deploy:
-    name: Build & Upload to TestFlight (macOS 15 & Xcode GA)
-    runs-on: macos-15
+    name: Build & Upload to TestFlight (macOS 26 & Xcode 26.0.1 GA)
+    runs-on: macos-26
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Select Official GA Xcode Environment on macOS 15
+      - name: Select Xcode 26.0.1 GA (Build 17A400 / iOS 26 SDK)
         run: |
-          if [ -d "/Applications/Xcode_16.4.app" ]; then
-            sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
-          elif [ -d "/Applications/Xcode_16.3.app" ]; then
-            sudo xcode-select -s /Applications/Xcode_16.3.app/Contents/Developer
-          elif [ -d "/Applications/Xcode_16.2.app" ]; then
-            sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
+          if [ -d "/Applications/Xcode_26.0.1.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_26.0.1.app/Contents/Developer
+          elif [ -d "/Applications/Xcode_26.0.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_26.0.app/Contents/Developer
           else
             sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
           fi
@@ -41,7 +39,7 @@ jobs:
             echo "❌ ERROR: Beta or pre-release Xcode detected."
             exit 1
           fi
-          echo "✅ Production GA Xcode on macOS 15 verified."
+          echo "✅ Xcode 26.0.1 GA verified."
 
       - name: Install Apple Certificate and Provisioning Profile
         env:
@@ -110,32 +108,6 @@ jobs:
             tail -n 100 /tmp/archive.log
             exit 1
           fi
-
-      - name: Normalize Archive Host OS & Audit Metadata (App Store Review Compliance)
-        run: |
-          ARCHIVE_PATH="$RUNNER_TEMP/ScriptFlip.xcarchive"
-          echo "Inspecting archive metadata at $ARCHIVE_PATH..."
-          GA_OS_BUILD="24A348"
-
-          if [ -f "$ARCHIVE_PATH/Info.plist" ]; then
-            CURRENT_OS=$(/usr/libexec/PlistBuddy -c "Print :BuildMachineOSBuild" "$ARCHIVE_PATH/Info.plist" 2>/dev/null || echo "Unknown")
-            echo "Root Archive BuildMachineOSBuild: $CURRENT_OS -> Normalizing to $GA_OS_BUILD"
-            /usr/libexec/PlistBuddy -c "Set :BuildMachineOSBuild $GA_OS_BUILD" "$ARCHIVE_PATH/Info.plist" 2>/dev/null || /usr/libexec/PlistBuddy -c "Add :BuildMachineOSBuild string $GA_OS_BUILD" "$ARCHIVE_PATH/Info.plist"
-          fi
-
-          APP_PLIST="$ARCHIVE_PATH/Products/Applications/ScriptFlip.app/Info.plist"
-          if [ -f "$APP_PLIST" ]; then
-            CURRENT_APP_OS=$(/usr/libexec/PlistBuddy -c "Print :BuildMachineOSBuild" "$APP_PLIST" 2>/dev/null || echo "Unknown")
-            echo "App Info.plist BuildMachineOSBuild: $CURRENT_APP_OS -> Normalizing to $GA_OS_BUILD"
-            /usr/libexec/PlistBuddy -c "Set :BuildMachineOSBuild $GA_OS_BUILD" "$APP_PLIST" 2>/dev/null || /usr/libexec/PlistBuddy -c "Add :BuildMachineOSBuild string $GA_OS_BUILD" "$APP_PLIST"
-          fi
-
-          for f_plist in $(find "$ARCHIVE_PATH/Products/Applications/ScriptFlip.app/Frameworks" -name "Info.plist" 2>/dev/null); do
-            echo "Normalizing embedded framework plist: $f_plist"
-            /usr/libexec/PlistBuddy -c "Set :BuildMachineOSBuild $GA_OS_BUILD" "$f_plist" 2>/dev/null || true
-          done
-
-          echo "Archive metadata normalization complete. Ready for exportArchive direct upload."
 
       - name: Export & Upload to TestFlight (Native Apple Xcode Pipeline)
         env:
