@@ -31,10 +31,18 @@ jobs:
       - name: Run Unit Tests (iOS Simulator)
         run: |
           set -o pipefail
+          DEVICE_ID=$(xcrun simctl list devices available | grep -E "iPhone" | head -n 1 | awk -F '[()]' '{print $(NF-1)}')
+          echo "Selected Concrete Simulator Device UUID: $DEVICE_ID"
+          if [ -n "$DEVICE_ID" ]; then
+            DEST="platform=iOS Simulator,id=$DEVICE_ID"
+          else
+            DEST="generic/platform=iOS"
+          fi
+          echo "Running tests on destination: $DEST"
           xcodebuild test \
             -project ScriptFlip.xcodeproj \
             -scheme ScriptFlip \
-            -destination "generic/platform=iOS Simulator" \
+            -destination "$DEST" \
             -enableCodeCoverage NO \
             CODE_SIGNING_ALLOWED=NO 2>&1 | tee /tmp/test.log
 
