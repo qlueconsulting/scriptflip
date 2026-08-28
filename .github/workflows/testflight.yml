@@ -88,13 +88,19 @@ jobs:
         run: |
           set -o pipefail
           BUILD_NUMBER="${{ github.run_number }}"
-          echo "Archiving ScriptFlip (Build $BUILD_NUMBER)..."
+          TAG_NAME="${GITHUB_REF_NAME}"
+          MARKETING_VER="${TAG_NAME#v}"
+          if [ -z "$MARKETING_VER" ] || [ "$MARKETING_VER" = "$TAG_NAME" ] && [[ "$TAG_NAME" != [0-9]* ]]; then
+            MARKETING_VER="1.0.0"
+          fi
+          echo "Archiving ScriptFlip (Marketing Version: $MARKETING_VER, Build: $BUILD_NUMBER)..."
           xcodebuild archive \
             -project ScriptFlip.xcodeproj \
             -scheme ScriptFlip \
             -archivePath $RUNNER_TEMP/ScriptFlip.xcarchive \
             -destination "generic/platform=iOS" \
             -derivedDataPath $RUNNER_TEMP/DerivedData \
+            MARKETING_VERSION="$MARKETING_VER" \
             CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
             -allowProvisioningUpdates 2>&1 | tee /tmp/archive.log
 
