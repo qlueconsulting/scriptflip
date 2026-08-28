@@ -18,16 +18,20 @@ jobs:
       - name: Select & Verify Clean Public GM Xcode Environment
         run: |
           BEST_XCODE=""
-          echo "Scanning all installed Xcode versions for official Public GM releases..."
+          echo "Scanning all installed Xcode versions for target build 17F113 or verified Public GM release..."
           for xc in $(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V -r); do
             DEV_PATH="$xc/Contents/Developer"
+            X_BUILD=$("$DEV_PATH/usr/bin/xcodebuild" -version 2>/dev/null | grep -i "Build version" | awk '{print $3}')
             X_VER=$("$DEV_PATH/usr/bin/xcodebuild" -version 2>/dev/null | head -n 1)
             SDK_BLD=$("$DEV_PATH/usr/bin/xcrun" --sdk iphoneos --show-sdk-build-version 2>/dev/null)
-            echo "Inspecting $xc -> $X_VER (SDK Build: $SDK_BLD)"
-            if [[ -n "$SDK_BLD" ]] && ! echo "$X_VER" | grep -qiE "beta|rc|seed" && ! echo "$SDK_BLD" | grep -qE "[a-z]$"; then
+            echo "Inspecting $xc -> $X_VER (Build: $X_BUILD, SDK Build: $SDK_BLD)"
+            if [ "$X_BUILD" = "17F113" ]; then
               BEST_XCODE="$DEV_PATH"
-              echo ">>> Selected Public GM Release: $xc ($X_VER, SDK Build: $SDK_BLD)"
+              echo ">>> Explicitly selected target Xcode build 17F113: $xc"
               break
+            fi
+            if [[ -z "$BEST_XCODE" ]] && [[ -n "$SDK_BLD" ]] && ! echo "$X_VER" | grep -qiE "beta|rc|seed" && ! echo "$SDK_BLD" | grep -qE "[a-z]$"; then
+              BEST_XCODE="$DEV_PATH"
             fi
           done
 
