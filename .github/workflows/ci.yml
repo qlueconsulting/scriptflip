@@ -1,10 +1,8 @@
-name: Build and Test
+name: Build and Test (Disabled - Managed by Xcode Cloud)
 
+# Automatic triggers disabled: CI/CD and testing are now managed by Apple Xcode Cloud.
+# To run manually on GitHub if ever needed, use the Actions tab (workflow_dispatch).
 on:
-  push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
