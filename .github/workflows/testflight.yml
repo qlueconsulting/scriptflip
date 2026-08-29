@@ -1,9 +1,8 @@
-name: Deploy to TestFlight
+name: Deploy to TestFlight (Disabled - Replaced by Xcode Cloud)
 
+# Automatic triggers disabled: Distribution is now managed natively by Apple Xcode Cloud.
+# Only manual dispatch is preserved for emergency fallback.
 on:
-  push:
-    tags:
-      - "v*"
   workflow_dispatch:
 
 jobs:
