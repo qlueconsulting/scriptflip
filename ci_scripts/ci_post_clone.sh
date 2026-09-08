@@ -25,13 +25,19 @@ else
 fi
 
 # ── Build Number ─────────────────────────────────────────────────────────────
-# Use "auto" to let Xcode Cloud auto-increment, or set a specific integer.
+# BUILD_NUMBER:        set to "auto" to use CI_BUILD_NUMBER, or pin a specific integer.
+# BUILD_NUMBER_OFFSET: added to CI_BUILD_NUMBER when BUILD_NUMBER=auto (default: 100).
+#                      Keeps Xcode Cloud builds above any previous GitHub Actions builds.
+echo "BUILD_NUMBER_OFFSET: ${BUILD_NUMBER_OFFSET:-100 (default)}"
+
+OFFSET="${BUILD_NUMBER_OFFSET:-100}"
+
 if [ "$BUILD_NUMBER" = "auto" ] || [ -z "$BUILD_NUMBER" ]; then
-  RESOLVED_BUILD_NUMBER="$CI_BUILD_NUMBER"
-  echo "-> BUILD_NUMBER=auto, using CI_BUILD_NUMBER = $CI_BUILD_NUMBER"
+  RESOLVED_BUILD_NUMBER="$((CI_BUILD_NUMBER + OFFSET))"
+  echo "-> BUILD_NUMBER=auto: CI_BUILD_NUMBER($CI_BUILD_NUMBER) + OFFSET($OFFSET) = $RESOLVED_BUILD_NUMBER"
 else
   RESOLVED_BUILD_NUMBER="$BUILD_NUMBER"
-  echo "-> BUILD_NUMBER overridden to $BUILD_NUMBER"
+  echo "-> BUILD_NUMBER pinned to $BUILD_NUMBER"
 fi
 
 if [ -n "$RESOLVED_BUILD_NUMBER" ]; then

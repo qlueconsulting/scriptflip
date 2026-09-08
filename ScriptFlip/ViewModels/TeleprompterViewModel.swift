@@ -13,9 +13,9 @@ public final class TeleprompterViewModel {
     public var isMirrored: Bool = false
     public var scrollOffset: Double = 0.0
     
-    /// nonisolated(unsafe) allows deinit to cancel the task without a Swift 6 actor-isolation error.
-    /// Task.cancel() is inherently thread-safe, so this is correct and intentional.
-    nonisolated(unsafe) private var scrollTask: Task<Void, Never>? = nil
+    // No special isolation annotation needed — Task uses [weak self] and exits
+    // naturally on the next tick when the ViewModel is deallocated.
+    private var scrollTask: Task<Void, Never>? = nil
     
     public init(script: Script) {
         self.script = script
@@ -50,10 +50,5 @@ public final class TeleprompterViewModel {
     private func stopScrollLoop() {
         scrollTask?.cancel()
         scrollTask = nil
-    }
-    
-    /// Task cancellation is nonisolated-safe — no actor-isolation violation in Swift 6.
-    deinit {
-        scrollTask?.cancel()
     }
 }
