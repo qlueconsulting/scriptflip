@@ -19,15 +19,20 @@ else
 fi
 
 # ── Build Number ─────────────────────────────────────────────────────────────
-# Set BUILD_NUMBER as an env var in your Xcode Cloud workflow to pin a number.
-# Falls back to Xcode Cloud's auto-incrementing CI_BUILD_NUMBER if not set.
-RESOLVED_BUILD_NUMBER="${BUILD_NUMBER:-$CI_BUILD_NUMBER}"
+# Set BUILD_NUMBER in your Xcode Cloud workflow env vars.
+# Use "auto" (or any non-numeric value) to let Xcode Cloud auto-increment.
+# Use a specific integer (e.g. "1") to pin the build number for that run.
+if [ "$BUILD_NUMBER" = "auto" ] || [ -z "$BUILD_NUMBER" ]; then
+  RESOLVED_BUILD_NUMBER="$CI_BUILD_NUMBER"
+  echo "-> BUILD_NUMBER=auto, using CI_BUILD_NUMBER = $CI_BUILD_NUMBER"
+else
+  RESOLVED_BUILD_NUMBER="$BUILD_NUMBER"
+  echo "-> BUILD_NUMBER overridden to $BUILD_NUMBER"
+fi
+
 if [ -n "$RESOLVED_BUILD_NUMBER" ]; then
-  echo "-> Applying CURRENT_PROJECT_VERSION = $RESOLVED_BUILD_NUMBER"
   sed -i '' "s/CURRENT_PROJECT_VERSION = [0-9][0-9]*/CURRENT_PROJECT_VERSION = ${RESOLVED_BUILD_NUMBER}/g" ScriptFlip.xcodeproj/project.pbxproj
   echo "   Done. CURRENT_PROJECT_VERSION = $RESOLVED_BUILD_NUMBER"
-else
-  echo "-> No build number source found - using value from project.pbxproj"
 fi
 
 echo "=== Post-Clone Complete ==="
