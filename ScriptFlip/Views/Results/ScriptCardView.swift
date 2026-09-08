@@ -7,7 +7,6 @@ public struct ScriptCardView: View {
     
     @State private var isCopied: Bool = false
     @State private var isSavedToHistory: Bool = false
-    @State private var showShareSheet: Bool = false
     
     public init(script: Script, onLaunchPrompter: @escaping (Script) -> Void) {
         self.script = script
@@ -139,7 +138,7 @@ public struct ScriptCardView: View {
                 HStack(spacing: 10) {
                     // Copy to Clipboard
                     Button(action: {
-                        UIPasteboard.general.string = script.fullSpokenText
+                        UIPasteboard.general.string = script.cleanTeleprompterText
                         isCopied = true
                         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
                             isCopied = false
@@ -177,8 +176,8 @@ public struct ScriptCardView: View {
                         .cornerRadius(10)
                     }
                     
-                    // Share Sheet
-                    Button(action: { showShareSheet = true }) {
+                    // Native SwiftUI ShareLink (Safe on iPad and iPhone)
+                    ShareLink(item: script.cleanTeleprompterText) {
                         Image(systemName: "square.and.arrow.up")
                             .font(.subheadline.bold())
                             .foregroundStyle(.white)
@@ -196,9 +195,6 @@ public struct ScriptCardView: View {
                 .stroke(Color.white.opacity(0.1), lineWidth: 1)
         )
         .cornerRadius(20)
-        .sheet(isPresented: $showShareSheet) {
-            ShareSheet(activityItems: [script.fullSpokenText])
-        }
     }
     
     private func badgeColor(for type: ScriptSection.SectionType) -> Color {
@@ -209,26 +205,5 @@ public struct ScriptCardView: View {
         case .callToAction: return .green
         }
     }
-}
-
-/// UIViewControllerRepresentable wrapper for native iOS UIActivityViewController share sheet.
-public struct ShareSheet: UIViewControllerRepresentable {
-    public let activityItems: [Any]
-    public let applicationActivities: [UIActivity]?
-    
-    public init(activityItems: [Any], applicationActivities: [UIActivity]? = nil) {
-        self.activityItems = activityItems
-        self.applicationActivities = applicationActivities
-    }
-    
-    public func makeUIViewController(context: Context) -> UIActivityViewController {
-        let controller = UIActivityViewController(
-            activityItems: activityItems,
-            applicationActivities: applicationActivities
-        )
-        return controller
-    }
-    
-    public func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 

@@ -203,7 +203,7 @@ final class ScriptFlipTests: XCTestCase {
         
         XCTAssertFalse(vm.isLoading)
         XCTAssertTrue(vm.showErrorAlert)
-        XCTAssertEqual(vm.errorMessage, "Please enter a valid YouTube/Podcast URL or transcript text.")
+        XCTAssertEqual(vm.errorMessage, "Please enter a valid video link (TikTok, Reels, YouTube) or transcript text.")
         XCTAssertTrue(vm.generatedScripts.isEmpty)
     }
     
@@ -373,6 +373,50 @@ final class ScriptFlipTests: XCTestCase {
         vm.resetPrompter()
         XCTAssertFalse(vm.isPlaying)
         XCTAssertEqual(vm.scrollOffset, 0)
+    }
+    
+    // MARK: - Modernization & App Review 2.1.0 Feature Tests
+    
+    func testScriptCleanTeleprompterTextFormatting() {
+        let script = Script(
+            title: "Clean Teleprompter Test",
+            style: .casual,
+            sections: [
+                ScriptSection(timeRange: "0:00 - 0:03", sectionType: .hook, spokenText: "Stop making this rookie mistake.", visualCue: "[Zoom in on phone]"),
+                ScriptSection(timeRange: "0:03 - 2:45", sectionType: .body, spokenText: "Here is the comprehensive 3-minute breakdown of how to structure your video.", visualCue: "[Point to whiteboard]"),
+                ScriptSection(timeRange: "2:45 - 3:00", sectionType: .callToAction, spokenText: "Follow for more daily content creation breakdowns.", visualCue: "[Subscribe badge overlay]")
+            ],
+            keyTakeaway: "Clear hooks retain 80% more viewers."
+        )
+        
+        let cleanText = script.cleanTeleprompterText
+        
+        // Clean text must NOT contain any bracketed section headers or visual cues
+        XCTAssertFalse(cleanText.contains("[Hook"))
+        XCTAssertFalse(cleanText.contains("[Core Value"))
+        XCTAssertFalse(cleanText.contains("Zoom in"))
+        XCTAssertFalse(cleanText.contains("whiteboard"))
+        XCTAssertFalse(cleanText.contains("Subscribe badge"))
+        
+        // Clean text MUST contain the seamless speaking script
+        XCTAssertTrue(cleanText.contains("Stop making this rookie mistake."))
+        XCTAssertTrue(cleanText.contains("Here is the comprehensive 3-minute breakdown of how to structure your video."))
+        XCTAssertTrue(cleanText.contains("Follow for more daily content creation breakdowns."))
+        
+        let expected = "Stop making this rookie mistake.\n\nHere is the comprehensive 3-minute breakdown of how to structure your video.\n\nFollow for more daily content creation breakdowns."
+        XCTAssertEqual(cleanText, expected)
+    }
+    
+    @MainActor
+    func testSubscriptionManagerUpgradeOnlyLogic() {
+        let manager = SubscriptionManager.shared
+        
+        // 1. Free tier can upgrade to Weekly or Monthly
+        XCTAssertTrue(manager.canUpgrade)
+        
+        // 2. Video Link Input Mode conforms to requirement #10
+        XCTAssertEqual(ScriptGeneratorViewModel.InputMode.url.rawValue, "Video Link")
+        XCTAssertEqual(ScriptGeneratorViewModel.InputMode.url.iconName, "play.rectangle.fill")
     }
 }
 

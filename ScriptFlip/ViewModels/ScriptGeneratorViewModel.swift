@@ -31,13 +31,13 @@ public final class ScriptGeneratorViewModel {
     public let subscriptionManager: SubscriptionManager
     
     public enum InputMode: String, CaseIterable, Identifiable, Sendable {
-        case url = "URL (YouTube/Podcast)"
+        case url = "Video Link"
         case rawText = "Raw Transcript / Text"
         
         public var id: String { rawValue }
         public var iconName: String {
             switch self {
-            case .url: return "link"
+            case .url: return "play.rectangle.fill"
             case .rawText: return "doc.text.fill"
             }
         }
@@ -80,7 +80,7 @@ public final class ScriptGeneratorViewModel {
         
         let trimmedInput = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedInput.isEmpty else {
-            let msg = "Please enter a valid YouTube/Podcast URL or transcript text."
+            let msg = "Please enter a valid video link (TikTok, Reels, YouTube) or transcript text."
             DebugLogService.shared.log("[ViewModel] Blocked early: \(msg)")
             self.errorMessage = msg
             self.showErrorAlert = true
@@ -123,7 +123,7 @@ public final class ScriptGeneratorViewModel {
                     DebugLogService.shared.log("[ViewModel] Blocked early: \(limitMsg)")
                     self.errorMessage = limitMsg
                     self.showPaywall = true
-                    self.showErrorAlert = true
+                    // Do not set showErrorAlert = true simultaneously to avoid modal presentation collision on iPad
                     return
                 }
             }
@@ -134,7 +134,7 @@ public final class ScriptGeneratorViewModel {
         self.showErrorAlert = false
         
         let requestType: GenerationRequest.InputType = (inputMode == .url)
-            ? (trimmedInput.contains("youtube") || trimmedInput.contains("youtu.be") ? .youtubeUrl : .podcastUrl)
+            ? .videoUrl
             : .rawText
             
         let payload = GenerationRequest(

@@ -70,15 +70,23 @@ public struct AboutView: View {
                             aboutLinkRow(
                                 title: "Privacy Policy",
                                 icon: "hand.raised.fill",
-                                url: "https://qlueconsulting.com/privacy"
+                                url: "https://gist.github.com/qlueconsulting/dd318693733c41c5a20ae5e39d585985"
                             )
                             
                             Divider().background(Color.white.opacity(0.08))
                             
                             aboutLinkRow(
-                                title: "Terms of Service",
+                                title: "Terms of Use (EULA)",
                                 icon: "doc.text.fill",
-                                url: "https://qlueconsulting.com/terms"
+                                url: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"
+                            )
+                            
+                            Divider().background(Color.white.opacity(0.08))
+                            
+                            aboutLinkRow(
+                                title: "Customer Support",
+                                icon: "questionmark.circle.fill",
+                                url: "https://gist.github.com/qlueconsulting/1b038663d0ea21b8ccda1623b7e67f97"
                             )
                             
                             Divider().background(Color.white.opacity(0.08))

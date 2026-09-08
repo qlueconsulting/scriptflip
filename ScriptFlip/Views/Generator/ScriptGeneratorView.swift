@@ -79,17 +79,17 @@ public struct ScriptGeneratorView: View {
                                 .foregroundStyle(.cyan)
                         }
                         
-                        // Diagnostics Button (Visible only in TestFlight and Debug builds)
-                        if SubscriptionManager.isTestFlightOrDebug {
-                            Button(action: { 
-                                DebugLogService.shared.log("[View] Diagnostics button tapped from toolbar.")
-                                viewModel.showDiagnostics = true 
-                            }) {
-                                Image(systemName: "wrench.and.screwdriver")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.gray)
-                            }
+                        // Diagnostics Button (Gated strictly behind DEBUG to prevent App Review rejection)
+                        #if DEBUG
+                        Button(action: { 
+                            DebugLogService.shared.log("[View] Diagnostics button tapped from toolbar.")
+                            viewModel.showDiagnostics = true 
+                        }) {
+                            Image(systemName: "wrench.and.screwdriver")
+                                .font(.subheadline)
+                                .foregroundStyle(.gray)
                         }
+                        #endif
                         
                         // About App Button
                         Button(action: {
@@ -103,26 +103,50 @@ public struct ScriptGeneratorView: View {
                     }
                 }
                 
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    if subscriptionManager.canUpgrade {
+                        Button(action: {
+                            DebugLogService.shared.log("[View] Manual Upgrade button tapped from toolbar.")
+                            viewModel.showPaywall = true
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "crown.fill")
+                                Text("Upgrade")
+                            }
+                            .font(.caption.bold())
+                            .foregroundStyle(.black)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(
+                                LinearGradient(
+                                    colors: [.yellow, .orange],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .cornerRadius(12)
+                        }
+                    }
+                    
                     usageBadge
                 }
             }
             .alert("Configuration Error", isPresented: $viewModel.showConfigAlert) {
-                if SubscriptionManager.isTestFlightOrDebug {
-                    Button("Open Diagnostics") {
-                        viewModel.showDiagnostics = true
-                    }
+                #if DEBUG
+                Button("Open Diagnostics") {
+                    viewModel.showDiagnostics = true
                 }
+                #endif
                 Button("OK", role: .cancel) { }
             } message: {
                 Text(viewModel.configurationAlertMessage ?? "Invalid Supabase URL or Anon Key.")
             }
             .alert("Script Generation Alert", isPresented: $viewModel.showErrorAlert) {
-                if SubscriptionManager.isTestFlightOrDebug {
-                    Button("Inspect Diagnostics") {
-                        viewModel.showDiagnostics = true
-                    }
+                #if DEBUG
+                Button("Inspect Diagnostics") {
+                    viewModel.showDiagnostics = true
                 }
+                #endif
                 Button("OK", role: .cancel) { }
             } message: {
                 Text(viewModel.errorMessage ?? "An unexpected error occurred.")
@@ -134,20 +158,25 @@ public struct ScriptGeneratorView: View {
                 }
                 Button("Cancel", role: .cancel) { }
             } message: {
-                Text("No captions or transcripts were found for this YouTube video. Would you like to switch to 'Raw Transcript / Text' mode and paste the content manually?")
+                Text("No captions or transcripts were found for this video. Would you like to switch to 'Raw Transcript / Text' mode and paste the content manually?")
             }
             .sheet(isPresented: $viewModel.showResults) {
                 ScriptResultsView(
                     scripts: viewModel.generatedScripts,
                     onLaunchPrompter: { script in
                         viewModel.showResults = false
-                        activePrompterScript = script
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                            activePrompterScript = script
+                        }
                     }
                 )
             }
             .sheet(isPresented: $viewModel.showHistory) {
                 HistoryView { prompterScript in
-                    activePrompterScript = prompterScript
+                    viewModel.showHistory = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                        activePrompterScript = prompterScript
+                    }
                 }
             }
             .sheet(isPresented: $viewModel.showAbout) {
@@ -177,7 +206,7 @@ public struct ScriptGeneratorView: View {
     private var headerBanner: some View {
         VStack(spacing: 8) {
             HStack {
-                Text("Turn Raw Content Into")
+                Text("Turn Any Video Into")
                     .font(.title2.bold())
                     .foregroundStyle(.white)
                 Text("Viral Scripts")
@@ -191,7 +220,7 @@ public struct ScriptGeneratorView: View {
                     )
             }
             
-            Text("AI-optimized for TikTok, Reels, & Shorts with timed hooks (0–3s)")
+            Text("AI-optimized 3–5 min spoken scripts for TikTok, Reels, Shorts & Podcasts")
                 .font(.subheadline)
                 .foregroundStyle(.gray)
                 .multilineTextAlignment(.center)
@@ -201,14 +230,8 @@ public struct ScriptGeneratorView: View {
     
     private var usageBadge: some View {
         Button(action: { 
-            DebugLogService.shared.log("[View] Usage badge tapped.")
-            if !subscriptionManager.isProTierActive {
-                viewModel.showPaywall = true 
-            } else if SubscriptionManager.isTestFlightOrDebug {
-                viewModel.showDiagnostics = true
-            } else {
-                viewModel.showAbout = true
-            }
+            DebugLogService.shared.log("[View] Usage badge tapped - presenting paywall & plan status.")
+            viewModel.showPaywall = true 
         }) {
             HStack(spacing: 6) {
                 switch subscriptionManager.activeTier {
@@ -264,7 +287,7 @@ public struct ScriptGeneratorView: View {
     private var inputCard: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text(viewModel.inputMode == .url ? "Target Video / Podcast URL" : "Source Content / Transcript")
+                Text(viewModel.inputMode == .url ? "Target Video URL (TikTok, Reels, YouTube)" : "Source Content / Transcript")
                     .font(.caption.bold())
                     .foregroundStyle(.gray)
                 Spacer()
@@ -278,7 +301,7 @@ public struct ScriptGeneratorView: View {
             }
             
             if viewModel.inputMode == .url {
-                TextField("https://youtube.com/watch?v=... or Podcast link", text: $viewModel.inputText)
+                TextField("Paste TikTok, Instagram Reel, YouTube, or video URL...", text: $viewModel.inputText)
                     .textFieldStyle(.plain)
                     .padding(14)
                     .background(Color.white.opacity(0.05))

@@ -9,6 +9,7 @@ public struct GenerationRequest: Codable, Sendable {
     
     public enum InputType: String, Codable, Sendable {
         case rawText = "text"
+        case videoUrl = "video"
         case youtubeUrl = "youtube"
         case podcastUrl = "podcast"
     }
@@ -39,7 +40,7 @@ public struct GenerationRequest: Codable, Sendable {
 }
 
 /// DTO for single universal script payload returned by Supabase Edge Function:
-/// `{ title, hook, body, callToAction, estimatedDuration, visualCues }`
+/// `{ title, hook, body, callToAction, estimatedDuration, keyTakeaway }`
 public struct UniversalScriptDTO: Codable, Sendable {
     public let title: String?
     public let hook: String
@@ -47,6 +48,7 @@ public struct UniversalScriptDTO: Codable, Sendable {
     public let callToAction: String?
     public let cta: String?
     public let estimatedDuration: String?
+    public let keyTakeaway: String?
     public let visualCues: [String]?
     public let visualCue: String?
     
@@ -56,7 +58,8 @@ public struct UniversalScriptDTO: Codable, Sendable {
         body: String,
         callToAction: String? = nil,
         cta: String? = nil,
-        estimatedDuration: String? = "30-45s",
+        estimatedDuration: String? = "3-5 min",
+        keyTakeaway: String? = nil,
         visualCues: [String]? = nil,
         visualCue: String? = nil
     ) {
@@ -66,6 +69,7 @@ public struct UniversalScriptDTO: Codable, Sendable {
         self.callToAction = callToAction
         self.cta = cta ?? callToAction
         self.estimatedDuration = estimatedDuration
+        self.keyTakeaway = keyTakeaway
         self.visualCues = visualCues
         self.visualCue = visualCue
     }

@@ -21,13 +21,12 @@ public final class SubscriptionManager {
     
     // MARK: - TestFlight & Tester Override Detection
     
-    /// Detects if running in a Debug build or TestFlight sandbox environment.
+    /// Detects if running in a Debug build (strictly compiled out in App Store releases).
     public static var isTestFlightOrDebug: Bool {
         #if DEBUG
         return true
         #else
-        guard let url = Bundle.main.appStoreReceiptURL else { return false }
-        return url.lastPathComponent == "sandboxReceipt"
+        return false
         #endif
     }
     
@@ -70,6 +69,30 @@ public final class SubscriptionManager {
             return .proMonthly
         }
         return .proWeekly // Default Pro tier
+    }
+    
+    /// Whether user can upgrade to a higher tier (Free can upgrade to Weekly/Monthly; Weekly can upgrade to Monthly; Monthly is top tier).
+    public var canUpgrade: Bool {
+        activeTier != .proMonthly
+    }
+    
+    /// Filter available packages to strictly show upgrade options (never downgrades).
+    public func availableUpgradePackages() -> [Package] {
+        guard let packages = currentOffering?.availablePackages else { return [] }
+        switch activeTier {
+        case .free:
+            // Free users see Weekly and Monthly
+            return packages
+        case .proWeekly:
+            // Weekly users only see Monthly upgrade
+            return packages.filter { pkg in
+                let id = pkg.storeProduct.productIdentifier.lowercased()
+                return id.contains("monthly") || id.contains("month")
+            }
+        case .proMonthly:
+            // Highest tier: no upgrade options
+            return []
+        }
     }
     
     /// Determines whether the Pro tier is active (via live RevenueCat Pro entitlement or manual Tester override).

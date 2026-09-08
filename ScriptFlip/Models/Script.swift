@@ -106,40 +106,40 @@ public struct Script: Codable, Identifiable, Hashable, Sendable {
     public init(dto: UniversalScriptDTO, index: Int = 1, style: ScriptStyle = .casual) {
         self.id = UUID()
         self.title = dto.title?.isEmpty == false ? dto.title! : "Universal Script: \(style.rawValue) Angle"
-        self.hookDurationSeconds = 3
-        self.estimatedTotalDurationSeconds = 120
+        self.hookDurationSeconds = 12
+        self.estimatedTotalDurationSeconds = 240
         self.style = style
         self.targetPlatform = .universal
-        self.estimatedDuration = dto.estimatedDuration ?? "~2 min"
+        self.estimatedDuration = dto.estimatedDuration ?? "3-5 min"
         
-        let primaryVisualCue = dto.visualCues?.first ?? dto.visualCue ?? "Direct camera eye-contact with high-contrast text overlay"
-        let bodyVisualCue = (dto.visualCues != nil && dto.visualCues!.count > 1) ? dto.visualCues![1] : "Dynamic camera cuts and text overlays"
-        let ctaVisualCue = (dto.visualCues != nil && dto.visualCues!.count > 2) ? dto.visualCues![2] : "Screen banner with follow / save prompt"
+        let primaryVisualCue = dto.visualCues?.first ?? dto.visualCue ?? "Direct camera eye-contact with natural delivery"
+        let bodyVisualCue = (dto.visualCues != nil && dto.visualCues!.count > 1) ? dto.visualCues![1] : "Natural hand gestures and clear pace"
+        let ctaVisualCue = (dto.visualCues != nil && dto.visualCues!.count > 2) ? dto.visualCues![2] : "Direct closing eye-contact"
         
         self.sections = [
             ScriptSection(
-                timeRange: "0:00 - 0:03",
+                timeRange: "0:00 - 0:15",
                 sectionType: .hook,
                 spokenText: dto.hook,
                 visualCue: primaryVisualCue,
-                audioCue: "High energy audio punch"
+                audioCue: "Opening hook"
             ),
             ScriptSection(
-                timeRange: "0:03 - 1:50",
+                timeRange: "0:15 - 4:30",
                 sectionType: .body,
                 spokenText: dto.body,
                 visualCue: bodyVisualCue
             ),
             ScriptSection(
-                timeRange: "1:50 - 2:00",
+                timeRange: "4:30 - 5:00",
                 sectionType: .callToAction,
                 spokenText: dto.resolvedCTA,
                 visualCue: ctaVisualCue
             )
         ]
         
-        self.viralityScore = 95
-        self.keyTakeaway = "2-minute social media reaction dialog with 3-second pattern interrupt hook engineered for TikTok, Reels, and Shorts algorithms."
+        self.viralityScore = 96
+        self.keyTakeaway = dto.keyTakeaway ?? "3 to 5 minute in-depth spoken presentation engineered for high retention and seamless teleprompter reading."
     }
     
     /// Initialize full `Script` model from legacy `GeneratedScriptDTO`
@@ -151,7 +151,7 @@ public struct Script: Codable, Identifiable, Hashable, Sendable {
                 body: dto.body,
                 callToAction: dto.cta,
                 cta: dto.cta,
-                estimatedDuration: "30-45s",
+                estimatedDuration: "3-5 min",
                 visualCues: [dto.visualCue],
                 visualCue: dto.visualCue
             ),
@@ -160,7 +160,18 @@ public struct Script: Codable, Identifiable, Hashable, Sendable {
         )
     }
     
-    /// Full combined text suitable for teleprompter display.
+    /// Pure spoken monologue without any bracketed section headers or camera cues, formatted cleanly for the teleprompter.
+    public var cleanTeleprompterText: String {
+        let hookText = hook.trimmingCharacters(in: .whitespacesAndNewlines)
+        let bodyText = body.trimmingCharacters(in: .whitespacesAndNewlines)
+        let ctaText = cta.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        return [hookText, bodyText, ctaText]
+            .filter { !$0.isEmpty }
+            .joined(separator: "\n\n")
+    }
+    
+    /// Combined text with section markers for clipboard or diagnostic display.
     public var fullSpokenText: String {
         sections.map { "[\($0.sectionType.rawValue)]\n\($0.spokenText)" }.joined(separator: "\n\n")
     }

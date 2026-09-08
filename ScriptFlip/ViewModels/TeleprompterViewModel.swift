@@ -48,4 +48,8 @@ public final class TeleprompterViewModel {
         timer?.invalidate()
         timer = nil
     }
+    
+    deinit {
+        timer?.invalidate()
+    }
 }

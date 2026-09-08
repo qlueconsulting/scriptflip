@@ -7,8 +7,7 @@ const corsHeaders = {
 }
 
 const ANTHROPIC_ENDPOINT = "https://api.anthropic.com/v1/messages"
-const ANTHROPIC_MODELS_ENDPOINT = "https://api.anthropic.com/v1/models"
-const MAX_INPUT_CHARS = 4000
+const MAX_INPUT_CHARS = 3000
 
 /**
  * Robustly extract clean 11-character YouTube video IDs from any URL format,
@@ -51,10 +50,30 @@ function extractYouTubeVideoId(input: string): string | null {
 }
 
 /**
+ * Detect social video platforms (TikTok, Instagram Reels, Facebook Reels, YouTube)
+ */
+function detectVideoPlatform(input: string): { platform: string; isVideoUrl: boolean } {
+  const lower = input.toLowerCase()
+  if (lower.includes("youtube.com") || lower.includes("youtu.be")) {
+    return { platform: "YouTube", isVideoUrl: true }
+  }
+  if (lower.includes("tiktok.com")) {
+    return { platform: "TikTok", isVideoUrl: true }
+  }
+  if (lower.includes("instagram.com")) {
+    return { platform: "Instagram Reels", isVideoUrl: true }
+  }
+  if (lower.includes("facebook.com") || lower.includes("fb.watch")) {
+    return { platform: "Facebook Reels", isVideoUrl: true }
+  }
+  return { platform: "Generic", isVideoUrl: input.startsWith("http://") || input.startsWith("https://") }
+}
+
+/**
  * Tier 1: Attempt to fetch automated or creator captions from YouTube player response.
  */
 async function fetchYouTubeTranscript(videoId: string): Promise<string | null> {
-  console.log(`[generate-scripts] [Tier 1] Attempting YouTube transcript fetch for videoId: ${videoId}`)
+  console.log(`[generate-scripts] [YouTube Tier 1] Fetching transcript for videoId: ${videoId}`)
   try {
     const watchUrl = `https://www.youtube.com/watch?v=${videoId}`
     const pageResp = await fetch(watchUrl, {
@@ -65,60 +84,37 @@ async function fetchYouTubeTranscript(videoId: string): Promise<string | null> {
       }
     })
 
-    if (!pageResp.ok) {
-      console.warn(`[generate-scripts] [Tier 1] YouTube page fetch returned status ${pageResp.status}`)
-      return null
-    }
-
+    if (!pageResp.ok) return null
     const html = await pageResp.text()
 
-    // 1. Extract ytInitialPlayerResponse JSON
     const playerResponseMatch = html.match(/ytInitialPlayerResponse\s*=\s*({.+?});(?:var|\n|<\/script>)/) ||
                                 html.match(/var ytInitialPlayerResponse = ({.+?});/)
     
-    if (!playerResponseMatch || !playerResponseMatch[1]) {
-      console.warn("[generate-scripts] [Tier 1] Could not find ytInitialPlayerResponse in YouTube HTML.")
-      return null
-    }
+    if (!playerResponseMatch || !playerResponseMatch[1]) return null
 
     let playerResponse: any
     try {
       playerResponse = JSON.parse(playerResponseMatch[1])
-    } catch (e) {
-      console.warn("[generate-scripts] [Tier 1] Error parsing ytInitialPlayerResponse:", e)
+    } catch (_) {
       return null
     }
 
     const captionTracks = playerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks
-    if (!captionTracks || !Array.isArray(captionTracks) || captionTracks.length === 0) {
-      console.warn("[generate-scripts] [Tier 1] No caption tracks available for this video.")
-      return null
-    }
+    if (!captionTracks || !Array.isArray(captionTracks) || captionTracks.length === 0) return null
 
-    // 2. Select English track if available, else first track
     const selectedTrack = captionTracks.find((t: any) => t.languageCode === 'en' || t.vssId?.includes('.en')) || captionTracks[0]
-    if (!selectedTrack?.baseUrl) {
-      console.warn("[generate-scripts] [Tier 1] Selected caption track lacks baseUrl.")
-      return null
-    }
+    if (!selectedTrack?.baseUrl) return null
 
-    console.log(`[generate-scripts] [Tier 1] Fetching caption track from baseUrl...`)
     const transcriptResp = await fetch(selectedTrack.baseUrl, {
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
       }
     })
-    if (!transcriptResp.ok) {
-      console.warn(`[generate-scripts] [Tier 1] Caption track fetch returned HTTP ${transcriptResp.status}`)
-      return null
-    }
+    if (!transcriptResp.ok) return null
 
     const transcriptXml = await transcriptResp.text()
-    if (!transcriptXml || transcriptXml.trim() === "") {
-      return null
-    }
+    if (!transcriptXml || transcriptXml.trim() === "") return null
 
-    // 3. Parse XML / HTML caption text
     const cleanText = transcriptXml
       .replace(/&amp;/g, '&')
       .replace(/&lt;/g, '<')
@@ -130,46 +126,41 @@ async function fetchYouTubeTranscript(videoId: string): Promise<string | null> {
       .replace(/\s+/g, ' ')
       .trim()
 
-    if (cleanText.length < 30) {
-      console.warn("[generate-scripts] [Tier 1] Parsed transcript text too short.")
-      return null
-    }
-
-    console.log(`[generate-scripts] [Tier 1] Successfully extracted YouTube transcript (${cleanText.length} characters).`)
-    return cleanText
+    return cleanText.length >= 30 ? cleanText : null
   } catch (err) {
-    console.error("[generate-scripts] [Tier 1] Error extracting YouTube transcript:", err)
+    console.warn("[generate-scripts] [YouTube Tier 1] Transcript extraction error:", err)
     return null
   }
 }
 
 /**
- * Tier 2: Fetch video metadata via YouTube oEmbed API and HTML OpenGraph tags as automatic fallback.
+ * Universal video metadata resolution (YouTube, TikTok, Instagram, Facebook)
  */
-async function fetchYouTubeMetadataFallback(videoId: string): Promise<string | null> {
-  console.log(`[generate-scripts] [Tier 2] Fetching public metadata fallback for videoId: ${videoId}`)
+async function fetchUniversalVideoMetadata(rawUrl: string, platform: string): Promise<string> {
+  console.log(`[generate-scripts] Resolving video metadata for platform: ${platform} - URL: ${rawUrl}`)
   let title = ""
-  let author = ""
   let description = ""
+  let creator = ""
 
-  // 1. Fetch official YouTube oEmbed JSON endpoint
-  try {
-    const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`
-    const oembedResp = await fetch(oembedUrl)
-    if (oembedResp.ok) {
-      const oembedData = await oembedResp.json()
-      title = oembedData.title || ""
-      author = oembedData.author_name || ""
-      console.log(`[generate-scripts] [Tier 2] oEmbed found title: "${title}" by "${author}"`)
+  // 1. YouTube specific oEmbed
+  if (platform === "YouTube") {
+    const videoId = extractYouTubeVideoId(rawUrl)
+    if (videoId) {
+      try {
+        const oembedResp = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`)
+        if (oembedResp.ok) {
+          const data = await oembedResp.json()
+          title = data.title || ""
+          creator = data.author_name || ""
+        }
+      } catch (_) {}
     }
-  } catch (err) {
-    console.warn("[generate-scripts] [Tier 2] oEmbed fetch warning:", err)
   }
 
-  // 2. Fetch watch page HTML for OpenGraph description and keywords
+  // 2. Generic HTML OpenGraph scraper for all platforms
   try {
-    const watchUrl = `https://www.youtube.com/watch?v=${videoId}`
-    const pageResp = await fetch(watchUrl, {
+    const formattedUrl = rawUrl.startsWith("http") ? rawUrl : `https://${rawUrl}`
+    const pageResp = await fetch(formattedUrl, {
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
         "Accept-Language": "en-US,en;q=0.9"
@@ -178,45 +169,46 @@ async function fetchYouTubeMetadataFallback(videoId: string): Promise<string | n
 
     if (pageResp.ok) {
       const html = await pageResp.text()
-
       if (!title) {
-        const titleMatch = html.match(/<title>(.+?)<\/title>/) || html.match(/<meta property="og:title" content="(.+?)"/)
+        const titleMatch = html.match(/<meta property="og:title" content="(.+?)"/) ||
+                           html.match(/<title>(.+?)<\/title>/)
         if (titleMatch && titleMatch[1]) {
-          title = titleMatch[1].replace(" - YouTube", "").trim()
+          title = titleMatch[1].replace(/ - (?:YouTube|TikTok|Instagram|Facebook)$/i, "").trim()
         }
       }
-
-      const descMatch = html.match(/<meta property="og:description" content="(.+?)"/) ||
-                        html.match(/<meta name="description" content="(.+?)"/)
-      if (descMatch && descMatch[1]) {
-        description = descMatch[1]
-          .replace(/&amp;/g, '&')
-          .replace(/&quot;/g, '"')
-          .replace(/&#39;/g, "'")
-          .trim()
+      if (!description) {
+        const descMatch = html.match(/<meta property="og:description" content="(.+?)"/) ||
+                          html.match(/<meta name="description" content="(.+?)"/)
+        if (descMatch && descMatch[1]) {
+          description = descMatch[1]
+            .replace(/&amp;/g, '&')
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'")
+            .trim()
+        }
       }
     }
-  } catch (err) {
-    console.warn("[generate-scripts] [Tier 2] HTML metadata scrape warning:", err)
+  } catch (e) {
+    console.warn("[generate-scripts] Universal metadata scrape notice:", e)
   }
 
-  if (!title && !description) {
-    console.warn(`[generate-scripts] [Tier 2] Failed to resolve any metadata for videoId: ${videoId}`)
-    return null
+  // Build clean structured context
+  const lines = [
+    `Platform: ${platform}`,
+    `Source URL: ${rawUrl}`,
+    title ? `Video Title: ${title}` : null,
+    creator ? `Creator: ${creator}` : null,
+    description ? `Description / Summary:\n${description}` : null
+  ].filter(Boolean)
+
+  if (lines.length <= 2) {
+    return `Video Source: ${platform} Link (${rawUrl}). Create a high-value, detailed 3-5 minute speaking reaction and breakdown for this video topic.`
   }
 
-  const structuredContent = [
-    `Video Title: ${title || "Short-Form Video"}`,
-    author ? `Channel / Creator: ${author}` : null,
-    description ? `Description & Overview:\n${description}` : null
-  ].filter(Boolean).join("\n\n")
-
-  console.log(`[generate-scripts] [Tier 2] Successfully compiled metadata context (${structuredContent.length} characters).`)
-  return structuredContent
+  return lines.join("\n\n")
 }
 
 serve(async (req) => {
-  // 1. Handle CORS Pre-Flight OPTIONS Request
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -224,20 +216,17 @@ serve(async (req) => {
   try {
     const anthropicApiKey = Deno.env.get("ANTHROPIC_API_KEY")
     if (!anthropicApiKey) {
-      console.error("[generate-scripts] Missing ANTHROPIC_API_KEY secret in environment.")
       return new Response(
         JSON.stringify({ 
-          error: "Configuration Error: ANTHROPIC_API_KEY is not set in Supabase Edge Function secrets. Please add it via `supabase secrets set ANTHROPIC_API_KEY=...`." 
+          error: "Configuration Error: ANTHROPIC_API_KEY is not set in Supabase Edge Function secrets." 
         }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       )
     }
 
-    // 2. Parse and Validate Client Request Payload
-    let bodyText = ""
-    let payload: { inputText?: string; scriptStyle?: string; model?: string; outputCount?: number; inputType?: string } = {}
+    let payload: { inputText?: string; scriptStyle?: string; model?: string; outputCount?: number; inputType?: string; style?: string } = {}
     try {
-      bodyText = await req.text()
+      const bodyText = await req.text()
       payload = JSON.parse(bodyText)
     } catch (parseError) {
       return new Response(
@@ -246,7 +235,9 @@ serve(async (req) => {
       )
     }
 
-    let { inputText, scriptStyle, inputType } = payload
+    let { inputText, scriptStyle, style, inputType } = payload
+    const effectiveStyle = scriptStyle || style || 'Casual & Relatable'
+
     if (!inputText || inputText.trim() === "") {
       return new Response(
         JSON.stringify({ error: "Missing required field: inputText cannot be empty." }),
@@ -254,44 +245,26 @@ serve(async (req) => {
       )
     }
 
-    // 3. Multi-Tier YouTube URL & Content Resolution
-    const youtubeVideoId = extractYouTubeVideoId(inputText)
-    if (inputType === 'youtube' || youtubeVideoId !== null) {
-      if (youtubeVideoId) {
-        console.log(`[generate-scripts] Processing YouTube videoId: ${youtubeVideoId}`)
-        // Tier 1: Transcript / Captions
-        const transcript = await fetchYouTubeTranscript(youtubeVideoId)
+    // 3. Universal Video Link Resolution (#10: YouTube, TikTok, Instagram Reels, Facebook Reels)
+    const { platform, isVideoUrl } = detectVideoPlatform(inputText.trim())
+    if (inputType === 'video' || inputType === 'youtube' || inputType === 'url' || isVideoUrl) {
+      const ytId = extractYouTubeVideoId(inputText)
+      if (ytId) {
+        const transcript = await fetchYouTubeTranscript(ytId)
         if (transcript) {
           inputText = transcript
         } else {
-          // Tier 2: Automatic Metadata Fallback (oEmbed + HTML meta description)
-          console.log(`[generate-scripts] Captions unavailable. Engaging Tier 2 metadata fallback for videoId: ${youtubeVideoId}`)
-          const metadataFallback = await fetchYouTubeMetadataFallback(youtubeVideoId)
-          if (metadataFallback) {
-            inputText = metadataFallback
-          } else {
-            return new Response(
-              JSON.stringify({ 
-                error: "Unable to retrieve content or captions for this YouTube video. Please paste the transcript or summary text manually." 
-              }),
-              { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-            )
-          }
+          inputText = await fetchUniversalVideoMetadata(inputText, "YouTube")
         }
       } else {
-        return new Response(
-          JSON.stringify({ 
-            error: "Invalid YouTube URL format. Please provide a valid YouTube link or paste text manually." 
-          }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        )
+        inputText = await fetchUniversalVideoMetadata(inputText, platform)
       }
     }
 
-    // 4. Token Reduction: Input Clamping & Sanitization
+    // 4. Streamlined Input Clamping (3000 chars limit for high-signal, cost-effective requests)
     const trimmedInput = inputText.trim()
     const sanitizedInput = trimmedInput.length > MAX_INPUT_CHARS
-      ? trimmedInput.substring(0, MAX_INPUT_CHARS) + "\n[...content truncated for maximum brevity...]"
+      ? trimmedInput.substring(0, MAX_INPUT_CHARS) + "\n[...content truncated for concise processing...]"
       : trimmedInput
 
     const requestHeaders = {
@@ -300,106 +273,62 @@ serve(async (req) => {
       "content-type": "application/json",
     }
 
-    // 5. Dynamic Model Discovery & Hierarchy
-    let dynamicModels: string[] = []
-    try {
-      const modelsResp = await fetch(ANTHROPIC_MODELS_ENDPOINT, {
-        headers: requestHeaders
-      })
-      if (modelsResp.ok) {
-        const modelsJson = await modelsResp.json()
-        if (modelsJson.data && Array.isArray(modelsJson.data)) {
-          dynamicModels = modelsJson.data.map((m: any) => m.id)
-          console.log("[generate-scripts] Discovered active models via /v1/models:", dynamicModels)
-        }
-      } else {
-        console.warn(`[generate-scripts] /v1/models returned HTTP ${modelsResp.status}`)
-      }
-    } catch (e) {
-      console.warn("[generate-scripts] Error querying /v1/models:", e)
-    }
-
+    // 5. Model Hierarchy
     const baseModelHierarchy = [
       payload.model,
       Deno.env.get("ANTHROPIC_MODEL"),
-      ...dynamicModels,
       "claude-3-5-sonnet-20241022",
       "claude-3-5-sonnet-latest",
       "claude-3-5-haiku-20241022",
-      "claude-3-5-haiku-latest",
-      "claude-3-5-sonnet-20240620",
-      "claude-3-haiku-20240307",
-      "claude-3-sonnet-20240229",
-      "claude-3-opus-20240229"
+      "claude-3-haiku-20240307"
     ].filter(Boolean) as string[]
 
     const modelHierarchy = Array.from(new Set(baseModelHierarchy))
 
-    // 6. Style-Specific "Act As" Prompts for 2-Minute Social Media Reaction Dialog (Response/Reaction Format)
+    // 6. Style-Specific System Prompts for 3-5 Minute Continuous Spoken Monologue (No Clip Cues)
     const stylePrompts: Record<string, string> = {
-      'Casual & Relatable': `Act as a relatable content creator filming a casual reaction and breakdown video for social media. You are reacting to the source content from a third-person perspective (NEVER pretend to be the original person in the transcript or retell their story as your own). Talk directly to your audience like a friend sharing commentary: "Okay, you guys have to see what this creator just said...", "I was watching this video and one thing completely blew my mind..."
+      'Casual & Relatable': `You are an engaging, relatable creator filming a direct-to-camera commentary and breakdown video. Speak directly to your audience like a close friend breaking down an eye-opening revelation. Use natural conversational rhythm, rhetorical questions, and authentic enthusiasm.`,
 
-Create a response to the source text in the style of a casual, conversational social media reaction. Make this a robust 2-minute dialog reacting to the text specifically for social media hooks and reactions. Use rhetorical questions, relatable commentary, and genuine enthusiasm. Structure your hook as a "wait, you guys need to hear this" pattern interrupt. The body should feel like an excited friend breaking down something they just discovered. End with a natural, non-salesy CTA that feels like peer advice.`,
+      'Direct Response Sales': `You are an authoritative strategist filming a high-converting video breakdown. Deliver sharp analysis, high-urgency logic, psychological hooks, and clear commercial takeaways designed for maximum viewer conviction.`,
 
-      'Direct Response Sales': `Act as a high-converting direct response creator filming an expert critique and reaction video for social media. You are analyzing and reacting to the source content as an external strategist (NEVER speak as the original author in the transcript). Reference the source material directly: "Everyone is talking about this claim, but here's the real reason it works...", "Look at what this case study actually proves for your business..."
+      'Storytelling & Narrative': `You are a master storyteller filming an immersive narrative exploration. Build curiosity with a mystery or tension hook, develop emotional stakes through vivid observations, and land on a powerful human lesson.`,
 
-Create a response to the source text in the style of a direct response reaction script optimized for maximum clicks, conversions, and engagement. Make this a robust 2-minute dialog reacting to the text specifically for social media hooks and reactions. Open with a bold claim or shocking reaction to the content that creates an open loop. Stack tangible benefits and takeaways in the body. Use power words, time-pressure language, and social proof framing. Close with a crystal-clear, urgent call to action.`,
+      'Controversial / Hot Take': `You are a bold, contrarian thinker filming an unfiltered breakdown that challenges conventional wisdom. Open with your sharpest hot take, dismantle popular misconceptions with clear logic, and pose a provocative challenge to your audience.`,
 
-      'Storytelling & Narrative': `Act as a master storytelling creator filming a commentary and narrative reaction video for social media. You are reacting to and exploring the story/ideas inside the source content as an observer (NEVER retell the transcript in the first person as if it happened to you). Frame it as a compelling external narrative: "This story about [topic] is one of the wildest things I've come across...", "When you hear what actually happened here, it completely changes how you look at [topic]..."
-
-Create a response to the source text in the style of an emotionally compelling story-driven social media reaction. Make this a robust 2-minute dialog reacting to the text specifically for social media hooks and reactions. Open with a moment of tension or mystery reacting to the source material. Build the narrative with vivid observations, emotional stakes, and pacing shifts. Land on a powerful takeaway that resonates on a human level and compels sharing.`,
-
-      'Controversial / Hot Take': `Act as a bold, opinionated content creator filming an unfiltered hot-take reaction video for social media. You are reacting to and challenging the source content from an external perspective (NEVER speak as the original author). Open with a contrarian reaction: "I just saw this take and I completely disagree...", "Everyone in the comments is praising this video, but here is the huge flaw nobody is talking about..."
-
-Create a response to the source text in the style of a controversial hot-take reaction that challenges conventional wisdom. Make this a robust 2-minute dialog reacting to the text specifically for social media hooks and reactions. Open with your most provocative reaction statement first. Systematically dismantle the source claims with sharp logic, counter-examples, and uncomfortable truths. End with a mic-drop question that forces viewers to pick a side in the comments.`,
-
-      'High-Value Educational': `Act as an expert educator and analyst filming a breakdown and reaction video for social media. You are analyzing the source content to extract and teach valuable lessons to your audience (NEVER pretend to be the person who created the transcript). Frame the response as an authoritative analysis: "Let's break down what this video gets 100% right and how you can apply it...", "Here are the 3 biggest lessons from this clip that you can use today..."
-
-Create a response to the source text in the style of a high-value educational breakdown for social media. Make this a robust 2-minute dialog reacting to the text specifically for social media hooks and reactions. Open with a counterintuitive insight or "most people missed this key part" hook that establishes your authority. Deliver the value in a numbered framework or step-by-step breakdown that feels immediately actionable. Close with the single most important takeaway and a CTA to save and share.`
+      'High-Value Educational': `You are an expert educator delivering an in-depth, structured masterclass breakdown. Deliver immediate actionable value using a clear multi-point framework that leaves viewers with profound insights.`
     }
 
-    const selectedPrompt = stylePrompts[style] || stylePrompts['Casual & Relatable']
+    const persona = stylePrompts[effectiveStyle] || stylePrompts['Casual & Relatable']
 
-    const systemPrompt = `${selectedPrompt}
+    const systemPrompt = `${persona}
 
-CRITICAL PERSPECTIVE RULES:
-1. RESPONSE/REACTION FORMAT ONLY: You are a creator REACTING TO, COMMENTING ON, and BREAKING DOWN the source content for your followers.
-2. NO FIRST-PERSON IMPERSONATION: NEVER write as if you are the original speaker/author in the source text (do NOT say "My podcast", "When I built my company", "I was arrested", etc.). ALWAYS speak as an outside creator reacting to what the source content shared (e.g., "This video claims...", "Look at what happened here...", "Here is my breakdown...").
-3. DIRECT-TO-CAMERA: Write spoken dialogue for the creator talking directly to their audience.
+CORE SCRIPTWRITING REQUIREMENTS:
+1. PURE SPOKEN SCRIPT ONLY: Write pure, natural spoken dialogue designed for continuous teleprompter delivery. Do NOT include any video editing directions, camera cues, cutaway notes, sound effects, or bracketed stage markers (e.g., do NOT output "[CUE: ...]", "[Hook]", etc.).
+2. 3 TO 5 MINUTE SPEAKING DURATION: The body must contain 500 to 700 words of substantive, high-retention speaking text divided into natural, readable paragraphs (representing approx. 3 to 5 minutes of speech at 140 words per minute).
+3. THIRD-PERSON PERSPECTIVE: React to and explore the source material as an outside creator/expert presenting commentary to your audience. Never pretend to be the original person in the source transcript.
+4. TELEPROMPTER READY: Write with natural pauses, rhetorical cadence, and smooth vocal transitions.
 
-Output ONLY valid JSON matching this exact structure — no markdown formatting, backticks, or preamble:
+Output ONLY valid JSON matching this exact structure (no markdown fences, no backticks, no preamble):
 {
   "script": {
-    "title": "Short punchy video title",
-    "hook": "0-3s high retention reaction hook with pattern interrupt that stops the scroll",
-    "body": "90-110s robust social media reaction dialog breaking down the source content with energy and personality",
-    "callToAction": "Clear viral engagement call to action",
-    "estimatedDuration": "~2 min",
-    "visualCues": ["Opening reaction visual cue", "Mid-video camera/editing cue", "Ending banner or graphic cue"]
+    "title": "Compelling Presentation Title",
+    "hook": "Strong 10-15s opening spoken hook capturing immediate attention (approx 30-40 words)",
+    "body": "Detailed 3-5 minute spoken presentation text (500-700 words) divided into clear thematic paragraphs without any camera cues or bracketed stage markers",
+    "callToAction": "Natural closing takeaway and engagement call to action (approx 30 words)",
+    "estimatedDuration": "3-5 min",
+    "keyTakeaway": "Single-sentence core summary of the breakdown"
   }
 }`
 
-    const maxTokensBudget = 1800
-
-    const maskedKey = anthropicApiKey.length > 10 
-      ? `${anthropicApiKey.substring(0, 7)}...${anthropicApiKey.substring(anthropicApiKey.length - 4)}` 
-      : "***"
-
-    console.log("================ [generate-scripts] DISPATCH START ================")
-    console.log(`[generate-scripts] Endpoint: ${ANTHROPIC_ENDPOINT}`)
-    console.log(`[generate-scripts] Model Hierarchy: ${JSON.stringify(modelHierarchy)}`)
-    console.log(`[generate-scripts] Masked API Key: ${maskedKey}`)
-    console.log(`[generate-scripts] Input Text Length: ${sanitizedInput.length} chars (clamped)`)
-    console.log(`[generate-scripts] Max Tokens: ${maxTokensBudget}`)
-    console.log("====================================================================")
+    // 7. Streamlined Token Budget: 2,200 tokens is optimal for ~700 words JSON output
+    const maxTokensBudget = 2200
 
     let finalResponse: Response | null = null
     let rawResponseText = ""
     let successfulModel = ""
 
-    // 7. Iterate through Model Hierarchy with Automatic Fallback
     for (const currentModel of modelHierarchy) {
-      console.log(`[generate-scripts] Attempting dispatch with model: '${currentModel}'...`)
+      console.log(`[generate-scripts] Dispatching with model '${currentModel}' (budget: ${maxTokensBudget})...`)
       
       const requestBody = {
         model: currentModel,
@@ -416,67 +345,45 @@ Output ONLY valid JSON matching this exact structure — no markdown formatting,
         })
 
         const text = await resp.text()
-        console.log(`[generate-scripts] Model '${currentModel}' returned HTTP ${resp.status}`)
-
         if (resp.ok) {
           finalResponse = resp
           rawResponseText = text
           successfulModel = currentModel
-          console.log(`[generate-scripts] Model '${currentModel}' succeeded!`)
           break
         } else {
-          console.warn(`[generate-scripts] Model '${currentModel}' failed with HTTP ${resp.status}: ${text.substring(0, 200)}`)
+          console.warn(`[generate-scripts] Model '${currentModel}' HTTP ${resp.status}: ${text.substring(0, 150)}`)
           finalResponse = resp
           rawResponseText = text
-          if (resp.status === 401 || resp.status === 403) {
-            break
-          }
+          if (resp.status === 401 || resp.status === 403) break
         }
       } catch (fetchErr) {
-        console.error(`[generate-scripts] Network error connecting to Anthropic with model '${currentModel}':`, fetchErr)
+        console.error(`[generate-scripts] Network error connecting to Anthropic (${currentModel}):`, fetchErr)
       }
     }
 
-    // 8. Handle Non-OK Anthropic Responses Gracefully
     if (!finalResponse || !finalResponse.ok) {
-      console.error(`[generate-scripts] All models in hierarchy failed. Last response:`, rawResponseText)
       let parsedError = rawResponseText
       try {
         const errorJson = JSON.parse(rawResponseText)
         parsedError = errorJson.error?.message || errorJson.message || rawResponseText
-      } catch (_) {
-        // use raw text
-      }
+      } catch (_) {}
       return new Response(
         JSON.stringify({ 
-          error: `Anthropic API Error (${finalResponse?.status || 502}): ${parsedError}`,
-          modelsAttempted: modelHierarchy
+          error: `Anthropic API Error: ${parsedError}`
         }),
-        { status: finalResponse?.status && finalResponse.status >= 400 && finalResponse.status < 600 ? finalResponse.status : 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      )
-    }
-
-    // 9. Parse Successful Response Payload
-    let result: any
-    try {
-      result = JSON.parse(rawResponseText)
-    } catch (e) {
-      console.error("[generate-scripts] Failed to parse Anthropic JSON response:", rawResponseText)
-      return new Response(
-        JSON.stringify({ error: `Invalid JSON received from Anthropic: ${rawResponseText.substring(0, 300)}` }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       )
     }
 
+    // 8. Parse Anthropic Response
+    const result = JSON.parse(rawResponseText)
     if (!result.content || !Array.isArray(result.content) || result.content.length === 0 || !result.content[0].text) {
-      console.error("[generate-scripts] Anthropic response missing content text:", result)
       return new Response(
-        JSON.stringify({ error: `Unexpected Anthropic response structure: ${JSON.stringify(result).substring(0, 300)}` }),
+        JSON.stringify({ error: "Unexpected Anthropic response structure" }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       )
     }
 
-    // 10. Clean and Parse Script Object JSON
     let contentText = result.content[0].text.trim()
     if (contentText.startsWith("```")) {
       contentText = contentText.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim()
@@ -486,54 +393,24 @@ Output ONLY valid JSON matching this exact structure — no markdown formatting,
     try {
       parsedJSON = JSON.parse(contentText)
     } catch (jsonErr) {
-      console.error("[generate-scripts] Failed to parse script JSON:", contentText)
+      console.error("[generate-scripts] JSON parse error:", contentText)
       return new Response(
-        JSON.stringify({ 
-          error: `Failed to parse generated script JSON from model: ${jsonErr.message}`,
-          rawOutput: contentText.substring(0, 500)
-        }),
+        JSON.stringify({ error: `Failed to parse generated script JSON: ${jsonErr.message}` }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       )
     }
 
-    // Extract standardized script object
-    let scriptObj: any = null
-    if (parsedJSON.script && typeof parsedJSON.script === 'object') {
-      scriptObj = parsedJSON.script
-    } else if (Array.isArray(parsedJSON.scripts) && parsedJSON.scripts.length > 0) {
-      scriptObj = parsedJSON.scripts[0]
-    } else if (Array.isArray(parsedJSON.data) && parsedJSON.data.length > 0) {
-      scriptObj = parsedJSON.data[0]
-    } else if (Array.isArray(parsedJSON) && parsedJSON.length > 0) {
-      scriptObj = parsedJSON[0]
-    } else if (parsedJSON.hook && parsedJSON.body) {
-      scriptObj = parsedJSON
-    }
+    let scriptObj: any = parsedJSON.script || (Array.isArray(parsedJSON.scripts) ? parsedJSON.scripts[0] : parsedJSON)
 
-    if (!scriptObj) {
-      scriptObj = {
-        title: "Universal Short-Form Script",
-        hook: "Stop scrolling and check this out!",
-        body: contentText.substring(0, 200),
-        callToAction: "Follow for more daily tips!",
-        estimatedDuration: "30-45s",
-        visualCues: ["Point directly at camera", "Text overlay with key insight"]
-      }
-    }
-
-    // Standardize fields for universal compatibility
     const normalizedScript = {
-      title: scriptObj.title || "Universal Short-Form Script",
+      title: scriptObj.title || "Universal Speaking Script",
       hook: scriptObj.hook || "",
       body: scriptObj.body || "",
-      callToAction: scriptObj.callToAction || scriptObj.cta || "",
-      cta: scriptObj.callToAction || scriptObj.cta || "",
-      estimatedDuration: scriptObj.estimatedDuration || "30-45s",
-      visualCues: Array.isArray(scriptObj.visualCues) ? scriptObj.visualCues : (scriptObj.visualCue ? [scriptObj.visualCue] : ["Camera focus with energetic delivery"]),
-      visualCue: Array.isArray(scriptObj.visualCues) ? scriptObj.visualCues.join("; ") : (scriptObj.visualCue || "Dynamic camera zoom and captions")
+      callToAction: scriptObj.callToAction || scriptObj.cta || "Follow and share for more daily breakdowns!",
+      cta: scriptObj.callToAction || scriptObj.cta || "Follow and share for more daily breakdowns!",
+      estimatedDuration: scriptObj.estimatedDuration || "3-5 min",
+      keyTakeaway: scriptObj.keyTakeaway || "Substantive 3-5 minute spoken presentation engineered for maximum retention."
     }
-
-    console.log(`[generate-scripts] Successfully generated single universal script with model '${successfulModel}'.`)
 
     return new Response(
       JSON.stringify({ 
@@ -545,9 +422,9 @@ Output ONLY valid JSON matching this exact structure — no markdown formatting,
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     )
   } catch (error) {
-    console.error("[generate-scripts] Unexpected unhandled error:", error)
+    console.error("[generate-scripts] Unhandled error:", error)
     return new Response(
-      JSON.stringify({ error: `Internal Edge Function Error: ${error.message}` }),
+      JSON.stringify({ error: `Internal Server Error: ${error.message}` }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     )
   }
