@@ -8,8 +8,10 @@ echo "CI_WORKFLOW:        ${CI_WORKFLOW:-not set}"
 echo "MARKETING_VERSION:  ${MARKETING_VERSION:-not set (using project default)}"
 echo "BUILD_NUMBER:       ${BUILD_NUMBER:-not set (using CI_BUILD_NUMBER)}"
 
-# Absolute path to project file — script runs from ci_scripts/, so use CI_WORKSPACE
-PBXPROJ="${CI_WORKSPACE}/ScriptFlip.xcodeproj/project.pbxproj"
+# Derive repo root from script location — CI_WORKSPACE is not set in post-clone
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+PBXPROJ="${REPO_ROOT}/ScriptFlip.xcodeproj/project.pbxproj"
+echo "-> Repo root:       $REPO_ROOT"
 echo "-> project.pbxproj: $PBXPROJ"
 
 # ── Marketing Version ────────────────────────────────────────────────────────
