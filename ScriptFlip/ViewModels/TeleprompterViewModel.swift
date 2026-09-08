@@ -13,7 +13,8 @@ public final class TeleprompterViewModel {
     public var isMirrored: Bool = false
     public var scrollOffset: Double = 0.0
     
-    private var timer: Timer? = nil
+    /// Task-based scroll loop — safe for Swift 6 actor isolation (Task is nonisolated-deinit safe).
+    private var scrollTask: Task<Void, Never>? = nil
     
     public init(script: Script) {
         self.script = script
@@ -22,34 +23,36 @@ public final class TeleprompterViewModel {
     public func togglePlayPause() {
         isPlaying.toggle()
         if isPlaying {
-            startTimer()
+            startScrollLoop()
         } else {
-            stopTimer()
+            stopScrollLoop()
         }
     }
     
     public func resetPrompter() {
-        stopTimer()
+        stopScrollLoop()
         isPlaying = false
         scrollOffset = 0.0
     }
     
-    private func startTimer() {
-        stopTimer()
-        timer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self, self.isPlaying else { return }
-                self.scrollOffset += (self.scrollSpeed * 0.05)
+    private func startScrollLoop() {
+        stopScrollLoop()
+        scrollTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 50_000_000) // 0.05s tick
+                guard let self, self.isPlaying, !Task.isCancelled else { continue }
+                self.scrollOffset += self.scrollSpeed * 0.05
             }
         }
     }
     
-    private func stopTimer() {
-        timer?.invalidate()
-        timer = nil
+    private func stopScrollLoop() {
+        scrollTask?.cancel()
+        scrollTask = nil
     }
     
+    /// Task cancellation is nonisolated-safe — no actor-isolation violation in Swift 6.
     deinit {
-        timer?.invalidate()
+        scrollTask?.cancel()
     }
 }
