@@ -13,8 +13,9 @@ public final class TeleprompterViewModel {
     public var isMirrored: Bool = false
     public var scrollOffset: Double = 0.0
     
-    /// Task-based scroll loop — safe for Swift 6 actor isolation (Task is nonisolated-deinit safe).
-    private var scrollTask: Task<Void, Never>? = nil
+    /// nonisolated(unsafe) allows deinit to cancel the task without a Swift 6 actor-isolation error.
+    /// Task.cancel() is inherently thread-safe, so this is correct and intentional.
+    nonisolated(unsafe) private var scrollTask: Task<Void, Never>? = nil
     
     public init(script: Script) {
         self.script = script
