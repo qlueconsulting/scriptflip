@@ -348,31 +348,26 @@ public struct PaywallContainerView: View {
     private func executePurchase() {
         let isMonthly = (subscriptionManager.activeTier == .proWeekly) || (selectedPackageType == .monthly)
         
-        let matchingPackage = subscriptionManager.currentOffering?.availablePackages.first(where: { pkg in
-            let id = pkg.storeProduct.productIdentifier.lowercased()
-            return isMonthly ? (id.contains("monthly") || id.contains("month")) : (id.contains("weekly") || id.contains("week"))
-        })
-        
         Task {
-            if let pkg = matchingPackage {
-                let success = await subscriptionManager.purchase(package: pkg)
-                if success {
-                    dismiss()
-                }
-            } else if let firstPkg = subscriptionManager.currentOffering?.availablePackages.first {
-                let success = await subscriptionManager.purchase(package: firstPkg)
-                if success {
-                    dismiss()
-                }
-            } else {
-                // If offerings are currently refreshing, trigger reload
+            // If offerings haven't loaded yet, try one more fetch with user feedback
+            if subscriptionManager.currentOffering == nil {
                 await subscriptionManager.fetchOfferings()
-                if let pkg = subscriptionManager.currentOffering?.availablePackages.first {
-                    let success = await subscriptionManager.purchase(package: pkg)
-                    if success {
-                        dismiss()
-                    }
-                }
+            }
+            
+            let matchingPackage = subscriptionManager.currentOffering?.availablePackages.first(where: { pkg in
+                let id = pkg.storeProduct.productIdentifier.lowercased()
+                return isMonthly ? (id.contains("monthly") || id.contains("month")) : (id.contains("weekly") || id.contains("week"))
+            }) ?? subscriptionManager.currentOffering?.availablePackages.first
+            
+            guard let pkg = matchingPackage else {
+                // Surface a clear error rather than silently failing
+                subscriptionManager.errorMessage = "Could not load subscription options from the App Store. Please check your internet connection and try again. If the issue persists, verify that in-app purchases are configured in RevenueCat and App Store Connect."
+                return
+            }
+            
+            let success = await subscriptionManager.purchase(package: pkg)
+            if success {
+                dismiss()
             }
         }
     }

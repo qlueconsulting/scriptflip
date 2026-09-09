@@ -1,12 +1,13 @@
 import UIKit
 
-/// Custom AppDelegate ensuring 100% synchronous, pure launch lifecycle.
+/// Custom AppDelegate ensuring clean launch lifecycle.
 public class AppDelegate: NSObject, UIApplicationDelegate {
     public func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
-        // Zero eager SDK initializations or background tasks during application launch
+        // Configure RevenueCat at launch so StoreKit offerings are ready before paywall opens
+        SubscriptionManager.ensureConfigured()
         return true
     }
 }
