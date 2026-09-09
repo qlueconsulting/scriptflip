@@ -214,7 +214,8 @@ serve(async (req) => {
   }
 
   try {
-    const anthropicApiKey = Deno.env.get("ANTHROPIC_API_KEY")
+    const rawKey = Deno.env.get("ANTHROPIC_API_KEY") || ""
+    const anthropicApiKey = rawKey.trim().replace(/^["']|["']$/g, "")
     if (!anthropicApiKey) {
       return new Response(
         JSON.stringify({ 
@@ -376,7 +377,9 @@ Output ONLY valid JSON matching this exact structure (no markdown fences, no bac
       const combinedErrors = modelErrors.join(" | ")
       console.error(`[generate-scripts] All models failed: ${combinedErrors}`)
       return new Response(
-        JSON.stringify({ error: `All models failed. ${combinedErrors}` }),
+        JSON.stringify({ 
+          error: `Anthropic API Error: ${combinedErrors}`
+        }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       )
     }
