@@ -273,14 +273,14 @@ serve(async (req) => {
       "content-type": "application/json",
     }
 
-    // 5. Model Hierarchy
+    // 5. Model Hierarchy — always prefer -latest aliases so Anthropic resolves current supported version
     const baseModelHierarchy = [
       payload.model,
       Deno.env.get("ANTHROPIC_MODEL"),
-      "claude-3-5-sonnet-20241022",
-      "claude-3-5-sonnet-latest",
-      "claude-3-5-haiku-20241022",
-      "claude-3-haiku-20240307"
+      "claude-3-5-sonnet-latest",       // Recommended: always current Sonnet
+      "claude-3-5-haiku-latest",         // Fast fallback: always current Haiku
+      "claude-3-5-sonnet-20241022",      // Pinned fallback
+      "claude-3-5-haiku-20241022",       // Pinned fast fallback
     ].filter(Boolean) as string[]
 
     const modelHierarchy = Array.from(new Set(baseModelHierarchy))
@@ -320,12 +320,13 @@ Output ONLY valid JSON matching this exact structure (no markdown fences, no bac
   }
 }`
 
-    // 7. Token Budget: 4,400 tokens allows ~1,000 words of rich JSON body output (doubled for fuller scripts)
+    // 7. Token Budget: 4,400 tokens allows ~1,000 words of rich JSON body output
     const maxTokensBudget = 4400
 
     let finalResponse: Response | null = null
     let rawResponseText = ""
     let successfulModel = ""
+    const modelErrors: string[] = []
 
     for (const currentModel of modelHierarchy) {
       console.log(`[generate-scripts] Dispatching with model '${currentModel}' (budget: ${maxTokensBudget})...`)
@@ -351,26 +352,27 @@ Output ONLY valid JSON matching this exact structure (no markdown fences, no bac
           successfulModel = currentModel
           break
         } else {
-          console.warn(`[generate-scripts] Model '${currentModel}' HTTP ${resp.status}: ${text.substring(0, 150)}`)
+          let errMsg = text.substring(0, 200)
+          try { errMsg = JSON.parse(text)?.error?.message || errMsg } catch (_) {}
+          const modelErr = `${currentModel} (HTTP ${resp.status}): ${errMsg}`
+          modelErrors.push(modelErr)
+          console.warn(`[generate-scripts] Model failed — ${modelErr}`)
           finalResponse = resp
           rawResponseText = text
           if (resp.status === 401 || resp.status === 403) break
         }
       } catch (fetchErr) {
-        console.error(`[generate-scripts] Network error connecting to Anthropic (${currentModel}):`, fetchErr)
+        const netErr = `${currentModel}: network error — ${fetchErr}`
+        modelErrors.push(netErr)
+        console.error(`[generate-scripts] ${netErr}`)
       }
     }
 
     if (!finalResponse || !finalResponse.ok) {
-      let parsedError = rawResponseText
-      try {
-        const errorJson = JSON.parse(rawResponseText)
-        parsedError = errorJson.error?.message || errorJson.message || rawResponseText
-      } catch (_) {}
+      const combinedErrors = modelErrors.join(" | ")
+      console.error(`[generate-scripts] All models failed: ${combinedErrors}`)
       return new Response(
-        JSON.stringify({ 
-          error: `Anthropic API Error: ${parsedError}`
-        }),
+        JSON.stringify({ error: `All models failed. ${combinedErrors}` }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       )
     }
