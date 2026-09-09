@@ -20,196 +20,19 @@ public struct ScriptGeneratorView: View {
         NavigationStack {
             ZStack {
                 Color(red: 0.05, green: 0.05, blue: 0.07).ignoresSafeArea()
-                
-                ScrollView {
-                    VStack(spacing: 28) {
-                        // Top Header / Logo Banner
-                        headerBanner
-                        
-                        // Input Type Selector Tabs
-                        inputTypePicker
-                        
-                        // Main Text / URL Input Box
-                        inputCard
-                        
-                        // Target Response Duration Slider (1 to 5 Minutes)
-                        durationSliderSection
-                        
-                        // Script Style Tone Selector
-                        stylePickerSection
-                        
-                        // Error Alert Banner if applicable
-                        if let error = viewModel.errorMessage {
-                            HStack(spacing: 10) {
-                                Image(systemName: "exclamationmark.triangle.fill")
-                                    .foregroundStyle(.red)
-                                Text(error)
-                                    .font(.footnote)
-                                    .foregroundStyle(.white)
-                                Spacer()
-                                Button(action: { viewModel.errorMessage = nil }) {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .foregroundStyle(.gray)
-                                }
-                            }
-                            .padding(14)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(Color.red.opacity(0.15))
-                            .cornerRadius(12)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.red.opacity(0.3), lineWidth: 1)
-                            )
-                        }
-                        
-                        // Generate Scripts CTA Button
-                        generateButton
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 40)
-                }
+                scrollContent
             }
             .navigationTitle("ScriptFlip")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItemGroup(placement: .topBarLeading) {
-                    HStack(spacing: 12) {
-                        // History Button
-                        Button(action: {
-                            DebugLogService.shared.log("[View] History button tapped from toolbar.")
-                            viewModel.showHistory = true
-                        }) {
-                            Image(systemName: "clock.arrow.circlepath")
-                                .font(.subheadline.bold())
-                                .foregroundStyle(.cyan)
-                        }
-                        
-                        // Diagnostics Button (Gated strictly behind DEBUG to prevent App Review rejection)
-                        #if DEBUG
-                        Button(action: { 
-                            DebugLogService.shared.log("[View] Diagnostics button tapped from toolbar.")
-                            viewModel.showDiagnostics = true 
-                        }) {
-                            Image(systemName: "wrench.and.screwdriver")
-                                .font(.subheadline)
-                                .foregroundStyle(.gray)
-                        }
-                        #endif
-                        
-                        // About App Button
-                        Button(action: {
-                            DebugLogService.shared.log("[View] About button tapped from toolbar.")
-                            viewModel.showAbout = true
-                        }) {
-                            Image(systemName: "info.circle")
-                                .font(.subheadline)
-                                .foregroundStyle(.gray)
-                        }
-                    }
-                }
-                
-                ToolbarItemGroup(placement: .topBarTrailing) {
-                    if subscriptionManager.activeTier == .free {
-                        Button(action: {
-                            DebugLogService.shared.log("[View] Manual Upgrade button tapped from toolbar.")
-                            viewModel.showPaywall = true
-                        }) {
-                            HStack(spacing: 4) {
-                                Image(systemName: "crown.fill")
-                                Text("Upgrade")
-                            }
-                            .font(.caption.bold())
-                            .foregroundStyle(.black)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(
-                                LinearGradient(
-                                    colors: [.yellow, .orange],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .cornerRadius(12)
-                        }
-                    }
-                    
-                    usageBadge
-                }
+                leadingToolbarItems
+                trailingToolbarItems
             }
-            .alert("Configuration Error", isPresented: $viewModel.showConfigAlert) {
-                #if DEBUG
-                Button("Open Diagnostics") {
-                    viewModel.showDiagnostics = true
-                }
-                #endif
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text(viewModel.configurationAlertMessage ?? "Invalid Supabase URL or Anon Key.")
-            }
-            .alert("Script Generation Alert", isPresented: $viewModel.showErrorAlert) {
-                #if DEBUG
-                Button("Inspect Diagnostics") {
-                    viewModel.showDiagnostics = true
-                }
-                #endif
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text(viewModel.errorMessage ?? "An unexpected error occurred.")
-            }
-            .alert("No Captions Found", isPresented: $viewModel.showMissingCaptionsAlert) {
-                Button("Switch to Raw Text") {
-                    viewModel.inputMode = .rawText
-                    viewModel.inputText = ""
-                }
-                Button("Cancel", role: .cancel) { }
-            } message: {
-                Text("No captions or transcripts were found for this video. Would you like to switch to 'Raw Transcript / Text' mode and paste the content manually?")
-            }
-            .sheet(isPresented: $viewModel.showResults) {
-                ScriptResultsView(
-                    scripts: viewModel.generatedScripts,
-                    onLaunchPrompter: { script in
-                        viewModel.showResults = false
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                            activePrompterScript = script
-                        }
-                    }
-                )
-            }
-            .sheet(isPresented: $viewModel.showHistory) {
-                HistoryView { prompterScript in
-                    viewModel.showHistory = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                        activePrompterScript = prompterScript
-                    }
-                }
-            }
-            .sheet(isPresented: $viewModel.showAbout) {
-                AboutView()
-            }
-            .sheet(isPresented: $viewModel.showPaywall, onDismiss: {
-                Task {
-                    await subscriptionManager.fetchCustomerInfo()
-                    viewModel.refreshUsage()
-                }
-            }) {
-                PaywallContainerView(subscriptionManager: subscriptionManager, onPurchaseSuccess: {
-                    Task {
-                        await subscriptionManager.fetchCustomerInfo()
-                        viewModel.refreshUsage()
-                    }
-                })
-            }
-            .sheet(isPresented: $viewModel.showDiagnostics) {
-                NetworkDiagnosticsView(diagnostics: viewModel.getDiagnostics()) {
-                    Task {
-                        await viewModel.generateScripts()
-                    }
-                }
-            }
-            .fullScreenCover(item: $activePrompterScript) { script in
-                TeleprompterView(script: script)
-            }
+            .modifier(ScriptGeneratorModalsModifier(
+                viewModel: viewModel,
+                subscriptionManager: subscriptionManager,
+                activePrompterScript: $activePrompterScript
+            ))
             .onAppear {
                 viewModel.refreshUsage()
             }
@@ -225,6 +48,117 @@ public struct ScriptGeneratorView: View {
                     }
                 }
             }
+        }
+    }
+    
+    // MARK: - Subviews
+    
+    private var scrollContent: some View {
+        ScrollView {
+            VStack(spacing: 28) {
+                headerBanner
+                inputTypePicker
+                inputCard
+                durationSliderSection
+                stylePickerSection
+                errorBanner
+                generateButton
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 40)
+        }
+    }
+    
+    @ViewBuilder
+    private var errorBanner: some View {
+        if let error = viewModel.errorMessage {
+            HStack(spacing: 10) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.red)
+                Text(error)
+                    .font(.footnote)
+                    .foregroundStyle(.white)
+                Spacer()
+                Button(action: { viewModel.errorMessage = nil }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.gray)
+                }
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.red.opacity(0.15))
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.red.opacity(0.3), lineWidth: 1)
+            )
+        }
+    }
+    
+    @ToolbarContentBuilder
+    private var leadingToolbarItems: some ToolbarContent {
+        ToolbarItemGroup(placement: .topBarLeading) {
+            HStack(spacing: 12) {
+                Button(action: {
+                    DebugLogService.shared.log("[View] History button tapped from toolbar.")
+                    viewModel.showHistory = true
+                }) {
+                    Image(systemName: "clock.arrow.circlepath")
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.cyan)
+                }
+                
+                #if DEBUG
+                Button(action: { 
+                    DebugLogService.shared.log("[View] Diagnostics button tapped from toolbar.")
+                    viewModel.showDiagnostics = true 
+                }) {
+                    Image(systemName: "wrench.and.screwdriver")
+                        .font(.subheadline)
+                        .foregroundStyle(.gray)
+                }
+                #endif
+                
+                Button(action: {
+                    DebugLogService.shared.log("[View] About button tapped from toolbar.")
+                    viewModel.showAbout = true
+                }) {
+                    Image(systemName: "info.circle")
+                        .font(.subheadline)
+                        .foregroundStyle(.gray)
+                }
+            }
+        }
+    }
+    
+    @ToolbarContentBuilder
+    private var trailingToolbarItems: some ToolbarContent {
+        ToolbarItemGroup(placement: .topBarTrailing) {
+            if subscriptionManager.activeTier == .free {
+                Button(action: {
+                    DebugLogService.shared.log("[View] Manual Upgrade button tapped from toolbar.")
+                    viewModel.showPaywall = true
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "crown.fill")
+                        Text("Upgrade")
+                    }
+                    .font(.caption.bold())
+                    .foregroundStyle(.black)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(
+                        LinearGradient(
+                            colors: [.yellow, .orange],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .cornerRadius(12)
+                }
+            }
+            
+            usageBadge
         }
     }
     
@@ -568,6 +502,92 @@ public struct ScriptGeneratorView: View {
             }
         }
         .animation(.easeInOut(duration: 0.25), value: viewModel.isLoading)
+    }
+}
+
+// MARK: - Modals & Presentation View Modifier
+
+private struct ScriptGeneratorModalsModifier: ViewModifier {
+    @Bindable var viewModel: ScriptGeneratorViewModel
+    var subscriptionManager: SubscriptionManager
+    @Binding var activePrompterScript: Script?
+    
+    func body(content: Content) -> some View {
+        content
+            .alert("Configuration Error", isPresented: $viewModel.showConfigAlert) {
+                #if DEBUG
+                Button("Open Diagnostics") {
+                    viewModel.showDiagnostics = true
+                }
+                #endif
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(viewModel.configurationAlertMessage ?? "Invalid Supabase URL or Anon Key.")
+            }
+            .alert("Script Generation Alert", isPresented: $viewModel.showErrorAlert) {
+                #if DEBUG
+                Button("Inspect Diagnostics") {
+                    viewModel.showDiagnostics = true
+                }
+                #endif
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(viewModel.errorMessage ?? "An unexpected error occurred.")
+            }
+            .alert("No Captions Found", isPresented: $viewModel.showMissingCaptionsAlert) {
+                Button("Switch to Raw Text") {
+                    viewModel.inputMode = .rawText
+                    viewModel.inputText = ""
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("No captions or transcripts were found for this video. Would you like to switch to 'Raw Transcript / Text' mode and paste the content manually?")
+            }
+            .sheet(isPresented: $viewModel.showResults) {
+                ScriptResultsView(
+                    scripts: viewModel.generatedScripts,
+                    onLaunchPrompter: { script in
+                        viewModel.showResults = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                            activePrompterScript = script
+                        }
+                    }
+                )
+            }
+            .sheet(isPresented: $viewModel.showHistory) {
+                HistoryView { prompterScript in
+                    viewModel.showHistory = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                        activePrompterScript = prompterScript
+                    }
+                }
+            }
+            .sheet(isPresented: $viewModel.showAbout) {
+                AboutView()
+            }
+            .sheet(isPresented: $viewModel.showPaywall, onDismiss: {
+                Task {
+                    await subscriptionManager.fetchCustomerInfo()
+                    viewModel.refreshUsage()
+                }
+            }) {
+                PaywallContainerView(subscriptionManager: subscriptionManager, onPurchaseSuccess: {
+                    Task {
+                        await subscriptionManager.fetchCustomerInfo()
+                        viewModel.refreshUsage()
+                    }
+                })
+            }
+            .sheet(isPresented: $viewModel.showDiagnostics) {
+                NetworkDiagnosticsView(diagnostics: viewModel.getDiagnostics()) {
+                    Task {
+                        await viewModel.generateScripts()
+                    }
+                }
+            }
+            .fullScreenCover(item: $activePrompterScript) { script in
+                TeleprompterView(script: script)
+            }
     }
 }
 
