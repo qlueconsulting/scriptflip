@@ -1,6 +1,7 @@
 import SwiftUI
 
 /// Diagnostic sheet displaying live Supabase Edge Function connectivity, tester controls, client event logs, and request/response payloads.
+@MainActor
 public struct NetworkDiagnosticsView: View {
     @Environment(\.dismiss) private var dismiss
     let diagnostics: NetworkDiagnosticInfo

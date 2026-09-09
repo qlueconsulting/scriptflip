@@ -14,8 +14,14 @@ public struct PaywallContainerView: View {
         case monthly
     }
     
-    public init(subscriptionManager: SubscriptionManager = SubscriptionManager.shared) {
+    var onPurchaseSuccess: (@MainActor () -> Void)? = nil
+    
+    public init(
+        subscriptionManager: SubscriptionManager = SubscriptionManager.shared,
+        onPurchaseSuccess: (@MainActor () -> Void)? = nil
+    ) {
         self.subscriptionManager = subscriptionManager
+        self.onPurchaseSuccess = onPurchaseSuccess
     }
     
     public var body: some View {
@@ -313,6 +319,7 @@ public struct PaywallContainerView: View {
                         let success = await subscriptionManager.restorePurchases()
                         if success {
                             await subscriptionManager.fetchCustomerInfo()
+                            onPurchaseSuccess?()
                             dismiss()
                         }
                     }
@@ -378,6 +385,7 @@ public struct PaywallContainerView: View {
             let success = await subscriptionManager.purchase(package: pkg)
             if success {
                 await subscriptionManager.fetchCustomerInfo()
+                onPurchaseSuccess?()
                 dismiss()
             } else if let err = subscriptionManager.errorMessage, !err.isEmpty {
                 alertMessage = err
