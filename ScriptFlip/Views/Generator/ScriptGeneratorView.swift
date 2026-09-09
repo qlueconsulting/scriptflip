@@ -418,39 +418,67 @@ public struct ScriptGeneratorView: View {
     }
     
     private var generateButton: some View {
-        Button(action: {
-            DebugLogService.shared.log("[View] Generate button tapped.")
-            Task {
-                await viewModel.generateScripts()
-            }
-        }) {
-            HStack(spacing: 10) {
-                if viewModel.isLoading {
-                    ProgressView()
-                        .tint(.black)
-                    Text("Generating...")
-                        .font(.headline.bold())
-                } else {
-                    Image(systemName: "sparkles")
-                        .font(.title3.bold())
-                    Text("Generate Universal Script")
-                        .font(.headline.bold())
+        VStack(spacing: 12) {
+            Button(action: {
+                DebugLogService.shared.log("[View] Generate button tapped.")
+                Task {
+                    await viewModel.generateScripts()
                 }
-            }
-            .foregroundStyle(.black)
-            .frame(maxWidth: .infinity)
-            .frame(height: 56)
-            .background(
-                LinearGradient(
-                    colors: [.cyan, .mint],
-                    startPoint: .leading,
-                    endPoint: .trailing
+            }) {
+                HStack(spacing: 10) {
+                    if viewModel.isLoading {
+                        ProgressView()
+                            .tint(.black)
+                        Text(viewModel.loadingPhaseText)
+                            .font(.subheadline.bold())
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    } else {
+                        Image(systemName: "sparkles")
+                            .font(.title3.bold())
+                        Text("Generate AI Response")
+                            .font(.headline.bold())
+                    }
+                }
+                .foregroundStyle(.black)
+                .frame(maxWidth: .infinity)
+                .frame(height: 56)
+                .background(
+                    LinearGradient(
+                        colors: [.cyan, .mint],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
                 )
-            )
-            .cornerRadius(16)
-            .shadow(color: Color.cyan.opacity(0.3), radius: 12, y: 4)
+                .cornerRadius(16)
+                .shadow(color: Color.cyan.opacity(0.3), radius: 12, y: 4)
+            }
+            .disabled(viewModel.isLoading)
+            
+            // Interactive Progress Indicator & Timer during AI generation
+            if viewModel.isLoading {
+                VStack(spacing: 6) {
+                    ProgressView(value: viewModel.loadingProgress, total: 1.0)
+                        .progressViewStyle(.linear)
+                        .tint(.cyan)
+                        .scaleEffect(x: 1, y: 1.5, anchor: .center)
+                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                    
+                    HStack {
+                        Text("Crafting 3–5 min spoken script...")
+                            .font(.caption2)
+                            .foregroundStyle(.gray)
+                        Spacer()
+                        Text("\(viewModel.elapsedSeconds)s elapsed")
+                            .font(.caption2.monospacedDigit())
+                            .foregroundStyle(.cyan)
+                    }
+                }
+                .padding(.horizontal, 4)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
         }
-        .disabled(viewModel.isLoading)
+        .animation(.easeInOut(duration: 0.25), value: viewModel.isLoading)
     }
 }
 

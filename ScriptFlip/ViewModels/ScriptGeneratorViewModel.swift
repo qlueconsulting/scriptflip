@@ -10,6 +10,11 @@ public final class ScriptGeneratorViewModel {
     public var selectedStyle: ScriptStyle = .casual
     
     public var isLoading: Bool = false
+    public var loadingPhaseText: String = "Connecting to AI..."
+    public var loadingProgress: Double = 0.0
+    public var elapsedSeconds: Int = 0
+    private var progressTask: Task<Void, Never>? = nil
+    
     public var errorMessage: String? = nil
     public var showErrorAlert: Bool = false
     public var configurationAlertMessage: String? = nil
@@ -132,6 +137,11 @@ public final class ScriptGeneratorViewModel {
         self.isLoading = true
         self.errorMessage = nil
         self.showErrorAlert = false
+        startProgressTracking()
+        defer {
+            self.isLoading = false
+            stopProgressTracking()
+        }
         
         let requestType: GenerationRequest.InputType = (inputMode == .url)
             ? .videoUrl
@@ -167,10 +177,8 @@ public final class ScriptGeneratorViewModel {
                 DebugLogService.shared.log("[ViewModel] Incremented Free usage: \(self.userUsage.usedCount)/3.")
             }
             
-            self.isLoading = false
             self.showResults = true
         } catch let apiError as ScriptAPIError {
-            self.isLoading = false
             DebugLogService.shared.log("[ViewModel] ScriptAPIError caught: \(apiError.localizedDescription)")
             
             switch apiError {
@@ -188,10 +196,46 @@ public final class ScriptGeneratorViewModel {
                 }
             }
         } catch {
-            self.isLoading = false
             DebugLogService.shared.log("[ViewModel] Unexpected error caught: \(error.localizedDescription)")
             self.errorMessage = error.localizedDescription
             self.showErrorAlert = true
         }
+    }
+    
+    // MARK: - Dynamic Progress Tracking
+    
+    private func startProgressTracking() {
+        elapsedSeconds = 0
+        loadingProgress = 0.05
+        loadingPhaseText = (inputMode == .url) ? "Analyzing video source..." : "Processing source text..."
+        
+        progressTask?.cancel()
+        progressTask = Task { @MainActor [weak self] in
+            while let self = self, self.isLoading {
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                guard self.isLoading else { break }
+                self.elapsedSeconds += 1
+                
+                if self.elapsedSeconds < 4 {
+                    self.loadingProgress = min(0.25, 0.05 + Double(self.elapsedSeconds) * 0.05)
+                    self.loadingPhaseText = (self.inputMode == .url) ? "Resolving video metadata..." : "Analyzing input topic..."
+                } else if self.elapsedSeconds < 14 {
+                    self.loadingProgress = min(0.55, 0.25 + Double(self.elapsedSeconds - 3) * 0.03)
+                    self.loadingPhaseText = "Writing 3–5 min spoken script..."
+                } else if self.elapsedSeconds < 28 {
+                    self.loadingProgress = min(0.85, 0.55 + Double(self.elapsedSeconds - 13) * 0.02)
+                    self.loadingPhaseText = "Refining teleprompter pacing..."
+                } else {
+                    self.loadingProgress = min(0.96, 0.85 + Double(self.elapsedSeconds - 27) * 0.005)
+                    self.loadingPhaseText = "Finalizing presentation (\(self.elapsedSeconds)s)..."
+                }
+            }
+        }
+    }
+    
+    private func stopProgressTracking() {
+        progressTask?.cancel()
+        progressTask = nil
+        loadingProgress = 1.0
     }
 }

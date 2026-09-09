@@ -164,7 +164,7 @@ public final class ScriptAPIService: ScriptAPIServiceProtocol, @unchecked Sendab
         // 2. BUILD REQUEST & HEADERS
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = "POST"
-        urlRequest.timeoutInterval = 30
+        urlRequest.timeoutInterval = 60
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
         urlRequest.setValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
         urlRequest.setValue("Bearer \(supabaseAnonKey)", forHTTPHeaderField: "Authorization")
@@ -185,7 +185,7 @@ public final class ScriptAPIService: ScriptAPIServiceProtocol, @unchecked Sendab
         // Pre-Flight Debug Logging
         print("================ [ScriptAPIService] PRE-FLIGHT REQUEST ================")
         print("[ScriptAPIService] Destination URL: \(url.absoluteString)")
-        print("[ScriptAPIService] Method: POST | Timeout: 30s")
+        print("[ScriptAPIService] Method: POST | Timeout: 60s")
         print("[ScriptAPIService] Headers: \(headersDict.map { "\($0.key): \($0.key.lowercased().contains("auth") || $0.key.lowercased() == "apikey" ? "\($0.value.prefix(15))..." : $0.value)" }.joined(separator: ", "))")
         print("[ScriptAPIService] Payload (\(requestBodyData.count) bytes): \(requestBodyString)")
         print("=======================================================================")
