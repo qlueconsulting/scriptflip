@@ -304,7 +304,7 @@ serve(async (req) => {
 
 CORE SCRIPTWRITING REQUIREMENTS:
 1. PURE SPOKEN SCRIPT ONLY: Write pure, natural spoken dialogue designed for continuous teleprompter delivery. Do NOT include any video editing directions, camera cues, cutaway notes, sound effects, or bracketed stage markers (e.g., do NOT output "[CUE: ...]", "[Hook]", etc.).
-2. 3 TO 5 MINUTE SPEAKING DURATION: The body must contain 500 to 700 words of substantive, high-retention speaking text divided into natural, readable paragraphs (representing approx. 3 to 5 minutes of speech at 140 words per minute).
+2. 3 TO 5 MINUTE SPEAKING DURATION: The body must contain 700 to 1000 words of substantive, high-retention speaking text divided into natural, readable paragraphs (representing approx. 3 to 5 minutes of speech at 140-200 words per minute). Do not cut short — fill the full word count.
 3. THIRD-PERSON PERSPECTIVE: React to and explore the source material as an outside creator/expert presenting commentary to your audience. Never pretend to be the original person in the source transcript.
 4. TELEPROMPTER READY: Write with natural pauses, rhetorical cadence, and smooth vocal transitions.
 
@@ -313,15 +313,15 @@ Output ONLY valid JSON matching this exact structure (no markdown fences, no bac
   "script": {
     "title": "Compelling Presentation Title",
     "hook": "Strong 10-15s opening spoken hook capturing immediate attention (approx 30-40 words)",
-    "body": "Detailed 3-5 minute spoken presentation text (500-700 words) divided into clear thematic paragraphs without any camera cues or bracketed stage markers",
+    "body": "Detailed 3-5 minute spoken presentation text (700-1000 words) divided into clear thematic paragraphs without any camera cues or bracketed stage markers",
     "callToAction": "Natural closing takeaway and engagement call to action (approx 30 words)",
     "estimatedDuration": "3-5 min",
     "keyTakeaway": "Single-sentence core summary of the breakdown"
   }
 }`
 
-    // 7. Streamlined Token Budget: 2,200 tokens is optimal for ~700 words JSON output
-    const maxTokensBudget = 2200
+    // 7. Token Budget: 4,400 tokens allows ~1,000 words of rich JSON body output (doubled for fuller scripts)
+    const maxTokensBudget = 4400
 
     let finalResponse: Response | null = null
     let rawResponseText = ""

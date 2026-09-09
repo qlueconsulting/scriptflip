@@ -183,7 +183,7 @@ public struct ScriptGeneratorView: View {
                 AboutView()
             }
             .sheet(isPresented: $viewModel.showPaywall) {
-                PaywallContainerView()
+                PaywallContainerView(subscriptionManager: subscriptionManager)
             }
             .sheet(isPresented: $viewModel.showDiagnostics) {
                 NetworkDiagnosticsView(diagnostics: viewModel.getDiagnostics()) {
@@ -260,7 +260,46 @@ public struct ScriptGeneratorView: View {
             .background(Color.white.opacity(0.1))
             .cornerRadius(12)
         }
+        #if DEBUG
+        .contextMenu {
+            Section("DEBUG: Testing Controls") {
+                Button("Reset Usage to 0") {
+                    UsageTracker.shared.resetUsage()
+                    SubscriptionManager.isTesterOverrideEnabled = false
+                    viewModel.refreshUsage()
+                }
+                Button("Simulate: Free (3 uses)") {
+                    UsageTracker.shared.resetUsage()
+                    SubscriptionManager.isTesterOverrideEnabled = false
+                    viewModel.refreshUsage()
+                }
+                Button("Simulate: Pro Weekly (50/wk)") {
+                    UsageTracker.shared.resetUsage()
+                    SubscriptionManager.isTesterOverrideEnabled = true
+                    SubscriptionManager.testerOverrideTier = .proWeekly
+                    viewModel.refreshUsage()
+                }
+                Button("Simulate: Pro Monthly (250/mo)") {
+                    UsageTracker.shared.resetUsage()
+                    SubscriptionManager.isTesterOverrideEnabled = true
+                    SubscriptionManager.testerOverrideTier = .proMonthly
+                    viewModel.refreshUsage()
+                }
+                Button("Exhaust Free Quota (use all 3)") {
+                    var usage = UsageTracker.shared.getUsage()
+                    // Directly write 3 uses via incrementing
+                    UsageTracker.shared.resetUsage()
+                    UsageTracker.shared.incrementUsage(tier: .free)
+                    UsageTracker.shared.incrementUsage(tier: .free)
+                    UsageTracker.shared.incrementUsage(tier: .free)
+                    SubscriptionManager.isTesterOverrideEnabled = false
+                    viewModel.refreshUsage()
+                }
+            }
+        }
+        #endif
     }
+
     
     private var inputTypePicker: some View {
         HStack(spacing: 8) {
