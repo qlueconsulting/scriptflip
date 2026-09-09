@@ -4,16 +4,18 @@ import RevenueCat
 @MainActor
 public struct PaywallContainerView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var subscriptionManager: SubscriptionManager
+    var subscriptionManager: SubscriptionManager
     @State private var selectedPackageType: SelectedTier = .monthly
+    @State private var showAlert: Bool = false
+    @State private var alertMessage: String = ""
     
     public enum SelectedTier {
         case weekly
         case monthly
     }
     
-    public init(subscriptionManager: SubscriptionManager? = nil) {
-        _subscriptionManager = State(wrappedValue: subscriptionManager ?? SubscriptionManager.shared)
+    public init(subscriptionManager: SubscriptionManager = SubscriptionManager.shared) {
+        self.subscriptionManager = subscriptionManager
     }
     
     public var body: some View {
@@ -95,6 +97,11 @@ public struct PaywallContainerView: View {
             }
             .task {
                 await subscriptionManager.fetchOfferings()
+            }
+            .alert("Subscription", isPresented: $showAlert) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(alertMessage)
             }
         }
     }
@@ -330,18 +337,14 @@ public struct PaywallContainerView: View {
     }
     
     private var monthlyPriceString: String {
-        if let pkg = subscriptionManager.currentOffering?.availablePackages.first(where: {
-            $0.storeProduct.productIdentifier.lowercased().contains("month")
-        }) {
+        if let pkg = subscriptionManager.monthlyPackage {
             return "\(pkg.localizedPriceString) / month"
         }
         return "$19.99 / month"
     }
     
     private var weeklyPriceString: String {
-        if let pkg = subscriptionManager.currentOffering?.availablePackages.first(where: {
-            $0.storeProduct.productIdentifier.lowercased().contains("week")
-        }) {
+        if let pkg = subscriptionManager.weeklyPackage {
             return "\(pkg.localizedPriceString) / week"
         }
         return "$4.99 / week"
@@ -351,26 +354,32 @@ public struct PaywallContainerView: View {
         let isMonthly = (subscriptionManager.activeTier == .proWeekly) || (selectedPackageType == .monthly)
         
         Task {
-            // If offerings haven't loaded yet, try one more fetch with user feedback
+            subscriptionManager.isPurchasing = true
+            defer { subscriptionManager.isPurchasing = false }
+            
+            // If offerings haven't loaded yet, try one more fetch
             if subscriptionManager.currentOffering == nil {
                 await subscriptionManager.fetchOfferings()
             }
             
-            let matchingPackage = subscriptionManager.currentOffering?.availablePackages.first(where: { pkg in
-                let id = pkg.storeProduct.productIdentifier.lowercased()
-                return isMonthly ? (id.contains("monthly") || id.contains("month")) : (id.contains("weekly") || id.contains("week"))
-            }) ?? subscriptionManager.currentOffering?.availablePackages.first
+            let targetPackage = isMonthly ? subscriptionManager.monthlyPackage : subscriptionManager.weeklyPackage
+            let resolvedPackage = targetPackage ?? subscriptionManager.currentOffering?.availablePackages.first
             
-            guard let pkg = matchingPackage else {
+            guard let pkg = resolvedPackage else {
                 #if DEBUG
-                subscriptionManager.errorMessage = "Could not load subscription options from the App Store. Please check your internet connection and try again. If the issue persists, verify that in-app purchases are configured in RevenueCat and App Store Connect."
+                subscriptionManager.errorMessage = "Could not load subscription options from the App Store. Please check your internet connection and verify in-app purchases in RevenueCat and App Store Connect."
                 #endif
+                alertMessage = "Unable to connect to the App Store. Subscriptions are still loading. Please check your internet connection and try again in a moment."
+                showAlert = true
                 return
             }
             
             let success = await subscriptionManager.purchase(package: pkg)
             if success {
                 dismiss()
+            } else if let err = subscriptionManager.errorMessage, !err.isEmpty {
+                alertMessage = err
+                showAlert = true
             }
         }
     }

@@ -417,6 +417,10 @@ final class ScriptFlipTests: XCTestCase {
         // 2. Video Link Input Mode conforms to requirement #10
         XCTAssertEqual(ScriptGeneratorViewModel.InputMode.url.rawValue, "Video Link")
         XCTAssertEqual(ScriptGeneratorViewModel.InputMode.url.iconName, "play.rectangle.fill")
+        
+        // 3. Package lookup safe nil returns when no offerings loaded
+        XCTAssertNil(manager.weeklyPackage)
+        XCTAssertNil(manager.monthlyPackage)
     }
 }
 

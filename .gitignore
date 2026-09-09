@@ -2,3 +2,6 @@
 .swiftpm/
 DerivedData/
 .env
+*.p8
+*.txt
+screens/

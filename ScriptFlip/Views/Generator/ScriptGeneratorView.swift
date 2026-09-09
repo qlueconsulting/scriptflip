@@ -198,6 +198,9 @@ public struct ScriptGeneratorView: View {
             .onAppear {
                 viewModel.refreshUsage()
             }
+            .task {
+                await subscriptionManager.fetchOfferings()
+            }
         }
     }
     

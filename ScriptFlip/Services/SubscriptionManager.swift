@@ -87,6 +87,30 @@ public final class SubscriptionManager {
         activeTier != .proMonthly
     }
     
+    /// Robust lookup for the weekly subscription package
+    public var weeklyPackage: Package? {
+        guard let offering = currentOffering else { return nil }
+        if let pkg = offering.weekly { return pkg }
+        return offering.availablePackages.first { pkg in
+            pkg.packageType == .weekly ||
+            pkg.identifier.lowercased().contains("week") ||
+            pkg.storeProduct.productIdentifier.lowercased().contains("week") ||
+            pkg.storeProduct.subscriptionPeriod?.unit == .week
+        } ?? offering.availablePackages.first
+    }
+    
+    /// Robust lookup for the monthly subscription package
+    public var monthlyPackage: Package? {
+        guard let offering = currentOffering else { return nil }
+        if let pkg = offering.monthly { return pkg }
+        return offering.availablePackages.first { pkg in
+            pkg.packageType == .monthly ||
+            pkg.identifier.lowercased().contains("month") ||
+            pkg.storeProduct.productIdentifier.lowercased().contains("month") ||
+            pkg.storeProduct.subscriptionPeriod?.unit == .month
+        } ?? offering.availablePackages.first { $0 != self.weeklyPackage } ?? offering.availablePackages.last
+    }
+
     /// Filter available packages to strictly show upgrade options (never downgrades).
     public func availableUpgradePackages() -> [Package] {
         guard let packages = currentOffering?.availablePackages else { return [] }
@@ -96,9 +120,14 @@ public final class SubscriptionManager {
             return packages
         case .proWeekly:
             // Weekly users only see Monthly upgrade
+            if let monthly = monthlyPackage {
+                return [monthly]
+            }
             return packages.filter { pkg in
-                let id = pkg.storeProduct.productIdentifier.lowercased()
-                return id.contains("monthly") || id.contains("month")
+                pkg.packageType == .monthly ||
+                pkg.identifier.lowercased().contains("month") ||
+                pkg.storeProduct.productIdentifier.lowercased().contains("month") ||
+                pkg.storeProduct.subscriptionPeriod?.unit == .month
             }
         case .proMonthly:
             // Highest tier: no upgrade options
@@ -177,8 +206,15 @@ public final class SubscriptionManager {
         
         do {
             let offerings = try await Purchases.shared.offerings()
-            self.currentOffering = offerings.current
+            // Robust fallback: use current offering, or offering with identifier "default", or the first available offering in .all
+            let resolved = offerings.current ?? offerings["default"] ?? offerings.all.values.first
+            self.currentOffering = resolved
+            let id = resolved?.identifier ?? "none"
+            let count = resolved?.availablePackages.count ?? 0
+            DebugLogService.shared.log("[SubscriptionManager] Offerings fetched. Active offering: '\(id)' with \(count) package(s). All offerings: \(Array(offerings.all.keys))")
+            print("[SubscriptionManager] Offerings fetched. Active offering: '\(id)' with \(count) package(s).")
         } catch {
+            DebugLogService.shared.log("[SubscriptionManager] Offerings fetch error: \(error.localizedDescription)")
             print("[SubscriptionManager] Graceful handling - offerings fetch error: \(error.localizedDescription)")
             self.currentOffering = nil
         }
