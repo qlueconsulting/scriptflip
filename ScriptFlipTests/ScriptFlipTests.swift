@@ -501,6 +501,46 @@ final class ScriptFlipTests: XCTestCase {
         manager.activeProductIdentifier = nil
         manager.activeSubscriptions = ["scriptflip_pro_weekly_50"]
         XCTAssertEqual(manager.activeTier, .proWeekly)
+        
+        // 6. Pro active with BOTH weekly and monthly (Sandbox upgrade scenario) -> Monthly takes precedence
+        manager.isPro = true
+        manager.activeProductIdentifier = nil
+        manager.activeSubscriptions = ["scriptflip_pro_weekly_50", "scriptflip_pro_monthly_250"]
+        XCTAssertEqual(manager.activeTier, .proMonthly)
+    }
+    
+    func testProMonthlyHasNoWeeklyLimitAndAccurateLabels() {
+        // User has generated 50 scripts this week, but only 50 out of 250 for the month
+        let usage = UserUsage(usedCount: 0, proUsedThisWeek: 50, proUsedThisMonth: 50)
+        
+        // Under Pro Weekly, 50/50 is limit reached:
+        XCTAssertTrue(usage.isLimitReached(for: .proWeekly))
+        XCTAssertEqual(usage.remainingGenerations(for: .proWeekly), 0)
+        
+        // Under Pro Monthly, user HAS NO WEEKLY LIMIT: 200 scripts remain out of 250
+        XCTAssertFalse(usage.isLimitReached(for: .proMonthly))
+        XCTAssertEqual(usage.remainingGenerations(for: .proMonthly), 200)
+        XCTAssertEqual(usage.totalLimit(for: .proMonthly), 250)
+        XCTAssertEqual(usage.cadenceUnit(for: .proMonthly), "Mo")
+        
+        // Label formatting verification
+        XCTAssertEqual(usage.remainingQuotaString(for: .proMonthly), "200/250 Mo")
+        XCTAssertEqual(usage.badgeQuotaString(for: .proMonthly), "PRO (200/250 Mo)")
+        
+        // Fresh Pro Monthly user labels
+        let freshMonthly = UserUsage(usedCount: 0, proUsedThisWeek: 0, proUsedThisMonth: 0)
+        XCTAssertEqual(freshMonthly.remainingQuotaString(for: .proMonthly), "250/250 Mo")
+        XCTAssertEqual(freshMonthly.badgeQuotaString(for: .proMonthly), "PRO (250/250 Mo)")
+        
+        // Fresh Pro Weekly user labels
+        let freshWeekly = UserUsage(usedCount: 0, proUsedThisWeek: 0, proUsedThisMonth: 0)
+        XCTAssertEqual(freshWeekly.remainingQuotaString(for: .proWeekly), "50/50 Wk")
+        XCTAssertEqual(freshWeekly.badgeQuotaString(for: .proWeekly), "PRO (50/50 Wk)")
+        
+        // Free user labels
+        let freshFree = UserUsage(usedCount: 0)
+        XCTAssertEqual(freshFree.remainingQuotaString(for: .free), "3/3 Free")
+        XCTAssertEqual(freshFree.badgeQuotaString(for: .free), "3/3 Free Left")
     }
 }
 

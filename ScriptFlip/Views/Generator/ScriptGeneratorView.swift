@@ -2,6 +2,7 @@ import SwiftUI
 
 @MainActor
 public struct ScriptGeneratorView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @State private var viewModel: ScriptGeneratorViewModel
     @State private var subscriptionManager: SubscriptionManager
     @State private var activePrompterScript: Script? = nil
@@ -10,8 +11,9 @@ public struct ScriptGeneratorView: View {
         viewModel: ScriptGeneratorViewModel? = nil,
         subscriptionManager: SubscriptionManager? = nil
     ) {
-        _viewModel = State(wrappedValue: viewModel ?? ScriptGeneratorViewModel())
-        _subscriptionManager = State(wrappedValue: subscriptionManager ?? SubscriptionManager.shared)
+        let subMgr = subscriptionManager ?? SubscriptionManager.shared
+        _viewModel = State(wrappedValue: viewModel ?? ScriptGeneratorViewModel(subscriptionManager: subMgr))
+        _subscriptionManager = State(wrappedValue: subMgr)
     }
     
     public var body: some View {
@@ -191,7 +193,12 @@ public struct ScriptGeneratorView: View {
                     viewModel.refreshUsage()
                 }
             }) {
-                PaywallContainerView(subscriptionManager: subscriptionManager)
+                PaywallContainerView(subscriptionManager: subscriptionManager, onPurchaseSuccess: {
+                    Task {
+                        await subscriptionManager.fetchCustomerInfo()
+                        viewModel.refreshUsage()
+                    }
+                })
             }
             .sheet(isPresented: $viewModel.showDiagnostics) {
                 NetworkDiagnosticsView(diagnostics: viewModel.getDiagnostics()) {
@@ -209,6 +216,14 @@ public struct ScriptGeneratorView: View {
             .task {
                 await subscriptionManager.fetchCustomerInfo()
                 viewModel.refreshUsage()
+            }
+            .onChange(of: scenePhase) { _, newPhase in
+                if newPhase == .active {
+                    Task {
+                        await subscriptionManager.fetchCustomerInfo()
+                        viewModel.refreshUsage()
+                    }
+                }
             }
         }
     }
@@ -247,22 +262,16 @@ public struct ScriptGeneratorView: View {
         }) {
             HStack(spacing: 6) {
                 switch subscriptionManager.activeTier {
-                case .proWeekly:
+                case .proWeekly, .proMonthly:
                     Image(systemName: "crown.fill")
                         .foregroundStyle(.yellow)
-                    Text("PRO (\(viewModel.userUsage.remainingProWeeklyGenerations)/50 Wk)")
-                        .font(.caption.bold())
-                        .foregroundStyle(.yellow)
-                case .proMonthly:
-                    Image(systemName: "crown.fill")
-                        .foregroundStyle(.yellow)
-                    Text("PRO (\(viewModel.userUsage.remainingProMonthlyGenerations)/250 Mo)")
+                    Text(viewModel.userUsage.badgeQuotaString(for: subscriptionManager.activeTier))
                         .font(.caption.bold())
                         .foregroundStyle(.yellow)
                 case .free:
                     Image(systemName: "sparkles")
                         .foregroundStyle(.cyan)
-                    Text("\(viewModel.userUsage.remainingFreeGenerations) Free Left")
+                    Text(viewModel.userUsage.badgeQuotaString(for: .free))
                         .font(.caption.bold())
                         .foregroundStyle(.white)
                 }
@@ -298,8 +307,6 @@ public struct ScriptGeneratorView: View {
                     viewModel.refreshUsage()
                 }
                 Button("Exhaust Free Quota (use all 3)") {
-                    var usage = UsageTracker.shared.getUsage()
-                    // Directly write 3 uses via incrementing
                     UsageTracker.shared.resetUsage()
                     UsageTracker.shared.incrementUsage(tier: .free)
                     UsageTracker.shared.incrementUsage(tier: .free)
@@ -336,14 +343,7 @@ public struct ScriptGeneratorView: View {
     }
     
     private var usageCountString: String {
-        switch subscriptionManager.activeTier {
-        case .free:
-            return "\(viewModel.userUsage.usedCount)/3"
-        case .proWeekly:
-            return "\(viewModel.userUsage.proUsedThisWeek)/50"
-        case .proMonthly:
-            return "\(viewModel.userUsage.proUsedThisMonth)/250"
-        }
+        viewModel.userUsage.remainingQuotaString(for: subscriptionManager.activeTier)
     }
     
     private var inputCard: some View {

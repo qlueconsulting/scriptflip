@@ -68,6 +68,47 @@ public struct UserUsage: Codable, Sendable {
         }
     }
     
+    public func totalLimit(for tier: SubscriptionTier) -> Int {
+        switch tier {
+        case .free: return Self.freeMonthlyLimit
+        case .proWeekly: return Self.proWeeklyLimit
+        case .proMonthly: return Self.proMonthlyLimit
+        }
+    }
+    
+    public func usedGenerations(for tier: SubscriptionTier) -> Int {
+        switch tier {
+        case .free: return usedCount
+        case .proWeekly: return proUsedThisWeek
+        case .proMonthly: return proUsedThisMonth
+        }
+    }
+    
+    public func cadenceUnit(for tier: SubscriptionTier) -> String {
+        switch tier {
+        case .free: return "Free"
+        case .proWeekly: return "Wk"
+        case .proMonthly: return "Mo"
+        }
+    }
+    
+    /// User-facing remaining quota formatted string: e.g. "250/250 Mo", "50/50 Wk", "3/3 Free"
+    public func remainingQuotaString(for tier: SubscriptionTier) -> String {
+        "\(remainingGenerations(for: tier))/\(totalLimit(for: tier)) \(cadenceUnit(for: tier))"
+    }
+    
+    /// User-facing badge formatted string: e.g. "PRO (250/250 Mo)", "PRO (50/50 Wk)", "3/3 Free Left"
+    public func badgeQuotaString(for tier: SubscriptionTier) -> String {
+        switch tier {
+        case .proMonthly:
+            return "PRO (\(remainingProMonthlyGenerations)/250 Mo)"
+        case .proWeekly:
+            return "PRO (\(remainingProWeeklyGenerations)/50 Wk)"
+        case .free:
+            return "\(remainingFreeGenerations)/3 Free Left"
+        }
+    }
+    
     // MARK: - Free Tier Computations
     
     public var remainingFreeGenerations: Int {
@@ -96,8 +137,21 @@ public struct UserUsage: Codable, Sendable {
         proUsedThisMonth >= Self.proMonthlyLimit
     }
     
+    /// Checks if Pro quota is reached for the given tier without conflating weekly and monthly quotas.
+    public func isProLimitReached(for tier: SubscriptionTier) -> Bool {
+        switch tier {
+        case .proMonthly:
+            return isProMonthlyLimitReached
+        case .proWeekly:
+            return isProWeeklyLimitReached
+        case .free:
+            return isLimitReached
+        }
+    }
+    
+    @available(*, deprecated, message: "Use isLimitReached(for: tier) to avoid conflating weekly and monthly quotas.")
     public var isProLimitReached: Bool {
-        isProWeeklyLimitReached || isProMonthlyLimitReached
+        isProWeeklyLimitReached
     }
     
     // MARK: - Backward Compatibility Decoding

@@ -76,7 +76,7 @@ public final class SubscriptionManager {
             return .free
         }
         
-        // 1. Gather all candidate product identifiers (active product ID + active subscriptions set)
+        // 1. Gather all candidate product identifiers (active product ID + active subscriptions set + all active entitlements)
         var candidateProductIds: [String] = []
         if let activeId = activeProductIdentifier, !activeId.isEmpty {
             candidateProductIds.append(activeId)
@@ -84,6 +84,14 @@ public final class SubscriptionManager {
         candidateProductIds.append(contentsOf: activeSubscriptions)
         if let customerInfo = activeCustomerInfo {
             candidateProductIds.append(contentsOf: customerInfo.activeSubscriptions)
+            for (_, entitlement) in customerInfo.entitlements.all {
+                if entitlement.isActive {
+                    candidateProductIds.append(entitlement.productIdentifier)
+                    if let planId = entitlement.productPlanIdentifier {
+                        candidateProductIds.append(planId)
+                    }
+                }
+            }
         }
         let lowerCandidates = candidateProductIds.map { $0.lowercased() }
         
@@ -101,21 +109,35 @@ public final class SubscriptionManager {
             }
         }
         
-        // 4. Heuristic search across all candidate IDs for monthly markers (month, monthly, 250, mo)
+        // 4. Inspect all available packages in current offering by packageType & subscriptionPeriod unit
+        if let offering = currentOffering {
+            for pkg in offering.availablePackages {
+                let pkgProdId = pkg.storeProduct.productIdentifier.lowercased()
+                if lowerCandidates.contains(pkgProdId) {
+                    if pkg.packageType == .monthly || pkg.storeProduct.subscriptionPeriod?.unit == .month {
+                        return .proMonthly
+                    } else if pkg.packageType == .weekly || pkg.storeProduct.subscriptionPeriod?.unit == .week {
+                        return .proWeekly
+                    }
+                }
+            }
+        }
+        
+        // 5. Heuristic search across all candidate IDs for monthly markers (month, monthly, 250, mo)
         for candidate in lowerCandidates {
             if candidate.contains("monthly") || candidate.contains("month") || candidate.contains("250") {
                 return .proMonthly
             }
         }
         
-        // 5. Heuristic search across all candidate IDs for weekly markers (week, weekly, 50, wk)
+        // 6. Heuristic search across all candidate IDs for weekly markers (week, weekly, 50, wk)
         for candidate in lowerCandidates {
             if candidate.contains("weekly") || candidate.contains("week") || candidate.contains("50") {
                 return .proWeekly
             }
         }
         
-        // 6. Default Pro tier
+        // 7. Default Pro tier
         return .proWeekly
     }
     
@@ -218,6 +240,9 @@ public final class SubscriptionManager {
             return self.isUnlimited
         }
         
+        // Fetch offerings first so package identifiers & subscription periods are available for tier matching
+        await fetchOfferings()
+        
         do {
             let customerInfo = try await Purchases.shared.customerInfo()
             self.activeCustomerInfo = customerInfo
@@ -226,7 +251,6 @@ public final class SubscriptionManager {
             self.isPro = proEntitlement?.isActive ?? false
             self.activeProductIdentifier = proEntitlement?.productIdentifier ?? customerInfo.activeSubscriptions.first
             DebugLogService.shared.log("[SubscriptionManager] Customer info refreshed. isPro: \(self.isPro), activeTier: \(self.activeTier.rawValue), product: \(self.activeProductIdentifier ?? "none"), allActive: \(customerInfo.activeSubscriptions)")
-            await fetchOfferings()
             return self.isUnlimited
         } catch {
             DebugLogService.shared.log("[SubscriptionManager] Customer info fetch error: \(error.localizedDescription)")
