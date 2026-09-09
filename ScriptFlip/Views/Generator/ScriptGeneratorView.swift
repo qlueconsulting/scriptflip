@@ -28,11 +28,44 @@ public struct ScriptGeneratorView: View {
                 leadingToolbarItems
                 trailingToolbarItems
             }
-            .modifier(ScriptGeneratorModalsModifier(
-                viewModel: viewModel,
-                subscriptionManager: subscriptionManager,
-                activePrompterScript: $activePrompterScript
-            ))
+            .sheet(isPresented: $viewModel.showResults) {
+                resultsSheet
+            }
+            .sheet(isPresented: $viewModel.showHistory) {
+                historySheet
+            }
+            .sheet(isPresented: $viewModel.showAbout) {
+                AboutView()
+            }
+            .sheet(isPresented: $viewModel.showPaywall, onDismiss: {
+                Task {
+                    await subscriptionManager.fetchCustomerInfo()
+                    viewModel.refreshUsage()
+                }
+            }) {
+                paywallSheet
+            }
+            .sheet(isPresented: $viewModel.showDiagnostics) {
+                diagnosticsSheet
+            }
+            .fullScreenCover(item: $activePrompterScript) { script in
+                TeleprompterView(script: script)
+            }
+            .alert("Configuration Error", isPresented: $viewModel.showConfigAlert) {
+                configAlertButtons
+            } message: {
+                Text(viewModel.configurationAlertMessage ?? "Invalid Supabase URL or Anon Key.")
+            }
+            .alert("Script Generation Alert", isPresented: $viewModel.showErrorAlert) {
+                errorAlertButtons
+            } message: {
+                Text(viewModel.errorMessage ?? "An unexpected error occurred.")
+            }
+            .alert("No Captions Found", isPresented: $viewModel.showMissingCaptionsAlert) {
+                missingCaptionsButtons
+            } message: {
+                Text("No captions or transcripts were found for this video. Would you like to switch to 'Raw Transcript / Text' mode and paste the content manually?")
+            }
             .onAppear {
                 viewModel.refreshUsage()
             }
@@ -503,91 +536,74 @@ public struct ScriptGeneratorView: View {
         }
         .animation(.easeInOut(duration: 0.25), value: viewModel.isLoading)
     }
-}
-
-// MARK: - Modals & Presentation View Modifier
-
-private struct ScriptGeneratorModalsModifier: ViewModifier {
-    @Bindable var viewModel: ScriptGeneratorViewModel
-    var subscriptionManager: SubscriptionManager
-    @Binding var activePrompterScript: Script?
     
-    func body(content: Content) -> some View {
-        content
-            .alert("Configuration Error", isPresented: $viewModel.showConfigAlert) {
-                #if DEBUG
-                Button("Open Diagnostics") {
-                    viewModel.showDiagnostics = true
-                }
-                #endif
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text(viewModel.configurationAlertMessage ?? "Invalid Supabase URL or Anon Key.")
-            }
-            .alert("Script Generation Alert", isPresented: $viewModel.showErrorAlert) {
-                #if DEBUG
-                Button("Inspect Diagnostics") {
-                    viewModel.showDiagnostics = true
-                }
-                #endif
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text(viewModel.errorMessage ?? "An unexpected error occurred.")
-            }
-            .alert("No Captions Found", isPresented: $viewModel.showMissingCaptionsAlert) {
-                Button("Switch to Raw Text") {
-                    viewModel.inputMode = .rawText
-                    viewModel.inputText = ""
-                }
-                Button("Cancel", role: .cancel) { }
-            } message: {
-                Text("No captions or transcripts were found for this video. Would you like to switch to 'Raw Transcript / Text' mode and paste the content manually?")
-            }
-            .sheet(isPresented: $viewModel.showResults) {
-                ScriptResultsView(
-                    scripts: viewModel.generatedScripts,
-                    onLaunchPrompter: { script in
-                        viewModel.showResults = false
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                            activePrompterScript = script
-                        }
-                    }
-                )
-            }
-            .sheet(isPresented: $viewModel.showHistory) {
-                HistoryView { prompterScript in
-                    viewModel.showHistory = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                        activePrompterScript = prompterScript
-                    }
+    // MARK: - Modal Subviews
+    
+    private var resultsSheet: some View {
+        ScriptResultsView(
+            scripts: viewModel.generatedScripts,
+            onLaunchPrompter: { script in
+                viewModel.showResults = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                    activePrompterScript = script
                 }
             }
-            .sheet(isPresented: $viewModel.showAbout) {
-                AboutView()
+        )
+    }
+    
+    private var historySheet: some View {
+        HistoryView { prompterScript in
+            viewModel.showHistory = false
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                activePrompterScript = prompterScript
             }
-            .sheet(isPresented: $viewModel.showPaywall, onDismiss: {
-                Task {
-                    await subscriptionManager.fetchCustomerInfo()
-                    viewModel.refreshUsage()
-                }
-            }) {
-                PaywallContainerView(subscriptionManager: subscriptionManager, onPurchaseSuccess: {
-                    Task {
-                        await subscriptionManager.fetchCustomerInfo()
-                        viewModel.refreshUsage()
-                    }
-                })
+        }
+    }
+    
+    private var paywallSheet: some View {
+        PaywallContainerView(subscriptionManager: subscriptionManager, onPurchaseSuccess: {
+            Task {
+                await subscriptionManager.fetchCustomerInfo()
+                viewModel.refreshUsage()
             }
-            .sheet(isPresented: $viewModel.showDiagnostics) {
-                NetworkDiagnosticsView(diagnostics: viewModel.getDiagnostics()) {
-                    Task {
-                        await viewModel.generateScripts()
-                    }
-                }
+        })
+    }
+    
+    private var diagnosticsSheet: some View {
+        NetworkDiagnosticsView(diagnostics: viewModel.getDiagnostics()) {
+            Task {
+                await viewModel.generateScripts()
             }
-            .fullScreenCover(item: $activePrompterScript) { script in
-                TeleprompterView(script: script)
-            }
+        }
+    }
+    
+    @ViewBuilder
+    private var configAlertButtons: some View {
+        #if DEBUG
+        Button("Open Diagnostics") {
+            viewModel.showDiagnostics = true
+        }
+        #endif
+        Button("OK", role: .cancel) { }
+    }
+    
+    @ViewBuilder
+    private var errorAlertButtons: some View {
+        #if DEBUG
+        Button("Inspect Diagnostics") {
+            viewModel.showDiagnostics = true
+        }
+        #endif
+        Button("OK", role: .cancel) { }
+    }
+    
+    @ViewBuilder
+    private var missingCaptionsButtons: some View {
+        Button("Switch to Raw Text") {
+            viewModel.inputMode = .rawText
+            viewModel.inputText = ""
+        }
+        Button("Cancel", role: .cancel) { }
     }
 }
 
