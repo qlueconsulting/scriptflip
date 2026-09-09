@@ -13,6 +13,40 @@ public final class TeleprompterViewModel {
     public var isMirrored: Bool = false
     public var scrollOffset: Double = 0.0
     
+    public var contentHeight: Double = 0.0
+    
+    // MARK: - Dynamic Distance & Countdown Calculations
+    
+    /// Estimated or measured total scroll distance in points/pixels.
+    public var totalDistance: Double {
+        if contentHeight > 100 {
+            return contentHeight
+        }
+        // Heuristic based on character count and font size if contentHeight not yet measured
+        let charCount = Double(script.cleanTeleprompterText.count)
+        let estimatedLines = max(1.0, charCount / 40.0)
+        return estimatedLines * (fontSize * 1.42) + 300.0
+    }
+    
+    /// Remaining scroll distance from current offset to bottom.
+    public var remainingDistance: Double {
+        max(0.0, totalDistance - scrollOffset)
+    }
+    
+    /// Remaining time in seconds to reach the bottom based on current scrollSpeed.
+    public var remainingSeconds: Int {
+        let speed = max(5.0, scrollSpeed)
+        return Int(ceil(remainingDistance / speed))
+    }
+    
+    /// Formatted clock countdown string (MM:SS) representing remaining time to reach bottom.
+    public var remainingTimeString: String {
+        let totalSec = remainingSeconds
+        let minutes = totalSec / 60
+        let seconds = totalSec % 60
+        return String(format: "%02d:%02d", minutes, seconds)
+    }
+    
     // No special isolation annotation needed — Task uses [weak self] and exits
     // naturally on the next tick when the ViewModel is deallocated.
     private var scrollTask: Task<Void, Never>? = nil
@@ -43,6 +77,13 @@ public final class TeleprompterViewModel {
                 try? await Task.sleep(nanoseconds: 50_000_000) // 0.05s tick
                 guard let self, self.isPlaying, !Task.isCancelled else { continue }
                 self.scrollOffset += self.scrollSpeed * 0.05
+                
+                // Auto-pause when reaching the bottom of the script
+                if self.scrollOffset >= self.totalDistance && self.totalDistance > 0 {
+                    self.isPlaying = false
+                    self.stopScrollLoop()
+                    break
+                }
             }
         }
     }

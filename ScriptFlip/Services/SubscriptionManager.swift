@@ -186,9 +186,11 @@ public final class SubscriptionManager {
             let proEntitlement = customerInfo.entitlements["pro"]
             self.isPro = proEntitlement?.isActive ?? false
             self.activeProductIdentifier = proEntitlement?.productIdentifier
+            DebugLogService.shared.log("[SubscriptionManager] Customer info refreshed. isPro: \(self.isPro), activeTier: \(self.activeTier.rawValue), product: \(self.activeProductIdentifier ?? "none")")
             await fetchOfferings()
             return self.isUnlimited
         } catch {
+            DebugLogService.shared.log("[SubscriptionManager] Customer info fetch error: \(error.localizedDescription)")
             print("[SubscriptionManager] Graceful handling - customerInfo fetch error: \(error.localizedDescription)")
             return self.isUnlimited
         }

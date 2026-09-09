@@ -42,8 +42,16 @@ public struct TeleprompterView: View {
                         .padding(.horizontal, 28)
                         .padding(.top, geometry.size.height * 0.28)
                         .frame(maxWidth: .infinity)
+                        .background(
+                            GeometryReader { contentProxy in
+                                Color.clear.preference(key: PrompterContentHeightKey.self, value: contentProxy.size.height)
+                            }
+                        )
                         .offset(y: -viewModel.scrollOffset)
                         .scaleEffect(x: viewModel.isMirrored ? -1 : 1, y: 1) // Mirror flip support for glass rigs
+                    }
+                    .onPreferenceChange(PrompterContentHeightKey.self) { height in
+                        viewModel.contentHeight = Double(height)
                     }
                 }
                 .contentShape(Rectangle())
@@ -73,21 +81,72 @@ public struct TeleprompterView: View {
                 }
                 .ignoresSafeArea()
                 
-                // Subtle Reading Focus Guideline
+                // Reading Focus Guide Line with Arrows (Follows words as they scroll)
                 VStack {
                     Spacer()
                         .frame(height: geometry.size.height * 0.32)
                     
-                    Rectangle()
-                        .fill(
-                            LinearGradient(
-                                colors: [Color.clear, Color.cyan.opacity(0.25), Color.clear],
-                                startPoint: .leading,
-                                endPoint: .trailing
+                    ZStack {
+                        // Soft highlight tint on active reading row
+                        Rectangle()
+                            .fill(Color.yellow.opacity(0.08))
+                            .frame(height: viewModel.fontSize * 1.35)
+                        
+                        // Focus guide line with left and right indicator arrows
+                        Rectangle()
+                            .fill(Color.yellow.opacity(0.45))
+                            .frame(height: 2.5)
+                            .overlay(
+                                HStack {
+                                    Image(systemName: "arrow.right.fill")
+                                        .font(.system(size: 13, weight: .black))
+                                        .foregroundStyle(.yellow)
+                                        .shadow(color: Color.yellow.opacity(0.6), radius: 4)
+                                    
+                                    Spacer()
+                                    
+                                    Image(systemName: "arrow.left.fill")
+                                        .font(.system(size: 13, weight: .black))
+                                        .foregroundStyle(.yellow)
+                                        .shadow(color: Color.yellow.opacity(0.6), radius: 4)
+                                }
+                                .padding(.horizontal, 14)
                             )
+                    }
+                    .frame(maxWidth: min(geometry.size.width - 24, 720))
+                    
+                    Spacer()
+                }
+                .allowsHitTesting(false)
+                
+                // Upper Left Clock Countdown Timer (Always visible so speaker tracks time remaining)
+                VStack {
+                    HStack {
+                        HStack(spacing: 6) {
+                            Image(systemName: "clock.fill")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundStyle(.yellow)
+                            
+                            Text(viewModel.remainingTimeString)
+                                .font(.system(size: 14, weight: .bold, design: .monospaced))
+                                .foregroundStyle(.white)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
+                        .background(.ultraThinMaterial)
+                        .clipShape(Capsule())
+                        .overlay(
+                            Capsule()
+                                .stroke(Color.yellow.opacity(0.4), lineWidth: 1)
                         )
-                        .frame(height: 1.5)
-                        .frame(maxWidth: min(geometry.size.width - 40, 720))
+                        .shadow(color: Color.black.opacity(0.6), radius: 6)
+                        .scaleEffect(x: viewModel.isMirrored ? -1 : 1, y: 1) // Mirror flip support for glass rigs
+                        
+                        Spacer()
+                    }
+                    .padding(.leading, 20)
+                    .padding(.top, showControls ? 64 : 18)
+                    .animation(.easeInOut(duration: 0.2), value: showControls)
                     
                     Spacer()
                 }
@@ -260,5 +319,14 @@ public struct TeleprompterView: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Content Height Preference Key
+
+private struct PrompterContentHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
     }
 }

@@ -6,10 +6,10 @@ public class AppDelegate: NSObject, UIApplicationDelegate {
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
-        // Configure RevenueCat and pre-fetch offerings at launch so StoreKit packages are ready before paywall opens
+        // Configure RevenueCat and check subscription entitlement at launch so app reflects paid access
         SubscriptionManager.ensureConfigured()
         Task {
-            await SubscriptionManager.shared.fetchOfferings()
+            await SubscriptionManager.shared.fetchCustomerInfo()
         }
         return true
     }

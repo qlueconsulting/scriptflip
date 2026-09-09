@@ -104,7 +104,7 @@ public struct ScriptGeneratorView: View {
                 }
                 
                 ToolbarItemGroup(placement: .topBarTrailing) {
-                    if subscriptionManager.canUpgrade {
+                    if subscriptionManager.activeTier == .free {
                         Button(action: {
                             DebugLogService.shared.log("[View] Manual Upgrade button tapped from toolbar.")
                             viewModel.showPaywall = true
@@ -199,7 +199,8 @@ public struct ScriptGeneratorView: View {
                 viewModel.refreshUsage()
             }
             .task {
-                await subscriptionManager.fetchOfferings()
+                await subscriptionManager.fetchCustomerInfo()
+                viewModel.refreshUsage()
             }
         }
     }
@@ -326,12 +327,42 @@ public struct ScriptGeneratorView: View {
         }
     }
     
+    private var usageCountString: String {
+        switch subscriptionManager.activeTier {
+        case .free:
+            return "\(viewModel.userUsage.usedCount)/3"
+        case .proWeekly:
+            return "\(viewModel.userUsage.proUsedThisWeek)/50"
+        case .proMonthly:
+            return "\(viewModel.userUsage.proUsedThisMonth)/250"
+        }
+    }
+    
     private var inputCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text(viewModel.inputMode == .url ? "Target Video URL (TikTok, Reels, YouTube)" : "Source Content / Transcript")
+            HStack(spacing: 8) {
+                Text(viewModel.inputMode == .url ? "Target Video URL" : "Source Content / Transcript")
                     .font(.caption.bold())
                     .foregroundStyle(.gray)
+                
+                // Small Usage Box: response count / total available
+                HStack(spacing: 4) {
+                    Image(systemName: subscriptionManager.isProTierActive ? "crown.fill" : "sparkles")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(subscriptionManager.isProTierActive ? .yellow : .cyan)
+                    Text(usageCountString)
+                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .foregroundStyle(.white)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Color.white.opacity(0.12))
+                .clipShape(Capsule())
+                .overlay(
+                    Capsule()
+                        .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                )
+                
                 Spacer()
                 if !viewModel.inputText.isEmpty {
                     Button("Clear") {

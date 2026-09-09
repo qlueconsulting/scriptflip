@@ -373,6 +373,22 @@ final class ScriptFlipTests: XCTestCase {
         vm.resetPrompter()
         XCTAssertFalse(vm.isPlaying)
         XCTAssertEqual(vm.scrollOffset, 0)
+        
+        // Countdown timer tests
+        vm.contentHeight = 3500
+        vm.scrollSpeed = 35
+        XCTAssertEqual(vm.remainingSeconds, 100)
+        XCTAssertEqual(vm.remainingTimeString, "01:40")
+        
+        // Speed slider adjustment updates countdown timer immediately
+        vm.scrollSpeed = 70
+        XCTAssertEqual(vm.remainingSeconds, 50)
+        XCTAssertEqual(vm.remainingTimeString, "00:50")
+        
+        // Scrolling reduces remaining time
+        vm.scrollOffset = 1400
+        XCTAssertEqual(vm.remainingSeconds, 30)
+        XCTAssertEqual(vm.remainingTimeString, "00:30")
     }
     
     // MARK: - Modernization & App Review 2.1.0 Feature Tests
