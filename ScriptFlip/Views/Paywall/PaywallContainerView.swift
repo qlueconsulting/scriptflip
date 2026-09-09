@@ -62,6 +62,7 @@ public struct PaywallContainerView: View {
                         tierSelectionSection
                             .padding(.horizontal, 20)
                         
+                        #if DEBUG
                         if let errorMsg = subscriptionManager.errorMessage {
                             Text(errorMsg)
                                 .font(.caption)
@@ -69,6 +70,7 @@ public struct PaywallContainerView: View {
                                 .padding(.horizontal, 20)
                                 .multilineTextAlignment(.center)
                         }
+                        #endif
                         
                         // Purchase Button
                         purchaseActionSection
@@ -360,8 +362,9 @@ public struct PaywallContainerView: View {
             }) ?? subscriptionManager.currentOffering?.availablePackages.first
             
             guard let pkg = matchingPackage else {
-                // Surface a clear error rather than silently failing
+                #if DEBUG
                 subscriptionManager.errorMessage = "Could not load subscription options from the App Store. Please check your internet connection and try again. If the issue persists, verify that in-app purchases are configured in RevenueCat and App Store Connect."
+                #endif
                 return
             }
             

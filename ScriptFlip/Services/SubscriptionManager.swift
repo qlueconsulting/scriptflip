@@ -189,7 +189,9 @@ public final class SubscriptionManager {
         Self.ensureConfigured()
         
         guard Purchases.isConfigured else {
+            #if DEBUG
             self.errorMessage = "In-App Purchases are currently initializing. Please try again in a moment."
+            #endif
             return false
         }
         
@@ -206,7 +208,9 @@ public final class SubscriptionManager {
                 return self.isUnlimited
             }
         } catch {
+            #if DEBUG
             self.errorMessage = error.localizedDescription
+            #endif
         }
         return false
     }
@@ -216,7 +220,9 @@ public final class SubscriptionManager {
         Self.ensureConfigured()
         
         guard Purchases.isConfigured else {
+            #if DEBUG
             self.errorMessage = "In-App Purchases are currently initializing. Please try again in a moment."
+            #endif
             return false
         }
         
@@ -231,7 +237,9 @@ public final class SubscriptionManager {
             self.activeProductIdentifier = proEntitlement?.productIdentifier
             return self.isUnlimited
         } catch {
+            #if DEBUG
             self.errorMessage = error.localizedDescription
+            #endif
             return false
         }
     }
