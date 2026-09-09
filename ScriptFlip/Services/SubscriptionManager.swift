@@ -11,6 +11,8 @@ public final class SubscriptionManager {
     
     public var isPro: Bool = false
     public var activeProductIdentifier: String? = nil
+    public var activeSubscriptions: Set<String> = []
+    public var activeCustomerInfo: CustomerInfo? = nil
     public var currentOffering: Offering? = nil
     public var isPurchasing: Bool = false
     public var errorMessage: String? = nil
@@ -73,13 +75,48 @@ public final class SubscriptionManager {
         guard isPro else {
             return .free
         }
-        let prodId = (activeProductIdentifier ?? "").lowercased()
-        if prodId.contains("weekly") || prodId.contains("week") {
-            return .proWeekly
-        } else if prodId.contains("monthly") || prodId.contains("month") {
-            return .proMonthly
+        
+        // 1. Gather all candidate product identifiers (active product ID + active subscriptions set)
+        var candidateProductIds: [String] = []
+        if let activeId = activeProductIdentifier, !activeId.isEmpty {
+            candidateProductIds.append(activeId)
         }
-        return .proWeekly // Default Pro tier
+        candidateProductIds.append(contentsOf: activeSubscriptions)
+        if let customerInfo = activeCustomerInfo {
+            candidateProductIds.append(contentsOf: customerInfo.activeSubscriptions)
+        }
+        let lowerCandidates = candidateProductIds.map { $0.lowercased() }
+        
+        // 2. Direct comparison against loaded monthly package product identifier
+        if let monthlyProdId = monthlyPackage?.storeProduct.productIdentifier.lowercased() {
+            if lowerCandidates.contains(monthlyProdId) {
+                return .proMonthly
+            }
+        }
+        
+        // 3. Direct comparison against loaded weekly package product identifier
+        if let weeklyProdId = weeklyPackage?.storeProduct.productIdentifier.lowercased() {
+            if lowerCandidates.contains(weeklyProdId) {
+                return .proWeekly
+            }
+        }
+        
+        // 4. Heuristic search across all candidate IDs for monthly markers (month, monthly, 250, mo)
+        for candidate in lowerCandidates {
+            if candidate.contains("monthly") || candidate.contains("month") || candidate.contains("250") {
+                return .proMonthly
+            }
+        }
+        
+        // 5. Heuristic search across all candidate IDs for weekly markers (week, weekly, 50, wk)
+        for candidate in lowerCandidates {
+            if candidate.contains("weekly") || candidate.contains("week") || candidate.contains("50") {
+                return .proWeekly
+            }
+        }
+        
+        // 6. Default Pro tier
+        return .proWeekly
     }
     
     /// Whether user can upgrade to a higher tier (Free can upgrade to Weekly/Monthly; Weekly can upgrade to Monthly; Monthly is top tier).
@@ -183,10 +220,12 @@ public final class SubscriptionManager {
         
         do {
             let customerInfo = try await Purchases.shared.customerInfo()
+            self.activeCustomerInfo = customerInfo
+            self.activeSubscriptions = customerInfo.activeSubscriptions
             let proEntitlement = customerInfo.entitlements["pro"]
             self.isPro = proEntitlement?.isActive ?? false
-            self.activeProductIdentifier = proEntitlement?.productIdentifier
-            DebugLogService.shared.log("[SubscriptionManager] Customer info refreshed. isPro: \(self.isPro), activeTier: \(self.activeTier.rawValue), product: \(self.activeProductIdentifier ?? "none")")
+            self.activeProductIdentifier = proEntitlement?.productIdentifier ?? customerInfo.activeSubscriptions.first
+            DebugLogService.shared.log("[SubscriptionManager] Customer info refreshed. isPro: \(self.isPro), activeTier: \(self.activeTier.rawValue), product: \(self.activeProductIdentifier ?? "none"), allActive: \(customerInfo.activeSubscriptions)")
             await fetchOfferings()
             return self.isUnlimited
         } catch {
@@ -240,9 +279,13 @@ public final class SubscriptionManager {
         do {
             let result = try await Purchases.shared.purchase(package: package)
             if !result.userCancelled {
+                self.activeCustomerInfo = result.customerInfo
+                self.activeSubscriptions = result.customerInfo.activeSubscriptions
                 let proEntitlement = result.customerInfo.entitlements["pro"]
                 self.isPro = proEntitlement?.isActive ?? false
-                self.activeProductIdentifier = proEntitlement?.productIdentifier
+                self.activeProductIdentifier = proEntitlement?.productIdentifier ?? result.customerInfo.activeSubscriptions.first
+                // Re-run full entitlement & offerings sync
+                await fetchCustomerInfo()
                 return self.isUnlimited
             }
         } catch {
@@ -270,9 +313,13 @@ public final class SubscriptionManager {
         
         do {
             let customerInfo = try await Purchases.shared.restorePurchases()
+            self.activeCustomerInfo = customerInfo
+            self.activeSubscriptions = customerInfo.activeSubscriptions
             let proEntitlement = customerInfo.entitlements["pro"]
             self.isPro = proEntitlement?.isActive ?? false
-            self.activeProductIdentifier = proEntitlement?.productIdentifier
+            self.activeProductIdentifier = proEntitlement?.productIdentifier ?? customerInfo.activeSubscriptions.first
+            // Re-run full entitlement & offerings sync
+            await fetchCustomerInfo()
             return self.isUnlimited
         } catch {
             #if DEBUG

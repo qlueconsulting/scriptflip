@@ -185,7 +185,12 @@ public struct ScriptGeneratorView: View {
             .sheet(isPresented: $viewModel.showAbout) {
                 AboutView()
             }
-            .sheet(isPresented: $viewModel.showPaywall) {
+            .sheet(isPresented: $viewModel.showPaywall, onDismiss: {
+                Task {
+                    await subscriptionManager.fetchCustomerInfo()
+                    viewModel.refreshUsage()
+                }
+            }) {
                 PaywallContainerView(subscriptionManager: subscriptionManager)
             }
             .sheet(isPresented: $viewModel.showDiagnostics) {

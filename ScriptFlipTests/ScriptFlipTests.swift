@@ -454,6 +454,54 @@ final class ScriptFlipTests: XCTestCase {
         )
         XCTAssertEqual(request.targetDurationMinutes, 4)
     }
+    
+    @MainActor
+    func testSubscriptionTierResolutionWithActiveSubscriptions() {
+        let manager = SubscriptionManager.shared
+        let origOverride = SubscriptionManager.isTesterOverrideEnabled
+        let origIsPro = manager.isPro
+        let origActiveId = manager.activeProductIdentifier
+        let origActiveSubs = manager.activeSubscriptions
+        
+        defer {
+            SubscriptionManager.isTesterOverrideEnabled = origOverride
+            manager.isPro = origIsPro
+            manager.activeProductIdentifier = origActiveId
+            manager.activeSubscriptions = origActiveSubs
+        }
+        
+        SubscriptionManager.isTesterOverrideEnabled = false
+        
+        // 1. Not pro -> .free
+        manager.isPro = false
+        manager.activeProductIdentifier = nil
+        manager.activeSubscriptions = []
+        XCTAssertEqual(manager.activeTier, .free)
+        
+        // 2. Pro active with monthly in activeProductIdentifier
+        manager.isPro = true
+        manager.activeProductIdentifier = "com.scriptflip.monthly"
+        manager.activeSubscriptions = []
+        XCTAssertEqual(manager.activeTier, .proMonthly)
+        
+        // 3. Pro active with monthly only in activeSubscriptions (Sandbox / StoreKit 2 scenario)
+        manager.isPro = true
+        manager.activeProductIdentifier = nil
+        manager.activeSubscriptions = ["scriptflip_pro_monthly_250"]
+        XCTAssertEqual(manager.activeTier, .proMonthly)
+        
+        // 4. Pro active with weekly in activeProductIdentifier
+        manager.isPro = true
+        manager.activeProductIdentifier = "com.scriptflip.weekly"
+        manager.activeSubscriptions = []
+        XCTAssertEqual(manager.activeTier, .proWeekly)
+        
+        // 5. Pro active with weekly in activeSubscriptions
+        manager.isPro = true
+        manager.activeProductIdentifier = nil
+        manager.activeSubscriptions = ["scriptflip_pro_weekly_50"]
+        XCTAssertEqual(manager.activeTier, .proWeekly)
+    }
 }
 
 

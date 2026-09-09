@@ -312,6 +312,7 @@ public struct PaywallContainerView: View {
                     Task {
                         let success = await subscriptionManager.restorePurchases()
                         if success {
+                            await subscriptionManager.fetchCustomerInfo()
                             dismiss()
                         }
                     }
@@ -376,6 +377,7 @@ public struct PaywallContainerView: View {
             
             let success = await subscriptionManager.purchase(package: pkg)
             if success {
+                await subscriptionManager.fetchCustomerInfo()
                 dismiss()
             } else if let err = subscriptionManager.errorMessage, !err.isEmpty {
                 alertMessage = err
