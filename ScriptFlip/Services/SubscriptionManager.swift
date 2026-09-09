@@ -31,26 +31,37 @@ public final class SubscriptionManager {
     }
     
     /// User-persisted tester override to simulate Pro tier during QA / Diagnostics.
+    /// Always returns false in Release/TestFlight — only active in DEBUG builds.
     public static var isTesterOverrideEnabled: Bool {
         get {
-            UserDefaults.standard.bool(forKey: "DEBUG_UNLIMITED_TESTER_MODE")
+            #if DEBUG
+            return UserDefaults.standard.bool(forKey: "DEBUG_UNLIMITED_TESTER_MODE")
+            #else
+            return false
+            #endif
         }
         set {
+            #if DEBUG
             UserDefaults.standard.set(newValue, forKey: "DEBUG_UNLIMITED_TESTER_MODE")
+            #endif
         }
     }
     
-    /// User-selected tester override tier (Pro Weekly vs Pro Monthly) for testing specific limits.
+    /// User-selected tester override tier. Always returns .free in Release/TestFlight.
     public static var testerOverrideTier: SubscriptionTier {
         get {
+            #if DEBUG
             if let saved = UserDefaults.standard.string(forKey: "DEBUG_TESTER_TIER"),
                let tier = SubscriptionTier(rawValue: saved) {
                 return tier
             }
+            #endif
             return .proWeekly
         }
         set {
+            #if DEBUG
             UserDefaults.standard.set(newValue.rawValue, forKey: "DEBUG_TESTER_TIER")
+            #endif
         }
     }
     

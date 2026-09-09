@@ -273,17 +273,21 @@ serve(async (req) => {
       "content-type": "application/json",
     }
 
-    // 5. Model Hierarchy — always prefer -latest aliases so Anthropic resolves current supported version
-    const baseModelHierarchy = [
-      payload.model,
-      Deno.env.get("ANTHROPIC_MODEL"),
-      "claude-3-5-sonnet-latest",       // Recommended: always current Sonnet
-      "claude-3-5-haiku-latest",         // Fast fallback: always current Haiku
-      "claude-3-5-sonnet-20241022",      // Pinned fallback
-      "claude-3-5-haiku-20241022",       // Pinned fast fallback
-    ].filter(Boolean) as string[]
+    // 5. Model selection — driven entirely by ANTHROPIC_MODEL Supabase secret (no hardcoded fallbacks).
+    //    Set this secret in: Supabase Dashboard → your project → Edge Functions → Secrets → ANTHROPIC_MODEL
+    //    Supports a comma-separated list for your own fallback chain, e.g:
+    //      ANTHROPIC_MODEL = "claude-3-5-sonnet-20241022,claude-3-5-haiku-20241022"
+    const anthropicModelSecret = Deno.env.get("ANTHROPIC_MODEL")
+    if (!anthropicModelSecret || anthropicModelSecret.trim() === "") {
+      return new Response(
+        JSON.stringify({ error: "Configuration Error: ANTHROPIC_MODEL secret is not set. Go to Supabase Dashboard → Edge Functions → Secrets and add ANTHROPIC_MODEL with your desired Claude model name." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      )
+    }
 
-    const modelHierarchy = Array.from(new Set(baseModelHierarchy))
+    // Build model list: per-request override first, then the secret's comma-separated list
+    const secretModels = anthropicModelSecret.split(",").map(m => m.trim()).filter(Boolean)
+    const modelHierarchy = Array.from(new Set([payload.model, ...secretModels].filter(Boolean) as string[]))
 
     // 6. Style-Specific System Prompts for 3-5 Minute Continuous Spoken Monologue (No Clip Cues)
     const stylePrompts: Record<string, string> = {
