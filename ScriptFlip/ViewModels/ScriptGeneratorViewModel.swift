@@ -8,6 +8,7 @@ public final class ScriptGeneratorViewModel {
     public var inputMode: InputMode = .url
     public var inputText: String = ""
     public var selectedStyle: ScriptStyle = .casual
+    public var targetDurationMinutes: Double = 3.0 // 1 to 5 minutes duration slider
     
     public var isLoading: Bool = false
     public var loadingPhaseText: String = "Connecting to AI..."
@@ -151,7 +152,8 @@ public final class ScriptGeneratorViewModel {
             inputText: trimmedInput,
             scriptStyle: selectedStyle.rawValue,
             inputType: requestType,
-            outputCount: 1
+            outputCount: 1,
+            targetDurationMinutes: Int(targetDurationMinutes)
         )
         
         DebugLogService.shared.log("[ViewModel] Dispatching request to APIService for style '\(selectedStyle.rawValue)'...")
@@ -221,7 +223,8 @@ public final class ScriptGeneratorViewModel {
                     self.loadingPhaseText = (self.inputMode == .url) ? "Resolving video metadata..." : "Analyzing input topic..."
                 } else if self.elapsedSeconds < 14 {
                     self.loadingProgress = min(0.55, 0.25 + Double(self.elapsedSeconds - 3) * 0.03)
-                    self.loadingPhaseText = "Writing 3–5 min spoken script..."
+                    let mins = Int(self.targetDurationMinutes)
+                    self.loadingPhaseText = "Writing \(mins) min spoken script..."
                 } else if self.elapsedSeconds < 28 {
                     self.loadingProgress = min(0.85, 0.55 + Double(self.elapsedSeconds - 13) * 0.02)
                     self.loadingPhaseText = "Refining teleprompter pacing..."

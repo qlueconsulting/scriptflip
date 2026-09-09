@@ -438,6 +438,22 @@ final class ScriptFlipTests: XCTestCase {
         XCTAssertNil(manager.weeklyPackage)
         XCTAssertNil(manager.monthlyPackage)
     }
+    
+    @MainActor
+    func testTargetDurationMinutesConfiguration() {
+        let vm = ScriptGeneratorViewModel()
+        XCTAssertEqual(vm.targetDurationMinutes, 3.0)
+        
+        vm.targetDurationMinutes = 5.0
+        XCTAssertEqual(vm.targetDurationMinutes, 5.0)
+        
+        let request = GenerationRequest(
+            inputText: "Testing custom duration",
+            scriptStyle: "Casual",
+            targetDurationMinutes: 4
+        )
+        XCTAssertEqual(request.targetDurationMinutes, 4)
+    }
 }
 
 

@@ -6,6 +6,7 @@ public struct GenerationRequest: Codable, Sendable {
     public let scriptStyle: String
     public let inputType: InputType?
     public let outputCount: Int?
+    public let targetDurationMinutes: Int?
     
     public enum InputType: String, Codable, Sendable {
         case rawText = "text"
@@ -18,24 +19,28 @@ public struct GenerationRequest: Codable, Sendable {
         inputText: String,
         scriptStyle: String,
         inputType: InputType? = nil,
-        outputCount: Int? = 1
+        outputCount: Int? = 1,
+        targetDurationMinutes: Int? = nil
     ) {
         self.inputText = inputText
         self.scriptStyle = scriptStyle
         self.inputType = inputType
         self.outputCount = outputCount
+        self.targetDurationMinutes = targetDurationMinutes
     }
     
     public init(
         inputType: InputType,
         content: String,
         style: ScriptStyle,
-        outputCount: Int = 1
+        outputCount: Int = 1,
+        targetDurationMinutes: Int? = nil
     ) {
         self.inputText = content
         self.scriptStyle = style.rawValue
         self.inputType = inputType
         self.outputCount = outputCount
+        self.targetDurationMinutes = targetDurationMinutes
     }
 }
 

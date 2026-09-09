@@ -225,7 +225,7 @@ serve(async (req) => {
       )
     }
 
-    let payload: { inputText?: string; scriptStyle?: string; model?: string; outputCount?: number; inputType?: string; style?: string } = {}
+    let payload: { inputText?: string; scriptStyle?: string; model?: string; outputCount?: number; inputType?: string; style?: string; targetDurationMinutes?: number } = {}
     try {
       const bodyText = await req.text()
       payload = JSON.parse(bodyText)
@@ -236,8 +236,12 @@ serve(async (req) => {
       )
     }
 
-    let { inputText, scriptStyle, style, inputType } = payload
+    let { inputText, scriptStyle, style, inputType, targetDurationMinutes } = payload
     const effectiveStyle = scriptStyle || style || 'Casual & Relatable'
+    const durationMinutes = Math.min(5, Math.max(1, Math.round(Number(targetDurationMinutes) || 3)))
+    const durationLabel = durationMinutes === 1 ? "1 minute" : `${durationMinutes} minutes`
+    const targetWordsMin = durationMinutes * 130
+    const targetWordsMax = durationMinutes * 165
 
     if (!inputText || inputText.trim() === "") {
       return new Response(
@@ -309,7 +313,7 @@ serve(async (req) => {
 
 CORE SCRIPTWRITING REQUIREMENTS:
 1. PURE SPOKEN SCRIPT ONLY: Write pure, natural spoken dialogue designed for continuous teleprompter delivery. Do NOT include any video editing directions, camera cues, cutaway notes, sound effects, or bracketed stage markers (e.g., do NOT output "[CUE: ...]", "[Hook]", etc.).
-2. 3 TO 5 MINUTE SPEAKING DURATION: The body must contain 700 to 1000 words of substantive, high-retention speaking text divided into natural, readable paragraphs (representing approx. 3 to 5 minutes of speech at 140-200 words per minute). Do not cut short — fill the full word count.
+2. TARGET SPOKEN DURATION (${durationLabel.toUpperCase()}): The user has specifically requested a spoken presentation length of ${durationLabel}. The body must contain approximately ${targetWordsMin} to ${targetWordsMax} spoken words of substantive, high-retention text divided into natural, readable paragraphs (representing exactly ${durationLabel} of speech at 130-165 words per minute). Calibrate the depth, examples, and narrative pacing so that reading aloud fills this target length naturally.
 3. THIRD-PERSON PERSPECTIVE: React to and explore the source material as an outside creator/expert presenting commentary to your audience. Never pretend to be the original person in the source transcript.
 4. TELEPROMPTER READY: Write with natural pauses, rhetorical cadence, and smooth vocal transitions.
 
@@ -317,10 +321,10 @@ Output ONLY valid JSON matching this exact structure (no markdown fences, no bac
 {
   "script": {
     "title": "Compelling Presentation Title",
-    "hook": "Strong 10-15s opening spoken hook capturing immediate attention (approx 30-40 words)",
-    "body": "Detailed 3-5 minute spoken presentation text (700-1000 words) divided into clear thematic paragraphs without any camera cues or bracketed stage markers",
-    "callToAction": "Natural closing takeaway and engagement call to action (approx 30 words)",
-    "estimatedDuration": "3-5 min",
+    "hook": "Strong 10-15s opening spoken hook capturing immediate attention (approx 25-40 words)",
+    "body": "Detailed ${durationLabel} spoken presentation text (~${targetWordsMin}-${targetWordsMax} words) divided into clear thematic paragraphs without any camera cues or bracketed stage markers",
+    "callToAction": "Natural closing takeaway and engagement call to action (approx 25-35 words)",
+    "estimatedDuration": "${durationLabel}",
     "keyTakeaway": "Single-sentence core summary of the breakdown"
   }
 }`

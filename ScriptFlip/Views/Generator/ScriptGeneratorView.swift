@@ -30,6 +30,9 @@ public struct ScriptGeneratorView: View {
                         // Main Text / URL Input Box
                         inputCard
                         
+                        // Target Response Duration Slider (1 to 5 Minutes)
+                        durationSliderSection
+                        
                         // Script Style Tone Selector
                         stylePickerSection
                         
@@ -400,6 +403,56 @@ public struct ScriptGeneratorView: View {
         }
     }
     
+    private var durationSliderSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                HStack(spacing: 6) {
+                    Image(systemName: "clock.arrow.circlepath")
+                        .font(.subheadline)
+                        .foregroundStyle(.cyan)
+                    Text("Response Length")
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.white)
+                }
+                
+                Spacer()
+                
+                Text("\(Int(viewModel.targetDurationMinutes)) min\(Int(viewModel.targetDurationMinutes) > 1 ? "s" : "")")
+                    .font(.subheadline.bold().monospacedDigit())
+                    .foregroundStyle(.cyan)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Color.cyan.opacity(0.12))
+                    .clipShape(Capsule())
+                    .overlay(
+                        Capsule()
+                            .stroke(Color.cyan.opacity(0.25), lineWidth: 1)
+                    )
+            }
+            
+            HStack(spacing: 12) {
+                Text("1 min")
+                    .font(.caption2.bold())
+                    .foregroundStyle(.gray)
+                
+                Slider(value: $viewModel.targetDurationMinutes, in: 1...5, step: 1)
+                    .tint(.cyan)
+                
+                Text("5 mins")
+                    .font(.caption2.bold())
+                    .foregroundStyle(.gray)
+            }
+            .padding(.horizontal, 4)
+        }
+        .padding(14)
+        .background(Color.white.opacity(0.05))
+        .cornerRadius(14)
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Color.white.opacity(0.12), lineWidth: 1)
+        )
+    }
+    
     private var stylePickerSection: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Script Tone & Style")
@@ -496,7 +549,7 @@ public struct ScriptGeneratorView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 4))
                     
                     HStack {
-                        Text("Crafting 3–5 min spoken script...")
+                        Text("Crafting \(Int(viewModel.targetDurationMinutes)) min spoken script...")
                             .font(.caption2)
                             .foregroundStyle(.gray)
                         Spacer()
