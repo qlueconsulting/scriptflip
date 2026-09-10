@@ -21,7 +21,7 @@ public final class SubscriptionManager {
     public private(set) var cachedTier: SubscriptionTier = .free
     
     /// User-persisted tester override tier (Free, Pro Weekly, or Pro Monthly) to test limits in Diagnostics.
-    public var overrideTier: SubscriptionTier? {
+    public var overrideTier: SubscriptionTier? = nil {
         didSet {
             if let overrideTier {
                 UserDefaults.standard.set(overrideTier.rawValue, forKey: "DEBUG_TESTER_TIER")

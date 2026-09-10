@@ -178,7 +178,7 @@ public final class ScriptAPIService: ScriptAPIServiceProtocol, @unchecked Sendab
                 outputCount: request.outputCount,
                 targetDurationMinutes: request.targetDurationMinutes,
                 anonymousUserId: KeychainService.shared.anonymousUserId,
-                clientTier: SubscriptionManager.shared.activeTier.rawValue
+                clientTier: request.clientTier
             )
         }
         

@@ -158,7 +158,9 @@ public final class ScriptGeneratorViewModel {
             scriptStyle: selectedStyle.rawValue,
             inputType: requestType,
             outputCount: 1,
-            targetDurationMinutes: Int(targetDurationMinutes)
+            targetDurationMinutes: Int(targetDurationMinutes),
+            anonymousUserId: KeychainService.shared.anonymousUserId,
+            clientTier: activeTier.rawValue
         )
         
         DebugLogService.shared.log("[ViewModel] Dispatching request to APIService for style '\(selectedStyle.rawValue)'...")
