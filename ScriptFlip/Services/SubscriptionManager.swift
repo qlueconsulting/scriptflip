@@ -80,9 +80,10 @@ public final class SubscriptionManager {
     }
 
     /// Resolves and caches the active subscription tier from current RevenueCat state.
-    /// Call this after every fetchCustomerInfo / purchase / restore cycle, once both
-    /// `activeCustomerInfo` and `currentOffering` are populated.
-    private func resolveActiveTier() {
+    /// Uses StoreKit subscription period via Purchases.shared.products() as the
+    /// primary detection strategy — reliable regardless of product ID naming or package ordering.
+    /// Falls back to offering package type matching and then string heuristics.
+    private func resolveActiveTier() async {
         if Self.isTesterOverrideEnabled {
             cachedTier = Self.testerOverrideTier
             return
@@ -92,7 +93,7 @@ public final class SubscriptionManager {
             return
         }
 
-        // 1. Gather all candidate product identifiers from entitlements + active subscriptions
+        // Gather unique candidate product identifiers from all RevenueCat sources
         var candidateProductIds: [String] = []
         if let activeId = activeProductIdentifier, !activeId.isEmpty {
             candidateProductIds.append(activeId)
@@ -100,80 +101,82 @@ public final class SubscriptionManager {
         candidateProductIds.append(contentsOf: activeSubscriptions)
         if let customerInfo = activeCustomerInfo {
             candidateProductIds.append(contentsOf: customerInfo.activeSubscriptions)
-            for (_, entitlement) in customerInfo.entitlements.all {
-                if entitlement.isActive {
-                    candidateProductIds.append(entitlement.productIdentifier)
-                    if let planId = entitlement.productPlanIdentifier {
-                        candidateProductIds.append(planId)
-                    }
+            for (_, entitlement) in customerInfo.entitlements.all where entitlement.isActive {
+                candidateProductIds.append(entitlement.productIdentifier)
+                if let planId = entitlement.productPlanIdentifier {
+                    candidateProductIds.append(planId)
                 }
             }
         }
-        let lowerCandidates = candidateProductIds.map { $0.lowercased() }
+        let uniqueCandidates = Array(Set(candidateProductIds)).filter { !$0.isEmpty }
+        DebugLogService.shared.log("[SubscriptionManager] resolveActiveTier — candidates: \(uniqueCandidates)")
 
-        DebugLogService.shared.log("[SubscriptionManager] resolveActiveTier candidates: \(lowerCandidates)")
-
-        // 2. Direct comparison against loaded monthly package product identifier
-        if let monthlyProdId = monthlyPackage?.storeProduct.productIdentifier.lowercased(),
-           !monthlyProdId.isEmpty {
-            DebugLogService.shared.log("[SubscriptionManager] monthlyPackage productId: \(monthlyProdId)")
-            if lowerCandidates.contains(monthlyProdId) {
-                cachedTier = .proMonthly
-                DebugLogService.shared.log("[SubscriptionManager] Resolved tier: proMonthly (direct monthly match)")
-                return
+        // PRIMARY: Ask StoreKit for the actual subscription period of each candidate product.
+        // This is the only 100% reliable method — avoids all string heuristics and package ordering issues.
+        if !uniqueCandidates.isEmpty, Purchases.isConfigured {
+            do {
+                let storeProducts = try await Purchases.shared.products(uniqueCandidates)
+                DebugLogService.shared.log("[SubscriptionManager] StoreKit products returned: \(storeProducts.map { "\($0.productIdentifier)=\(String(describing: $0.subscriptionPeriod?.unit.rawValue))" })")
+                for product in storeProducts {
+                    if let period = product.subscriptionPeriod {
+                        switch period.unit {
+                        case .month:
+                            cachedTier = .proMonthly
+                            DebugLogService.shared.log("[SubscriptionManager] Resolved tier: proMonthly (StoreKit period=month for \(product.productIdentifier))")
+                            return
+                        case .week:
+                            cachedTier = .proWeekly
+                            DebugLogService.shared.log("[SubscriptionManager] Resolved tier: proWeekly (StoreKit period=week for \(product.productIdentifier))")
+                            return
+                        default:
+                            break
+                        }
+                    }
+                }
+            } catch {
+                DebugLogService.shared.log("[SubscriptionManager] StoreKit products fetch failed: \(error.localizedDescription) — falling back to offering matching")
             }
         }
 
-        // 3. Direct comparison against loaded weekly package product identifier
-        if let weeklyProdId = weeklyPackage?.storeProduct.productIdentifier.lowercased(),
-           !weeklyProdId.isEmpty {
-            DebugLogService.shared.log("[SubscriptionManager] weeklyPackage productId: \(weeklyProdId)")
-            if lowerCandidates.contains(weeklyProdId) {
-                cachedTier = .proWeekly
-                DebugLogService.shared.log("[SubscriptionManager] Resolved tier: proWeekly (direct weekly match)")
-                return
-            }
-        }
+        let lowerCandidates = uniqueCandidates.map { $0.lowercased() }
 
-        // 4. Inspect all available packages in current offering by packageType & subscriptionPeriod
+        // FALLBACK 1: Match against offering packages by subscriptionPeriod (no string heuristics on package IDs)
         if let offering = currentOffering {
             for pkg in offering.availablePackages {
                 let pkgProdId = pkg.storeProduct.productIdentifier.lowercased()
-                DebugLogService.shared.log("[SubscriptionManager] Checking offering package: \(pkgProdId), type: \(pkg.packageType.rawValue)")
+                DebugLogService.shared.log("[SubscriptionManager] Offering package: \(pkgProdId), type=\(pkg.packageType.rawValue), period=\(String(describing: pkg.storeProduct.subscriptionPeriod?.unit.rawValue))")
                 if lowerCandidates.contains(pkgProdId) {
                     if pkg.packageType == .monthly || pkg.storeProduct.subscriptionPeriod?.unit == .month {
                         cachedTier = .proMonthly
-                        DebugLogService.shared.log("[SubscriptionManager] Resolved tier: proMonthly (offering package type)")
+                        DebugLogService.shared.log("[SubscriptionManager] Resolved tier: proMonthly (offering package period/type for \(pkgProdId))")
                         return
                     } else if pkg.packageType == .weekly || pkg.storeProduct.subscriptionPeriod?.unit == .week {
                         cachedTier = .proWeekly
-                        DebugLogService.shared.log("[SubscriptionManager] Resolved tier: proWeekly (offering package type)")
+                        DebugLogService.shared.log("[SubscriptionManager] Resolved tier: proWeekly (offering package period/type for \(pkgProdId))")
                         return
                     }
                 }
             }
         }
 
-        // 5. Heuristic: scan candidate IDs for month markers
+        // FALLBACK 2: String heuristics on candidate product IDs
         for candidate in lowerCandidates {
             if candidate.contains("monthly") || candidate.contains("month") || candidate.contains("250") {
                 cachedTier = .proMonthly
-                DebugLogService.shared.log("[SubscriptionManager] Resolved tier: proMonthly (heuristic: '\(candidate)')")
+                DebugLogService.shared.log("[SubscriptionManager] Resolved tier: proMonthly (string heuristic: '\(candidate)')")
                 return
             }
         }
-
-        // 6. Heuristic: scan candidate IDs for week markers
         for candidate in lowerCandidates {
             if candidate.contains("weekly") || candidate.contains("week") {
                 cachedTier = .proWeekly
-                DebugLogService.shared.log("[SubscriptionManager] Resolved tier: proWeekly (heuristic: '\(candidate)')")
+                DebugLogService.shared.log("[SubscriptionManager] Resolved tier: proWeekly (string heuristic: '\(candidate)')")
                 return
             }
         }
 
-        // 7. Default — pro user with unknown billing period; log explicitly so we can add a rule
-        DebugLogService.shared.log("[SubscriptionManager] WARNING: Could not determine billing period from candidates \(lowerCandidates). Defaulting to proWeekly. Check RevenueCat product IDs.")
+        // LAST RESORT: unknown billing period — log for diagnostics
+        DebugLogService.shared.log("[SubscriptionManager] WARNING: Could not determine billing period. Candidates=\(uniqueCandidates). Check RevenueCat dashboard product IDs. Defaulting to proWeekly.")
         cachedTier = .proWeekly
     }
 
@@ -183,7 +186,7 @@ public final class SubscriptionManager {
         activeTier != .proMonthly
     }
     
-    /// Robust lookup for the weekly subscription package
+    /// Returns the weekly subscription package from the current offering, or nil if not found.
     public var weeklyPackage: Package? {
         guard let offering = currentOffering else { return nil }
         if let pkg = offering.weekly { return pkg }
@@ -192,10 +195,11 @@ public final class SubscriptionManager {
             pkg.identifier.lowercased().contains("week") ||
             pkg.storeProduct.productIdentifier.lowercased().contains("week") ||
             pkg.storeProduct.subscriptionPeriod?.unit == .week
-        } ?? offering.availablePackages.first
+        }
+        // No fallback to .first — returning nil is safer than returning the wrong package
     }
-    
-    /// Robust lookup for the monthly subscription package
+
+    /// Returns the monthly subscription package from the current offering, or nil if not found.
     public var monthlyPackage: Package? {
         guard let offering = currentOffering else { return nil }
         if let pkg = offering.monthly { return pkg }
@@ -204,7 +208,8 @@ public final class SubscriptionManager {
             pkg.identifier.lowercased().contains("month") ||
             pkg.storeProduct.productIdentifier.lowercased().contains("month") ||
             pkg.storeProduct.subscriptionPeriod?.unit == .month
-        } ?? offering.availablePackages.first { $0 != self.weeklyPackage } ?? offering.availablePackages.last
+        }
+        // No fallback to .last — returning nil is safer than returning the wrong package
     }
 
     /// Filter available packages to strictly show upgrade options (never downgrades).
@@ -288,7 +293,7 @@ public final class SubscriptionManager {
             self.isPro = proEntitlement?.isActive ?? false
             self.activeProductIdentifier = proEntitlement?.productIdentifier ?? customerInfo.activeSubscriptions.first
             // Resolve and cache the tier now that both customerInfo and currentOffering are set
-            self.resolveActiveTier()
+            await self.resolveActiveTier()
             DebugLogService.shared.log("[SubscriptionManager] Customer info refreshed. isPro: \(self.isPro), resolvedTier: \(self.cachedTier.rawValue), product: \(self.activeProductIdentifier ?? "none"), allActive: \(customerInfo.activeSubscriptions)")
             return self.isUnlimited
         } catch {
