@@ -3,7 +3,6 @@ import SwiftUI
 /// About and App Information screen displaying version, developer info, and policy links.
 public struct AboutView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var isRefreshing: Bool = false
     
     public init() {}
     
@@ -51,89 +50,6 @@ public struct AboutView: View {
                         }
                         .padding(18)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.white.opacity(0.05))
-                        .cornerRadius(16)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .stroke(Color.white.opacity(0.08), lineWidth: 1)
-                        )
-                        
-                        // Subscription Status Card
-                        VStack(alignment: .leading, spacing: 12) {
-                            HStack {
-                                Image(systemName: SubscriptionManager.shared.isProTierActive ? "crown.fill" : "sparkles")
-                                    .foregroundStyle(SubscriptionManager.shared.isProTierActive ? .yellow : .cyan)
-                                Text("Subscription Status")
-                                    .font(.headline.bold())
-                                    .foregroundStyle(.white)
-                                Spacer()
-                                Text(SubscriptionManager.shared.activeTier.displayName)
-                                    .font(.caption.bold())
-                                    .foregroundStyle(SubscriptionManager.shared.isProTierActive ? .yellow : .white)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 3)
-                                    .background(Color.white.opacity(0.1))
-                                    .cornerRadius(6)
-                            }
-                            
-                            VStack(spacing: 8) {
-                                HStack {
-                                    Text("Entitlement Status:")
-                                        .font(.caption)
-                                        .foregroundStyle(.gray)
-                                    Spacer()
-                                    Text(SubscriptionManager.shared.isPro ? "Active" : "Inactive")
-                                        .font(.caption.bold())
-                                        .foregroundStyle(SubscriptionManager.shared.isPro ? .green : .gray)
-                                }
-                                
-                                HStack {
-                                    Text("Active Product ID:")
-                                        .font(.caption)
-                                        .foregroundStyle(.gray)
-                                    Spacer()
-                                    Text(SubscriptionManager.shared.activeProductIdentifier ?? "none")
-                                        .font(.caption.monospaced())
-                                        .foregroundStyle(.white)
-                                }
-                                
-                                let activeSubs = Array(SubscriptionManager.shared.activeSubscriptions)
-                                HStack {
-                                    Text("Active Subscriptions:")
-                                        .font(.caption)
-                                        .foregroundStyle(.gray)
-                                    Spacer()
-                                    Text(activeSubs.isEmpty ? "none" : activeSubs.joined(separator: ", "))
-                                        .font(.caption.monospaced())
-                                        .foregroundStyle(.white)
-                                }
-                            }
-                            
-                            Button(action: {
-                                Task {
-                                    isRefreshing = true
-                                    defer { isRefreshing = false }
-                                    await SubscriptionManager.shared.fetchCustomerInfo()
-                                }
-                            }) {
-                                HStack(spacing: 6) {
-                                    if isRefreshing {
-                                        ProgressView().tint(.cyan).scaleEffect(0.8)
-                                    } else {
-                                        Image(systemName: "arrow.triangle.2.circlepath")
-                                    }
-                                    Text("Refresh Subscription Status")
-                                }
-                                .font(.caption.bold())
-                                .foregroundStyle(.cyan)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 36)
-                                .background(Color.cyan.opacity(0.12))
-                                .cornerRadius(8)
-                            }
-                            .disabled(isRefreshing)
-                        }
-                        .padding(18)
                         .background(Color.white.opacity(0.05))
                         .cornerRadius(16)
                         .overlay(

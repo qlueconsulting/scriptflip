@@ -145,15 +145,6 @@ public struct ScriptGeneratorView: View {
                         .foregroundStyle(.cyan)
                 }
                 
-                Button(action: { 
-                    DebugLogService.shared.log("[View] Diagnostics button tapped from toolbar.")
-                    viewModel.showDiagnostics = true 
-                }) {
-                    Image(systemName: "wrench.and.screwdriver")
-                        .font(.subheadline)
-                        .foregroundStyle(.gray)
-                }
-                
                 Button(action: {
                     DebugLogService.shared.log("[View] About button tapped from toolbar.")
                     viewModel.showAbout = true
