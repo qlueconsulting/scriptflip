@@ -37,6 +37,12 @@ public final class UsageTracker: Sendable {
                 modified = true
             }
             
+            // Synchronize monthly counter if weekly usage exceeds monthly usage (e.g. from prior tier tracking)
+            if usage.proUsedThisWeek > usage.proUsedThisMonth {
+                usage.proUsedThisMonth = usage.proUsedThisWeek
+                modified = true
+            }
+            
             if modified {
                 saveUsage(usage)
             }
@@ -59,6 +65,7 @@ public final class UsageTracker: Sendable {
             current.usedCount += 1
         case .proWeekly:
             current.proUsedThisWeek += 1
+            current.proUsedThisMonth += 1
         case .proMonthly:
             current.proUsedThisMonth += 1
         }

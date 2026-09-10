@@ -12,6 +12,7 @@ public struct NetworkDiagnosticsView: View {
     @State private var isTesterOverrideActive: Bool = false
     @State private var currentUsedCount: Int = 0
     @State private var testerActionMessage: String? = nil
+    @State private var isRefreshingSubscriptions: Bool = false
     
     public init(diagnostics: NetworkDiagnosticInfo, onRunTest: @escaping () -> Void = {}) {
         self.diagnostics = diagnostics
@@ -30,6 +31,9 @@ public struct NetworkDiagnosticsView: View {
                         
                         // Tester Controls Section
                         testerControlsSection
+                        
+                        // Subscription & RevenueCat Diagnostics Section
+                        subscriptionDiagnosticsSection
                         
                         // Configuration Section
                         configurationSection
@@ -230,6 +234,104 @@ public struct NetworkDiagnosticsView: View {
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(Color.yellow.opacity(0.25), lineWidth: 1)
+            )
+        }
+    }
+    
+    private var subscriptionDiagnosticsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("REVENUECAT & APP STORE ENTITLEMENTS")
+                    .font(.caption.bold())
+                    .foregroundStyle(.cyan)
+                Spacer()
+                if isRefreshingSubscriptions {
+                    ProgressView()
+                        .tint(.cyan)
+                        .scaleEffect(0.8)
+                }
+            }
+            
+            VStack(alignment: .leading, spacing: 12) {
+                diagnosticRow(
+                    title: "Live Pro Entitlement",
+                    value: SubscriptionManager.shared.isPro ? "YES (ACTIVE)" : "NO (FREE)",
+                    isMonospace: false,
+                    isSuccess: SubscriptionManager.shared.isPro
+                )
+                
+                diagnosticRow(
+                    title: "Active Product ID",
+                    value: SubscriptionManager.shared.activeProductIdentifier ?? "none",
+                    isMonospace: true
+                )
+                
+                let activeSubs = Array(SubscriptionManager.shared.activeSubscriptions)
+                diagnosticRow(
+                    title: "Active Subscriptions",
+                    value: activeSubs.isEmpty ? "none" : activeSubs.joined(separator: ", "),
+                    isMonospace: true
+                )
+                
+                diagnosticRow(
+                    title: "Detected Active Tier",
+                    value: SubscriptionManager.shared.activeTier.displayName,
+                    isMonospace: false,
+                    isSuccess: SubscriptionManager.shared.isProTierActive
+                )
+                
+                diagnosticRow(
+                    title: "Cached Tier",
+                    value: SubscriptionManager.shared.cachedTier.rawValue,
+                    isMonospace: false
+                )
+                
+                let offering = SubscriptionManager.shared.currentOffering
+                diagnosticRow(
+                    title: "Current Offering",
+                    value: offering?.identifier ?? "none",
+                    isMonospace: true
+                )
+                
+                diagnosticRow(
+                    title: "Offering Monthly Pkg",
+                    value: SubscriptionManager.shared.monthlyPackage?.storeProduct.productIdentifier ?? "not found",
+                    isMonospace: true
+                )
+                
+                diagnosticRow(
+                    title: "Offering Weekly Pkg",
+                    value: SubscriptionManager.shared.weeklyPackage?.storeProduct.productIdentifier ?? "not found",
+                    isMonospace: true
+                )
+                
+                Button(action: {
+                    Task {
+                        isRefreshingSubscriptions = true
+                        defer { isRefreshingSubscriptions = false }
+                        await SubscriptionManager.shared.fetchCustomerInfo()
+                        self.logs = DebugLogService.shared.getLogs()
+                    }
+                }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                        Text("Re-query RevenueCat CustomerInfo")
+                    }
+                    .font(.caption.bold())
+                    .foregroundStyle(.cyan)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 38)
+                    .background(Color.cyan.opacity(0.12))
+                    .cornerRadius(8)
+                }
+                .disabled(isRefreshingSubscriptions)
+            }
+            .padding(16)
+            .background(Color.white.opacity(0.04))
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.cyan.opacity(0.2), lineWidth: 1)
             )
         }
     }
