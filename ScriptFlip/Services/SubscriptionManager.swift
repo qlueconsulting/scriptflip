@@ -365,12 +365,26 @@ public final class SubscriptionManager {
         await fetchOfferings()
         
         do {
-            let customerInfo = try await Purchases.shared.customerInfo()
+            // Force sync with App Store receipt so upgrades made in Settings or outside app are recognized
+            let customerInfo: CustomerInfo
+            if let synced = try? await Purchases.shared.syncPurchases() {
+                customerInfo = synced
+            } else {
+                customerInfo = try await Purchases.shared.customerInfo()
+            }
             self.activeCustomerInfo = customerInfo
             self.activeSubscriptions = customerInfo.activeSubscriptions
             let proEntitlement = customerInfo.entitlements["pro"]
             self.isPro = proEntitlement?.isActive ?? false
             self.activeProductIdentifier = proEntitlement?.productIdentifier ?? customerInfo.activeSubscriptions.first
+            
+            #if DEBUG
+            // If live RevenueCat entitlement is active, disable any stale tester override so real subscription takes precedence
+            if self.isPro {
+                Self.isTesterOverrideEnabled = false
+            }
+            #endif
+            
             // Resolve and cache the tier now that both customerInfo and currentOffering are set
             await self.resolveActiveTier()
             DebugLogService.shared.log("[SubscriptionManager] Customer info refreshed. isPro: \(self.isPro), resolvedTier: \(self.cachedTier.rawValue), product: \(self.activeProductIdentifier ?? "none"), allActive: \(customerInfo.activeSubscriptions)")
