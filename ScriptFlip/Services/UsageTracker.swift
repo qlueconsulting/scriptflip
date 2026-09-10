@@ -37,12 +37,6 @@ public final class UsageTracker: Sendable {
                 modified = true
             }
             
-            // Synchronize monthly counter if weekly usage exceeds monthly usage (e.g. from prior tier tracking)
-            if usage.proUsedThisWeek > usage.proUsedThisMonth {
-                usage.proUsedThisMonth = usage.proUsedThisWeek
-                modified = true
-            }
-            
             if modified {
                 saveUsage(usage)
             }
@@ -65,7 +59,6 @@ public final class UsageTracker: Sendable {
             current.usedCount += 1
         case .proWeekly:
             current.proUsedThisWeek += 1
-            current.proUsedThisMonth += 1
         case .proMonthly:
             current.proUsedThisMonth += 1
         }
@@ -89,6 +82,27 @@ public final class UsageTracker: Sendable {
             lastWeekResetDate: Date()
         )
         saveUsage(reset)
+    }
+    
+    /// Synchronize local counters with server-authoritative quota counts returned from backend.
+    public func syncWithServerQuota(freeUsed: Int? = nil, proWeekUsed: Int? = nil, proMonthUsed: Int? = nil) {
+        var current = getUsage()
+        var modified = false
+        if let free = freeUsed {
+            current.usedCount = free
+            modified = true
+        }
+        if let week = proWeekUsed {
+            current.proUsedThisWeek = week
+            modified = true
+        }
+        if let month = proMonthUsed {
+            current.proUsedThisMonth = month
+            modified = true
+        }
+        if modified {
+            saveUsage(current)
+        }
     }
     
     private func saveUsage(_ usage: UserUsage) {

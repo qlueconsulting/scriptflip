@@ -551,6 +551,29 @@ final class ScriptFlipTests: XCTestCase {
         XCTAssertEqual(freshFree.remainingQuotaString(for: .free), "3/3 Free")
         XCTAssertEqual(freshFree.badgeQuotaString(for: .free), "3/3 Free Left")
     }
+    
+    func testKeychainServiceProvidesValidAnonymousUUID() {
+        let anonId = KeychainService.shared.anonymousUserId
+        XCTAssertFalse(anonId.isEmpty)
+        // Verify valid UUID format
+        XCTAssertNotNil(UUID(uuidString: anonId), "anonymousUserId must be a valid UUID format")
+        // Verify idempotency
+        XCTAssertEqual(KeychainService.shared.anonymousUserId, anonId)
+    }
+    
+    func testUsageTrackerSyncWithServerQuota() {
+        let tracker = UsageTracker.shared
+        tracker.resetUsage()
+        
+        // Sync server authoritative counts
+        tracker.syncWithServerQuota(freeUsed: 2, proWeekUsed: 12, proMonthUsed: 45)
+        let usage = tracker.getUsage()
+        XCTAssertEqual(usage.usedCount, 2)
+        XCTAssertEqual(usage.proUsedThisWeek, 12)
+        XCTAssertEqual(usage.proUsedThisMonth, 45)
+        
+        tracker.resetUsage()
+    }
 }
 
 

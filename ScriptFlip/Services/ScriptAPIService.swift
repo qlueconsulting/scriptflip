@@ -169,9 +169,22 @@ public final class ScriptAPIService: ScriptAPIServiceProtocol, @unchecked Sendab
         urlRequest.setValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
         urlRequest.setValue("Bearer \(supabaseAnonKey)", forHTTPHeaderField: "Authorization")
         
+        var effectiveRequest = request
+        if effectiveRequest.anonymousUserId == nil {
+            effectiveRequest = GenerationRequest(
+                inputText: request.inputText,
+                scriptStyle: request.scriptStyle,
+                inputType: request.inputType,
+                outputCount: request.outputCount,
+                targetDurationMinutes: request.targetDurationMinutes,
+                anonymousUserId: KeychainService.shared.anonymousUserId,
+                clientTier: SubscriptionManager.shared.activeTier.rawValue
+            )
+        }
+        
         let requestBodyData: Data
         do {
-            requestBodyData = try JSONEncoder().encode(request)
+            requestBodyData = try JSONEncoder().encode(effectiveRequest)
             urlRequest.httpBody = requestBodyData
         } catch {
             let err = ScriptAPIError.decodingError(error, rawBody: "Failed to encode GenerationRequest JSON.")
@@ -289,6 +302,14 @@ public final class ScriptAPIService: ScriptAPIServiceProtocol, @unchecked Sendab
             )
             throw error
         } else if httpResponse.statusCode == 429 {
+            if let responseWrapper = try? JSONDecoder().decode(GenerationResponse.self, from: data),
+               let quota = responseWrapper.quota {
+                UsageTracker.shared.syncWithServerQuota(
+                    freeUsed: quota.freeUsed,
+                    proWeekUsed: quota.proWeekUsed,
+                    proMonthUsed: quota.proMonthUsed
+                )
+            }
             let error = ScriptAPIError.usageLimitExceeded
             recordDiagnostics(
                 requestTimestamp: startTime,
@@ -338,6 +359,13 @@ public final class ScriptAPIService: ScriptAPIServiceProtocol, @unchecked Sendab
         
         // Check for wrapped { script: { ... } } or { error: "..." }
         if let responseWrapper = try? decoder.decode(GenerationResponse.self, from: data) {
+            if let quota = responseWrapper.quota {
+                UsageTracker.shared.syncWithServerQuota(
+                    freeUsed: quota.freeUsed,
+                    proWeekUsed: quota.proWeekUsed,
+                    proMonthUsed: quota.proMonthUsed
+                )
+            }
             if let errorMsg = responseWrapper.error, !errorMsg.isEmpty {
                 let error = ScriptAPIError.edgeFunctionError(errorMsg)
                 recordDiagnostics(

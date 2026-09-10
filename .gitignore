@@ -5,3 +5,4 @@ DerivedData/
 *.p8
 *.txt
 screens/
+supabase/.temp/

@@ -1,10 +1,17 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
+
+const supabaseUrl = Deno.env.get("SUPABASE_URL") || ""
+const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
+const supabase = (supabaseUrl && supabaseServiceKey) 
+  ? createClient(supabaseUrl, supabaseServiceKey) 
+  : null
 
 const ANTHROPIC_ENDPOINT = "https://api.anthropic.com/v1/messages"
 const MAX_INPUT_CHARS = 3000
@@ -213,6 +220,8 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
+  const requestStartTime = performance.now()
+
   try {
     const rawKey = Deno.env.get("ANTHROPIC_API_KEY") || ""
     const anthropicApiKey = rawKey.trim().replace(/^["']|["']$/g, "")
@@ -225,7 +234,17 @@ serve(async (req) => {
       )
     }
 
-    let payload: { inputText?: string; scriptStyle?: string; model?: string; outputCount?: number; inputType?: string; style?: string; targetDurationMinutes?: number } = {}
+    let payload: { 
+      inputText?: string; 
+      scriptStyle?: string; 
+      model?: string; 
+      outputCount?: number; 
+      inputType?: string; 
+      style?: string; 
+      targetDurationMinutes?: number;
+      anonymousUserId?: string;
+      clientTier?: string;
+    } = {}
     try {
       const bodyText = await req.text()
       payload = JSON.parse(bodyText)
@@ -234,6 +253,35 @@ serve(async (req) => {
         JSON.stringify({ error: `Malformed JSON request body: ${parseError.message}` }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       )
+    }
+
+    // 1. Quota Enforcement via Supabase Postgres RPC (Zero Anthropic Token Cost if Quota Reached)
+    let quotaCheck: any = null
+    if (supabase && payload.anonymousUserId) {
+      try {
+        console.log(`[generate-scripts] Checking quota for user: ${payload.anonymousUserId}, tier: ${payload.clientTier || 'free'}`)
+        const { data, error } = await supabase.rpc('check_quota', {
+          p_anon_id: payload.anonymousUserId,
+          p_tier: payload.clientTier || 'free'
+        })
+        if (error) {
+          console.warn(`[generate-scripts] check_quota error:`, error.message)
+        } else if (data) {
+          quotaCheck = data
+          console.log(`[generate-scripts] Quota check result:`, quotaCheck)
+          if (quotaCheck.allowed === false) {
+            return new Response(
+              JSON.stringify({
+                error: `Usage limit reached (${quotaCheck.limit - quotaCheck.remaining}/${quotaCheck.limit}). Upgrade to Pro for more generations.`,
+                quota: quotaCheck
+              }),
+              { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            )
+          }
+        }
+      } catch (dbErr: any) {
+        console.warn(`[generate-scripts] Failed to execute check_quota RPC:`, dbErr?.message || dbErr)
+      }
     }
 
     let { inputText, scriptStyle, style, inputType, targetDurationMinutes } = payload
@@ -425,12 +473,40 @@ Output ONLY valid JSON matching this exact structure (no markdown fences, no bac
       keyTakeaway: scriptObj.keyTakeaway || "Substantive 3-5 minute spoken presentation engineered for maximum retention."
     }
 
+    // 9. Record generation audit and increment quota
+    let finalQuota = quotaCheck
+    if (supabase && payload.anonymousUserId) {
+      try {
+        const durationMs = Math.round(performance.now() - requestStartTime)
+        const usage = result.usage || {}
+        const { data: recordData, error: recordErr } = await supabase.rpc('record_generation', {
+          p_anon_id: payload.anonymousUserId,
+          p_tier: payload.clientTier || 'free',
+          p_input_type: inputType || (isVideoUrl ? 'video' : 'text'),
+          p_duration: durationMinutes,
+          p_model: successfulModel,
+          p_input_tokens: usage.input_tokens || 0,
+          p_output_tokens: usage.output_tokens || 0,
+          p_duration_ms: durationMs
+        })
+        if (recordErr) {
+          console.warn(`[generate-scripts] record_generation error:`, recordErr.message)
+        } else if (recordData) {
+          finalQuota = recordData
+          console.log(`[generate-scripts] Quota recorded:`, finalQuota)
+        }
+      } catch (recordErr: any) {
+        console.warn(`[generate-scripts] Failed to record generation audit:`, recordErr?.message || recordErr)
+      }
+    }
+
     return new Response(
       JSON.stringify({ 
         script: normalizedScript,
         data: [normalizedScript],
         scripts: [normalizedScript],
-        activeModel: successfulModel
+        activeModel: successfulModel,
+        quota: finalQuota
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     )

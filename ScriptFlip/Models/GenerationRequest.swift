@@ -8,6 +8,9 @@ public struct GenerationRequest: Codable, Sendable {
     public let outputCount: Int?
     public let targetDurationMinutes: Int?
     
+    public let anonymousUserId: String?
+    public let clientTier: String?
+    
     public enum InputType: String, Codable, Sendable {
         case rawText = "text"
         case videoUrl = "video"
@@ -20,13 +23,17 @@ public struct GenerationRequest: Codable, Sendable {
         scriptStyle: String,
         inputType: InputType? = nil,
         outputCount: Int? = 1,
-        targetDurationMinutes: Int? = nil
+        targetDurationMinutes: Int? = nil,
+        anonymousUserId: String? = nil,
+        clientTier: String? = nil
     ) {
         self.inputText = inputText
         self.scriptStyle = scriptStyle
         self.inputType = inputType
         self.outputCount = outputCount
         self.targetDurationMinutes = targetDurationMinutes
+        self.anonymousUserId = anonymousUserId
+        self.clientTier = clientTier
     }
     
     public init(
@@ -34,13 +41,17 @@ public struct GenerationRequest: Codable, Sendable {
         content: String,
         style: ScriptStyle,
         outputCount: Int = 1,
-        targetDurationMinutes: Int? = nil
+        targetDurationMinutes: Int? = nil,
+        anonymousUserId: String? = nil,
+        clientTier: String? = nil
     ) {
         self.inputText = content
         self.scriptStyle = style.rawValue
         self.inputType = inputType
         self.outputCount = outputCount
         self.targetDurationMinutes = targetDurationMinutes
+        self.anonymousUserId = anonymousUserId
+        self.clientTier = clientTier
     }
 }
 
@@ -106,22 +117,64 @@ public struct GeneratedScriptDTO: Codable, Sendable {
     }
 }
 
+/// Quota information returned by Supabase backend inside GenerationResponse.
+public struct ServerQuotaResponse: Codable, Sendable {
+    public let allowed: Bool?
+    public let remaining: Int?
+    public let limit: Int?
+    public let tier: String?
+    public let freeUsed: Int?
+    public let proWeekUsed: Int?
+    public let proMonthUsed: Int?
+    
+    enum CodingKeys: String, CodingKey {
+        case allowed
+        case remaining
+        case limit
+        case tier
+        case freeUsed = "free_used"
+        case proWeekUsed = "pro_week_used"
+        case proMonthUsed = "pro_month_used"
+    }
+    
+    public init(
+        allowed: Bool? = nil,
+        remaining: Int? = nil,
+        limit: Int? = nil,
+        tier: String? = nil,
+        freeUsed: Int? = nil,
+        proWeekUsed: Int? = nil,
+        proMonthUsed: Int? = nil
+    ) {
+        self.allowed = allowed
+        self.remaining = remaining
+        self.limit = limit
+        self.tier = tier
+        self.freeUsed = freeUsed
+        self.proWeekUsed = proWeekUsed
+        self.proMonthUsed = proMonthUsed
+    }
+}
+
 /// Wrapped response payload if returned inside a root container object (`{ script: { ... } }`, `{ data: [...] }` or `{ scripts: [...] }`).
 public struct GenerationResponse: Codable, Sendable {
     public let script: UniversalScriptDTO?
     public let data: [UniversalScriptDTO]?
     public let scripts: [UniversalScriptDTO]?
+    public let quota: ServerQuotaResponse?
     public let error: String?
     
     public init(
         script: UniversalScriptDTO? = nil,
         data: [UniversalScriptDTO]? = nil,
         scripts: [UniversalScriptDTO]? = nil,
+        quota: ServerQuotaResponse? = nil,
         error: String? = nil
     ) {
         self.script = script
         self.data = data
         self.scripts = scripts
+        self.quota = quota
         self.error = error
     }
     

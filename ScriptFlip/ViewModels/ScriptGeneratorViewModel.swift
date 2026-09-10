@@ -30,7 +30,11 @@ public final class ScriptGeneratorViewModel {
     public var showHistory: Bool = false
     public var showAbout: Bool = false
     
-    public var userUsage: UserUsage = UserUsage()
+    public var usageRevision: Int = 0
+    public var userUsage: UserUsage {
+        _ = usageRevision
+        return usageTracker.getUsage()
+    }
     
     private let apiService: ScriptAPIServiceProtocol
     private let usageTracker: UsageTracker
@@ -61,15 +65,16 @@ public final class ScriptGeneratorViewModel {
     }
     
     public func refreshUsage() {
-        self.userUsage = usageTracker.getUsage()
+        self.usageRevision += 1
+        let current = userUsage
         let tier = subscriptionManager.activeTier
         switch tier {
         case .proWeekly:
-            DebugLogService.shared.log("[ViewModel] Usage refreshed (PRO WEEKLY): \(userUsage.proUsedThisWeek)/50 weekly (\(userUsage.remainingProWeeklyGenerations) left).")
+            DebugLogService.shared.log("[ViewModel] Usage refreshed (PRO WEEKLY): \(current.proUsedThisWeek)/50 weekly (\(current.remainingProWeeklyGenerations) left).")
         case .proMonthly:
-            DebugLogService.shared.log("[ViewModel] Usage refreshed (PRO MONTHLY): \(userUsage.proUsedThisMonth)/250 monthly (\(userUsage.remainingProMonthlyGenerations) left).")
+            DebugLogService.shared.log("[ViewModel] Usage refreshed (PRO MONTHLY): \(current.proUsedThisMonth)/250 monthly (\(current.remainingProMonthlyGenerations) left).")
         case .free:
-            DebugLogService.shared.log("[ViewModel] Usage refreshed (FREE): \(userUsage.usedCount)/3 used (\(userUsage.remainingFreeGenerations) remaining).")
+            DebugLogService.shared.log("[ViewModel] Usage refreshed (FREE): \(current.usedCount)/3 used (\(current.remainingFreeGenerations) remaining).")
         }
     }
     
@@ -169,14 +174,16 @@ public final class ScriptGeneratorViewModel {
             }
             
             // Increment usage count for active tier
-            self.userUsage = usageTracker.incrementUsage(tier: subscriptionManager.activeTier)
+            usageTracker.incrementUsage(tier: subscriptionManager.activeTier)
+            self.usageRevision += 1
+            let currentUsage = self.userUsage
             switch subscriptionManager.activeTier {
             case .proWeekly:
-                DebugLogService.shared.log("[ViewModel] Incremented Pro Weekly usage: \(self.userUsage.proUsedThisWeek)/50.")
+                DebugLogService.shared.log("[ViewModel] Incremented Pro Weekly usage: \(currentUsage.proUsedThisWeek)/50.")
             case .proMonthly:
-                DebugLogService.shared.log("[ViewModel] Incremented Pro Monthly usage: \(self.userUsage.proUsedThisMonth)/250.")
+                DebugLogService.shared.log("[ViewModel] Incremented Pro Monthly usage: \(currentUsage.proUsedThisMonth)/250.")
             case .free:
-                DebugLogService.shared.log("[ViewModel] Incremented Free usage: \(self.userUsage.usedCount)/3.")
+                DebugLogService.shared.log("[ViewModel] Incremented Free usage: \(currentUsage.usedCount)/3.")
             }
             
             self.showResults = true

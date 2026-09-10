@@ -31,6 +31,7 @@
 		1117 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2117 /* HistoryView.swift */; };
 		1118 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2118 /* AboutView.swift */; };
 		1119 /* SplashScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2119 /* SplashScreenView.swift */; };
+		111A /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 211A /* KeychainService.swift */; };
 		1120 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 3101 /* RevenueCat */; };
 		1121 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 3102 /* RevenueCatUI */; };
 		1130 /* ScriptAPIServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2130 /* ScriptAPIServiceTests.swift */; };
@@ -82,6 +83,7 @@
 		2117 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
 		2118 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 		2119 /* SplashScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashScreenView.swift; sourceTree = "<group>"; };
+		211A /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainService.swift; sourceTree = "<group>"; };
 		2112 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		2113 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		2120 /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
@@ -171,6 +173,7 @@
 				210A /* UsageTracker.swift */,
 				2115 /* DebugLogService.swift */,
 				2116 /* HistoryManager.swift */,
+				211A /* KeychainService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -452,6 +455,7 @@
 				1117 /* HistoryView.swift in Sources */,
 				1118 /* AboutView.swift in Sources */,
 				1119 /* SplashScreenView.swift in Sources */,
+				111A /* KeychainService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

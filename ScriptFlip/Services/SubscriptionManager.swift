@@ -34,11 +34,13 @@ public final class SubscriptionManager {
     }
     
     private init() {
+        #if DEBUG
         if UserDefaults.standard.bool(forKey: "DEBUG_UNLIMITED_TESTER_MODE"),
            let saved = UserDefaults.standard.string(forKey: "DEBUG_TESTER_TIER"),
            let tier = SubscriptionTier(rawValue: saved) {
             self.overrideTier = tier
         }
+        #endif
     }
     
     // MARK: - Tester Override API
@@ -399,12 +401,12 @@ public final class SubscriptionManager {
             self.isPro = proEntitlement?.isActive ?? false
             self.activeProductIdentifier = proEntitlement?.productIdentifier ?? customerInfo.activeSubscriptions.first
             
-            #if DEBUG
             // If live RevenueCat entitlement is active, disable any stale tester override so real subscription takes precedence
             if self.isPro {
-                Self.isTesterOverrideEnabled = false
+                self.overrideTier = nil
+                UserDefaults.standard.removeObject(forKey: "DEBUG_TESTER_TIER")
+                UserDefaults.standard.set(false, forKey: "DEBUG_UNLIMITED_TESTER_MODE")
             }
-            #endif
             
             // Resolve and cache the tier now that both customerInfo and currentOffering are set
             await self.resolveActiveTier()
