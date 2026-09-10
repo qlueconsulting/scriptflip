@@ -241,22 +241,22 @@ public struct PaywallContainerView: View {
                     .font(.title3)
                     .foregroundStyle(isSelected ? .cyan : .gray)
                 
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 8) {
-                        Text(title)
-                            .font(.subheadline.bold())
-                            .foregroundStyle(.white)
-                        
-                        if let badge = badge {
-                            Text(badge)
-                                .font(.system(size: 9, weight: .black))
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color.cyan)
-                                .foregroundStyle(.black)
-                                .cornerRadius(4)
-                        }
+                VStack(alignment: .leading, spacing: 4) {
+                    if let badge = badge {
+                        Text(badge)
+                            .font(.system(size: 9, weight: .black))
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 3)
+                            .background(Color.cyan)
+                            .foregroundStyle(.black)
+                            .cornerRadius(4)
+                            .lineLimit(1)
+                            .fixedSize(horizontal: true, vertical: false)
                     }
+                    
+                    Text(title)
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.white)
                     
                     Text(quota)
                         .font(.caption)

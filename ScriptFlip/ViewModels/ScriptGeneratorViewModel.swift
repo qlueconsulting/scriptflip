@@ -24,7 +24,13 @@ public final class ScriptGeneratorViewModel {
     
     public var generatedScripts: [Script] = []
     
-    public var showPaywall: Bool = false
+    public var showPaywall: Bool = false {
+        didSet {
+            if showPaywall && subscriptionManager.activeTier == .proMonthly {
+                showPaywall = false
+            }
+        }
+    }
     public var showResults: Bool = false
     public var showDiagnostics: Bool = false
     public var showHistory: Bool = false

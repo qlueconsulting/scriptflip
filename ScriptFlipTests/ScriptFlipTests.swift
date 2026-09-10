@@ -574,6 +574,73 @@ final class ScriptFlipTests: XCTestCase {
         
         tracker.resetUsage()
     }
+    
+    @MainActor
+    func testProMonthlyBlocksPaywallPresentation() {
+        let manager = SubscriptionManager.shared
+        let origOverride = manager.overrideTier
+        defer { manager.overrideTier = origOverride }
+        
+        // 1. Pro Monthly blocks paywall presentation
+        manager.setTesterOverride(tier: .proMonthly)
+        XCTAssertEqual(manager.activeTier, .proMonthly)
+        XCTAssertFalse(manager.canUpgrade)
+        
+        let vm = ScriptGeneratorViewModel(subscriptionManager: manager)
+        vm.showPaywall = true
+        XCTAssertFalse(vm.showPaywall, "showPaywall must remain false for Pro Monthly subscribers")
+        
+        // 2. Pro Weekly permits paywall presentation for upgrading
+        manager.setTesterOverride(tier: .proWeekly)
+        XCTAssertEqual(manager.activeTier, .proWeekly)
+        XCTAssertTrue(manager.canUpgrade)
+        
+        vm.showPaywall = true
+        XCTAssertTrue(vm.showPaywall, "showPaywall must be allowed for Pro Weekly subscribers to upgrade")
+        
+        // 3. Free permits paywall presentation
+        manager.setTesterOverride(tier: .free)
+        XCTAssertEqual(manager.activeTier, .free)
+        XCTAssertTrue(manager.canUpgrade)
+        
+        vm.showPaywall = true
+        XCTAssertTrue(vm.showPaywall, "showPaywall must be allowed for Free subscribers to upgrade")
+    }
+    
+    @MainActor
+    func testMonthlyPrecedenceOverWeeklyInEntitlements() {
+        let manager = SubscriptionManager.shared
+        let origOverride = manager.overrideTier
+        let origIsPro = manager.isPro
+        let origActiveSubs = manager.activeSubscriptions
+        let origActiveId = manager.activeProductIdentifier
+        
+        defer {
+            manager.overrideTier = origOverride
+            manager.isPro = origIsPro
+            manager.activeSubscriptions = origActiveSubs
+            manager.activeProductIdentifier = origActiveId
+        }
+        
+        manager.clearTesterOverride()
+        manager.isPro = true
+        manager.activeProductIdentifier = nil
+        
+        // Test case: Both weekly and monthly active simultaneously
+        manager.activeSubscriptions = ["com.qlueconsulting.scriptflip.weekly", "com.qlueconsulting.scriptflip.monthly"]
+        XCTAssertEqual(manager.activeTier, .proMonthly, "When both weekly and monthly are present, Monthly MUST take precedence")
+        XCTAssertFalse(manager.canUpgrade)
+        
+        // Test case: Monthly alone
+        manager.activeSubscriptions = ["com.qlueconsulting.scriptflip.monthly"]
+        XCTAssertEqual(manager.activeTier, .proMonthly, "When monthly is alone, Monthly MUST be followed")
+        XCTAssertFalse(manager.canUpgrade)
+        
+        // Test case: Weekly alone
+        manager.activeSubscriptions = ["com.qlueconsulting.scriptflip.weekly"]
+        XCTAssertEqual(manager.activeTier, .proWeekly, "When weekly is alone without monthly, Weekly is followed")
+        XCTAssertTrue(manager.canUpgrade)
+    }
 }
 
 

@@ -226,6 +226,7 @@ public struct ScriptGeneratorView: View {
     
     private var usageBadge: some View {
         Button(action: { 
+            guard subscriptionManager.activeTier != .proMonthly else { return }
             DebugLogService.shared.log("[View] Usage badge tapped - presenting paywall & plan status.")
             viewModel.showPaywall = true 
         }) {
@@ -250,6 +251,7 @@ public struct ScriptGeneratorView: View {
             .background(Color.white.opacity(0.1))
             .cornerRadius(12)
         }
+        .disabled(subscriptionManager.activeTier == .proMonthly)
         #if DEBUG
         .contextMenu {
             Section("DEBUG: Testing Controls") {

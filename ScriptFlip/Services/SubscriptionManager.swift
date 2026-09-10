@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import StoreKit
 import RevenueCat
 import RevenueCatUI
 
@@ -129,6 +130,7 @@ public final class SubscriptionManager {
         candidateProductIds.append(contentsOf: activeSubscriptions)
         if let customerInfo = activeCustomerInfo {
             candidateProductIds.append(contentsOf: customerInfo.activeSubscriptions)
+            candidateProductIds.append(contentsOf: customerInfo.allPurchasedProductIdentifiers)
             for (_, entitlement) in customerInfo.entitlements.all where entitlement.isActive {
                 candidateProductIds.append(entitlement.productIdentifier)
                 if let planId = entitlement.productPlanIdentifier {
@@ -145,7 +147,7 @@ public final class SubscriptionManager {
             }
         }
         
-        // 2. Monthly string heuristic FIRST (Monthly always takes precedence)
+        // 2. Monthly string heuristic FIRST (Monthly ALWAYS takes precedence if both weekly and monthly are present)
         for c in lower {
             if c.contains("monthly") || c.contains("month") || c.contains("250") || c.contains("mo") {
                 return .proMonthly
@@ -159,7 +161,7 @@ public final class SubscriptionManager {
             }
         }
         
-        // 4. Weekly string heuristic
+        // 4. Weekly string heuristic (ONLY if monthly was not found)
         for c in lower {
             if c.contains("weekly") || c.contains("week") || c.contains("50") || c.contains("wk") {
                 return .proWeekly
@@ -170,116 +172,98 @@ public final class SubscriptionManager {
         return .proMonthly
     }
 
-    /// Resolves and caches the active subscription tier from current RevenueCat state.
+    /// Resolves and caches the active subscription tier using Apple StoreKit 2 as the sole authoritative on-device source of truth.
     /// Priority order:
-    /// 1. StoreKit 2 actual subscriptionPeriod unit (.month vs .week) & price inspection
-    /// 2. Current Offering available packages matching
-    /// 3. String heuristics on all candidate IDs (Monthly takes precedence)
-    /// 4. Safe default to Pro Monthly for verified paying subscribers
+    /// 1. Direct on-device StoreKit 2 `Transaction.currentEntitlements` query.
+    ///    - Ignores revoked transactions (revocationDate != nil)
+    ///    - Ignores superseded transactions (isUpgraded == true)
+    ///    - STRICT RULE: If Monthly is present alone OR together with Weekly -> MONTHLY WINS.
+    ///    - Weekly is returned ONLY if weekly is verified AND monthly is completely absent.
+    /// 2. Fallback for test/mock environments where StoreKit daemon returns no transactions:
+    ///    - Evaluate activeProductIdentifier & activeSubscriptions using same strict precedence (Monthly wins).
     private func resolveActiveTier() async {
         if let override = overrideTier {
             cachedTier = override
             return
         }
-        guard isPro else {
-            cachedTier = .free
+
+        // --- STEP 1: StoreKit 2 Direct On-Device Entitlements Inspection ---
+        var storeKitMonthlyFound = false
+        var storeKitWeeklyFound = false
+        var storeKitProductIds: [String] = []
+
+        for await result in Transaction.currentEntitlements {
+            guard case .verified(let transaction) = result else { continue }
+            // Ignore revoked / refunded transactions
+            guard transaction.revocationDate == nil else { continue }
+            // Ignore transactions that Apple has flagged as upgraded (superseded by a higher subscription)
+            if transaction.isUpgraded {
+                DebugLogService.shared.log("[SubscriptionManager] StoreKit 2 transaction '\(transaction.productID)' isUpgraded == true (superseded). Skipping.")
+                continue
+            }
+
+            storeKitProductIds.append(transaction.productID)
+            let idLower = transaction.productID.lowercased()
+
+            // Query StoreKit 2 product metadata directly from Apple
+            if let products = try? await Product.products(for: [transaction.productID]),
+               let product = products.first {
+                if product.subscription?.subscriptionPeriod.unit == .month || product.price > 10.0 {
+                    storeKitMonthlyFound = true
+                    DebugLogService.shared.log("[SubscriptionManager] StoreKit 2 detected MONTHLY product: '\(product.id)' (unit: month, price: \(product.price))")
+                } else if product.subscription?.subscriptionPeriod.unit == .week {
+                    storeKitWeeklyFound = true
+                    DebugLogService.shared.log("[SubscriptionManager] StoreKit 2 detected WEEKLY product: '\(product.id)' (unit: week)")
+                } else {
+                    // String heuristics on product ID
+                    if idLower.contains("monthly") || idLower.contains("month") || idLower.contains("250") || idLower.contains("mo") {
+                        storeKitMonthlyFound = true
+                    } else if idLower.contains("weekly") || idLower.contains("week") || idLower.contains("50") || idLower.contains("wk") {
+                        storeKitWeeklyFound = true
+                    }
+                }
+            } else {
+                // Heuristic fallback if product metadata could not be fetched
+                if idLower.contains("monthly") || idLower.contains("month") || idLower.contains("250") || idLower.contains("mo") {
+                    storeKitMonthlyFound = true
+                } else if idLower.contains("weekly") || idLower.contains("week") || idLower.contains("50") || idLower.contains("wk") {
+                    storeKitWeeklyFound = true
+                }
+            }
+        }
+
+        DebugLogService.shared.log("[SubscriptionManager] StoreKit 2 inspection complete. Active products: \(storeKitProductIds), monthlyFound: \(storeKitMonthlyFound), weeklyFound: \(storeKitWeeklyFound)")
+
+        // RULE: If Monthly is active ALONE OR WITH Weekly, Monthly MUST be followed
+        if storeKitMonthlyFound {
+            self.isPro = true
+            self.cachedTier = .proMonthly
+            self.activeProductIdentifier = storeKitProductIds.first { $0.lowercased().contains("month") || $0.lowercased().contains("250") || $0.lowercased().contains("mo") } ?? storeKitProductIds.first
+            DebugLogService.shared.log("[SubscriptionManager] StoreKit 2 resolved tier: .proMonthly (Monthly precedence enforced)")
+            return
+        } else if storeKitWeeklyFound {
+            // Weekly ALONE (no monthly active)
+            self.isPro = true
+            self.cachedTier = .proWeekly
+            self.activeProductIdentifier = storeKitProductIds.first
+            DebugLogService.shared.log("[SubscriptionManager] StoreKit 2 resolved tier: .proWeekly (Weekly alone)")
             return
         }
 
-        // Gather unique candidate product identifiers from all RevenueCat sources
-        var candidateProductIds: [String] = []
-        if let activeId = activeProductIdentifier, !activeId.isEmpty {
-            candidateProductIds.append(activeId)
-        }
-        candidateProductIds.append(contentsOf: activeSubscriptions)
-        if let customerInfo = activeCustomerInfo {
-            candidateProductIds.append(contentsOf: customerInfo.activeSubscriptions)
-            for (_, entitlement) in customerInfo.entitlements.all where entitlement.isActive {
-                candidateProductIds.append(entitlement.productIdentifier)
-                if let planId = entitlement.productPlanIdentifier {
-                    candidateProductIds.append(planId)
-                }
-            }
-        }
-        let uniqueCandidates = Array(Set(candidateProductIds)).filter { !$0.isEmpty }
-        let lowerCandidates = uniqueCandidates.map { $0.lowercased() }
-        DebugLogService.shared.log("[SubscriptionManager] resolveActiveTier — candidates: \(uniqueCandidates)")
-
-        // PRIORITY 1: Ask StoreKit for the actual subscription period & price of each candidate product.
-        // MONTHLY MUST ALWAYS TAKE PRECEDENCE OVER WEEKLY IF BOTH ARE PRESENT.
-        if !uniqueCandidates.isEmpty, Purchases.isConfigured {
-            do {
-                let storeProducts = try await Purchases.shared.products(uniqueCandidates)
-                DebugLogService.shared.log("[SubscriptionManager] StoreKit products returned: \(storeProducts.map { "\($0.productIdentifier) period=\(String(describing: $0.subscriptionPeriod?.unit.rawValue)) price=\($0.price)" })")
-                
-                // Check if ANY product is Monthly (by unit == .month or price > $10, e.g. $19.99 vs $4.99)
-                let hasMonthlyProduct = storeProducts.contains { product in
-                    product.subscriptionPeriod?.unit == .month || product.price > 10.0
-                }
-                if hasMonthlyProduct {
-                    cachedTier = .proMonthly
-                    DebugLogService.shared.log("[SubscriptionManager] Resolved tier: proMonthly (StoreKit detected month period or monthly price threshold)")
-                    return
-                }
-                
-                // If NO Monthly product found, check if ANY product is Weekly
-                let hasWeeklyProduct = storeProducts.contains { product in
-                    product.subscriptionPeriod?.unit == .week
-                }
-                if hasWeeklyProduct {
-                    cachedTier = .proWeekly
-                    DebugLogService.shared.log("[SubscriptionManager] Resolved tier: proWeekly (StoreKit detected week period)")
-                    return
-                }
-            } catch {
-                DebugLogService.shared.log("[SubscriptionManager] StoreKit products fetch failed: \(error.localizedDescription) — falling back to offering matching")
-            }
+        // --- STEP 2: Fallback for Unit Tests & Mock / Preview Environments ---
+        // If StoreKit 2 returned zero active transactions, check if candidates exist from test mocks or diagnostics
+        let syncTier = resolveSynchronousTier()
+        if syncTier != .free {
+            self.isPro = true
+            self.cachedTier = syncTier
+            DebugLogService.shared.log("[SubscriptionManager] Mock/Test fallback resolved tier: \(syncTier.rawValue)")
+            return
         }
 
-        // PRIORITY 2: Match against offering packages (Monthly checked FIRST)
-        if let offering = currentOffering {
-            let hasMonthlyOffering = offering.availablePackages.contains { pkg in
-                let pkgProdId = pkg.storeProduct.productIdentifier.lowercased()
-                guard lowerCandidates.contains(pkgProdId) else { return false }
-                return pkg.packageType == .monthly || pkg.storeProduct.subscriptionPeriod?.unit == .month || pkg.storeProduct.price > 10.0
-            }
-            if hasMonthlyOffering {
-                cachedTier = .proMonthly
-                DebugLogService.shared.log("[SubscriptionManager] Resolved tier: proMonthly (Offering detected monthly package)")
-                return
-            }
-            
-            let hasWeeklyOffering = offering.availablePackages.contains { pkg in
-                let pkgProdId = pkg.storeProduct.productIdentifier.lowercased()
-                guard lowerCandidates.contains(pkgProdId) else { return false }
-                return pkg.packageType == .weekly || pkg.storeProduct.subscriptionPeriod?.unit == .week
-            }
-            if hasWeeklyOffering {
-                cachedTier = .proWeekly
-                DebugLogService.shared.log("[SubscriptionManager] Resolved tier: proWeekly (Offering detected weekly package)")
-                return
-            }
-        }
-
-        // PRIORITY 3: String heuristics on candidate product IDs (Monthly checked FIRST)
-        for candidate in lowerCandidates {
-            if candidate.contains("monthly") || candidate.contains("month") || candidate.contains("250") || candidate.contains("mo") {
-                cachedTier = .proMonthly
-                DebugLogService.shared.log("[SubscriptionManager] Resolved tier: proMonthly (string heuristic: '\(candidate)')")
-                return
-            }
-        }
-        for candidate in lowerCandidates {
-            if candidate.contains("weekly") || candidate.contains("week") || candidate.contains("50") || candidate.contains("wk") {
-                cachedTier = .proWeekly
-                DebugLogService.shared.log("[SubscriptionManager] Resolved tier: proWeekly (string heuristic: '\(candidate)')")
-                return
-            }
-        }
-
-        // PRIORITY 4: Verified Pro customer whose cadence cannot be determined from metadata
-        DebugLogService.shared.log("[SubscriptionManager] Indeterminate Pro cadence for candidates: \(uniqueCandidates). Defaulting to proMonthly (250/mo) for verified paying subscriber.")
-        cachedTier = .proMonthly
+        // No active subscription found in StoreKit 2 or mocks -> Free tier
+        self.isPro = false
+        self.cachedTier = .free
+        DebugLogService.shared.log("[SubscriptionManager] StoreKit 2 resolved tier: .free (no active entitlements)")
     }
 
 
@@ -379,44 +363,29 @@ public final class SubscriptionManager {
     public func fetchCustomerInfo() async -> Bool {
         Self.ensureConfigured()
         
-        guard Purchases.isConfigured else {
-            print("[SubscriptionManager] Purchases not configured. Returning entitlement status.")
-            return self.isUnlimited
-        }
-        
         // Fetch offerings first so package identifiers & subscription periods are available for tier matching
         await fetchOfferings()
         
-        do {
-            // Force sync with App Store receipt so upgrades made in Settings or outside app are recognized
-            let customerInfo: CustomerInfo
-            if let synced = try? await Purchases.shared.syncPurchases() {
-                customerInfo = synced
-            } else {
-                customerInfo = try await Purchases.shared.customerInfo()
+        // 1. Primary, real-time authoritative entitlement check via Apple StoreKit 2
+        await self.resolveActiveTier()
+        
+        // 2. Synchronize RevenueCat in background for billing & restore tracking
+        if Purchases.isConfigured {
+            if let customerInfo = try? await Purchases.shared.customerInfo() {
+                self.activeCustomerInfo = customerInfo
+                self.activeSubscriptions = customerInfo.activeSubscriptions
             }
-            self.activeCustomerInfo = customerInfo
-            self.activeSubscriptions = customerInfo.activeSubscriptions
-            let proEntitlement = customerInfo.entitlements["pro"]
-            self.isPro = proEntitlement?.isActive ?? false
-            self.activeProductIdentifier = proEntitlement?.productIdentifier ?? customerInfo.activeSubscriptions.first
-            
-            // If live RevenueCat entitlement is active, disable any stale tester override so real subscription takes precedence
-            if self.isPro {
-                self.overrideTier = nil
-                UserDefaults.standard.removeObject(forKey: "DEBUG_TESTER_TIER")
-                UserDefaults.standard.set(false, forKey: "DEBUG_UNLIMITED_TESTER_MODE")
-            }
-            
-            // Resolve and cache the tier now that both customerInfo and currentOffering are set
-            await self.resolveActiveTier()
-            DebugLogService.shared.log("[SubscriptionManager] Customer info refreshed. isPro: \(self.isPro), resolvedTier: \(self.cachedTier.rawValue), product: \(self.activeProductIdentifier ?? "none"), allActive: \(customerInfo.activeSubscriptions)")
-            return self.isUnlimited
-        } catch {
-            DebugLogService.shared.log("[SubscriptionManager] Customer info fetch error: \(error.localizedDescription)")
-            print("[SubscriptionManager] Graceful handling - customerInfo fetch error: \(error.localizedDescription)")
-            return self.isUnlimited
         }
+        
+        // 3. If live Pro subscription is active, disable any stale tester override so real subscription takes precedence
+        if self.isPro {
+            self.overrideTier = nil
+            UserDefaults.standard.removeObject(forKey: "DEBUG_TESTER_TIER")
+            UserDefaults.standard.set(false, forKey: "DEBUG_UNLIMITED_TESTER_MODE")
+        }
+        
+        DebugLogService.shared.log("[SubscriptionManager] Customer info refreshed via StoreKit 2. isPro: \(self.isPro), activeTier: \(self.activeTier.rawValue), cachedTier: \(self.cachedTier.rawValue)")
+        return self.isUnlimited
     }
     
     /// Fetch active RevenueCat offerings safely on demand without throwing or asserting.

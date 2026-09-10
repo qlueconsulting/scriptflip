@@ -260,7 +260,7 @@ public struct NetworkDiagnosticsView: View {
     private var subscriptionDiagnosticsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("REVENUECAT & APP STORE ENTITLEMENTS")
+                Text("STOREKIT 2 & APP STORE ENTITLEMENTS")
                     .font(.caption.bold())
                     .foregroundStyle(.cyan)
                 Spacer()
@@ -334,7 +334,7 @@ public struct NetworkDiagnosticsView: View {
                 }) {
                     HStack(spacing: 6) {
                         Image(systemName: "arrow.triangle.2.circlepath")
-                        Text("Re-query RevenueCat CustomerInfo")
+                        Text("Re-query StoreKit 2 Entitlements")
                     }
                     .font(.caption.bold())
                     .foregroundStyle(.cyan)
