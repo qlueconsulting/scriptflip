@@ -141,7 +141,6 @@ public struct ScriptGeneratorView: View {
                         .foregroundStyle(.cyan)
                 }
                 
-                #if DEBUG
                 Button(action: { 
                     DebugLogService.shared.log("[View] Diagnostics button tapped from toolbar.")
                     viewModel.showDiagnostics = true 
@@ -150,7 +149,6 @@ public struct ScriptGeneratorView: View {
                         .font(.subheadline)
                         .foregroundStyle(.gray)
                 }
-                #endif
                 
                 Button(action: {
                     DebugLogService.shared.log("[View] About button tapped from toolbar.")
