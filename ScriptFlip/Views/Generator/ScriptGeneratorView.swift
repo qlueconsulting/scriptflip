@@ -38,14 +38,18 @@ public struct ScriptGeneratorView: View {
                 AboutView()
             }
             .sheet(isPresented: $viewModel.showPaywall, onDismiss: {
-                Task {
+                Task { @MainActor in
                     await subscriptionManager.fetchCustomerInfo()
                     viewModel.refreshUsage()
                 }
             }) {
                 paywallSheet
             }
-            .sheet(isPresented: $viewModel.showDiagnostics) {
+            .sheet(isPresented: $viewModel.showDiagnostics, onDismiss: {
+                Task { @MainActor in
+                    viewModel.refreshUsage()
+                }
+            }) {
                 diagnosticsSheet
             }
             .fullScreenCover(item: $activePrompterScript) { script in

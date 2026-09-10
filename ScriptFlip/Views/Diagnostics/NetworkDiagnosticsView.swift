@@ -66,7 +66,7 @@ public struct NetworkDiagnosticsView: View {
             }
             .onAppear {
                 self.logs = DebugLogService.shared.getLogs()
-                self.isTesterOverrideActive = SubscriptionManager.isTesterOverrideEnabled
+                self.isTesterOverrideActive = SubscriptionManager.shared.overrideTier != nil
                 self.currentUsedCount = UsageTracker.shared.getUsage().usedCount
             }
         }
@@ -157,8 +157,8 @@ public struct NetworkDiagnosticsView: View {
                 VStack(spacing: 8) {
                     HStack(spacing: 8) {
                         Button(action: {
-                            SubscriptionManager.isTesterOverrideEnabled = false
-                            isTesterOverrideActive = false
+                            SubscriptionManager.shared.setTesterOverride(tier: .free)
+                            isTesterOverrideActive = true
                             DebugLogService.shared.log("[Diagnostics] Switched to Free Tier (3/mo).")
                             testerActionMessage = "🔒 Free Tier Active (3/mo)"
                             self.logs = DebugLogService.shared.getLogs()
@@ -173,8 +173,7 @@ public struct NetworkDiagnosticsView: View {
                         }
                         
                         Button(action: {
-                            SubscriptionManager.isTesterOverrideEnabled = true
-                            SubscriptionManager.testerOverrideTier = .proWeekly
+                            SubscriptionManager.shared.setTesterOverride(tier: .proWeekly)
                             isTesterOverrideActive = true
                             DebugLogService.shared.log("[Diagnostics] Switched to Pro Weekly (50/wk).")
                             testerActionMessage = "✨ Pro Weekly Active (50/wk)"
@@ -190,8 +189,7 @@ public struct NetworkDiagnosticsView: View {
                         }
                         
                         Button(action: {
-                            SubscriptionManager.isTesterOverrideEnabled = true
-                            SubscriptionManager.testerOverrideTier = .proMonthly
+                            SubscriptionManager.shared.setTesterOverride(tier: .proMonthly)
                             isTesterOverrideActive = true
                             DebugLogService.shared.log("[Diagnostics] Switched to Pro Monthly (250/mo).")
                             testerActionMessage = "✨ Pro Monthly Active (250/mo)"
@@ -204,6 +202,27 @@ public struct NetworkDiagnosticsView: View {
                                 .frame(height: 38)
                                 .background(SubscriptionManager.shared.activeTier == .proMonthly ? Color.yellow : Color.white.opacity(0.12))
                                 .cornerRadius(8)
+                        }
+                    }
+                    
+                    if SubscriptionManager.shared.overrideTier != nil {
+                        Button(action: {
+                            SubscriptionManager.shared.clearTesterOverride()
+                            isTesterOverrideActive = false
+                            DebugLogService.shared.log("[Diagnostics] Cleared overrides - using real Apple / RevenueCat subscription.")
+                            testerActionMessage = "🍏 Live Subscription Restored"
+                            self.logs = DebugLogService.shared.getLogs()
+                        }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "checkmark.shield")
+                                Text("Use Live Apple Subscription (Clear Overrides)")
+                            }
+                            .font(.caption.bold())
+                            .foregroundStyle(.cyan)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 36)
+                            .background(Color.cyan.opacity(0.12))
+                            .cornerRadius(8)
                         }
                     }
                     

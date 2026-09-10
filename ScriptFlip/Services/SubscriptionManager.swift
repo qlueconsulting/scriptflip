@@ -20,11 +20,64 @@ public final class SubscriptionManager {
     /// Avoids the nil-race where currentOffering is nil when activeTier is first read.
     public private(set) var cachedTier: SubscriptionTier = .free
     
-    private init() {
-        // Zero async operations or eager SDK calls in init
+    /// User-persisted tester override tier (Free, Pro Weekly, or Pro Monthly) to test limits in Diagnostics.
+    public var overrideTier: SubscriptionTier? {
+        didSet {
+            if let overrideTier {
+                UserDefaults.standard.set(overrideTier.rawValue, forKey: "DEBUG_TESTER_TIER")
+                UserDefaults.standard.set(true, forKey: "DEBUG_UNLIMITED_TESTER_MODE")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "DEBUG_TESTER_TIER")
+                UserDefaults.standard.set(false, forKey: "DEBUG_UNLIMITED_TESTER_MODE")
+            }
+        }
     }
     
-    // MARK: - TestFlight & Tester Override Detection
+    private init() {
+        if UserDefaults.standard.bool(forKey: "DEBUG_UNLIMITED_TESTER_MODE"),
+           let saved = UserDefaults.standard.string(forKey: "DEBUG_TESTER_TIER"),
+           let tier = SubscriptionTier(rawValue: saved) {
+            self.overrideTier = tier
+        }
+    }
+    
+    // MARK: - Tester Override API
+    
+    /// Manually switch subscription tier in Diagnostics (Free, Pro Weekly, Pro Monthly).
+    public func setTesterOverride(tier: SubscriptionTier) {
+        self.overrideTier = tier
+        self.cachedTier = tier
+    }
+    
+    /// Clear manual override to restore live Apple / RevenueCat subscription detection.
+    public func clearTesterOverride() {
+        self.overrideTier = nil
+        Task {
+            await self.fetchCustomerInfo()
+        }
+    }
+    
+    /// Backward-compatible static tester override check.
+    public static var isTesterOverrideEnabled: Bool {
+        get {
+            SubscriptionManager.shared.overrideTier != nil
+        }
+        set {
+            if !newValue {
+                SubscriptionManager.shared.overrideTier = nil
+            }
+        }
+    }
+    
+    /// Backward-compatible static tester override tier.
+    public static var testerOverrideTier: SubscriptionTier {
+        get {
+            SubscriptionManager.shared.overrideTier ?? .proWeekly
+        }
+        set {
+            SubscriptionManager.shared.setTesterOverride(tier: newValue)
+        }
+    }
     
     /// Detects if running in a Debug build (strictly compiled out in App Store releases).
     public static var isTestFlightOrDebug: Bool {
@@ -35,46 +88,11 @@ public final class SubscriptionManager {
         #endif
     }
     
-    /// User-persisted tester override to simulate Pro tier during QA / Diagnostics.
-    /// Always returns false in Release/TestFlight — only active in DEBUG builds.
-    public static var isTesterOverrideEnabled: Bool {
-        get {
-            #if DEBUG
-            return UserDefaults.standard.bool(forKey: "DEBUG_UNLIMITED_TESTER_MODE")
-            #else
-            return false
-            #endif
-        }
-        set {
-            #if DEBUG
-            UserDefaults.standard.set(newValue, forKey: "DEBUG_UNLIMITED_TESTER_MODE")
-            #endif
-        }
-    }
-    
-    /// User-selected tester override tier. Always returns .free in Release/TestFlight.
-    public static var testerOverrideTier: SubscriptionTier {
-        get {
-            #if DEBUG
-            if let saved = UserDefaults.standard.string(forKey: "DEBUG_TESTER_TIER"),
-               let tier = SubscriptionTier(rawValue: saved) {
-                return tier
-            }
-            #endif
-            return .proWeekly
-        }
-        set {
-            #if DEBUG
-            UserDefaults.standard.set(newValue.rawValue, forKey: "DEBUG_TESTER_TIER")
-            #endif
-        }
-    }
-    
     /// The user's active subscription tier.
     /// Always use this in the UI — backed by cachedTier with synchronous fallback.
     public var activeTier: SubscriptionTier {
-        if Self.isTesterOverrideEnabled {
-            return Self.testerOverrideTier
+        if let override = overrideTier {
+            return override
         }
         guard isPro else {
             return .free
@@ -97,6 +115,9 @@ public final class SubscriptionManager {
 
     /// Fast, non-blocking synchronous tier evaluation used before async resolution completes or in tests.
     public func resolveSynchronousTier() -> SubscriptionTier {
+        if let override = overrideTier {
+            return override
+        }
         guard isPro else { return .free }
         
         var candidateProductIds: [String] = []
@@ -154,8 +175,8 @@ public final class SubscriptionManager {
     /// 3. String heuristics on all candidate IDs (Monthly takes precedence)
     /// 4. Safe default to Pro Monthly for verified paying subscribers
     private func resolveActiveTier() async {
-        if Self.isTesterOverrideEnabled {
-            cachedTier = Self.testerOverrideTier
+        if let override = overrideTier {
+            cachedTier = override
             return
         }
         guard isPro else {

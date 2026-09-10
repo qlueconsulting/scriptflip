@@ -507,6 +507,15 @@ final class ScriptFlipTests: XCTestCase {
         manager.activeProductIdentifier = nil
         manager.activeSubscriptions = ["scriptflip_pro_weekly_50", "scriptflip_pro_monthly_250"]
         XCTAssertEqual(manager.activeTier, .proMonthly)
+        
+        // 7. Manual Tester Override (Diagnostics control)
+        manager.setTesterOverride(tier: .proMonthly)
+        XCTAssertEqual(manager.activeTier, .proMonthly)
+        manager.setTesterOverride(tier: .proWeekly)
+        XCTAssertEqual(manager.activeTier, .proWeekly)
+        manager.setTesterOverride(tier: .free)
+        XCTAssertEqual(manager.activeTier, .free)
+        manager.clearTesterOverride()
     }
     
     func testProMonthlyHasNoWeeklyLimitAndAccurateLabels() {
