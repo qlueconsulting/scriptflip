@@ -2,6 +2,11 @@ name: Build and Test (Disabled - Managed by Xcode Cloud)
 
 # Automatic triggers disabled: CI/CD and testing are now managed by Apple Xcode Cloud.
 # To run manually on GitHub if ever needed, use the Actions tab (workflow_dispatch).
+# If push/pull_request triggers are ever re-enabled, ensure android/** is strictly excluded:
+# paths-ignore:
+#   - 'android/**'
+#   - 'docs/**'
+#   - '**.md'
 on:
   workflow_dispatch:
 

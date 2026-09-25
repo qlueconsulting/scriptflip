@@ -2,6 +2,11 @@ name: Deploy to TestFlight (Disabled - Replaced by Xcode Cloud)
 
 # Automatic triggers disabled: Distribution is now managed natively by Apple Xcode Cloud.
 # Only manual dispatch is preserved for emergency fallback.
+# If push/pull_request triggers are ever re-enabled, ensure android/** is strictly excluded:
+# paths-ignore:
+#   - 'android/**'
+#   - 'docs/**'
+#   - '**.md'
 on:
   workflow_dispatch:
 
