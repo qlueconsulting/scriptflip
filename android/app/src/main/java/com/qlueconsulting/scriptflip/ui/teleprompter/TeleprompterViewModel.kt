@@ -10,15 +10,17 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.math.ceil
+import kotlin.math.max
 
 class TeleprompterViewModel(val script: Script) : ViewModel() {
     private val _isPlaying = MutableStateFlow(false)
     val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
 
-    private val _scrollSpeed = MutableStateFlow(40f) // Pixels per second
+    private val _scrollSpeed = MutableStateFlow(35f) // Pixels per second (matches iOS default 35.0)
     val scrollSpeed: StateFlow<Float> = _scrollSpeed.asStateFlow()
 
-    private val _fontSize = MutableStateFlow(32f)
+    private val _fontSize = MutableStateFlow(30f) // Matches iOS default ~32
     val fontSize: StateFlow<Float> = _fontSize.asStateFlow()
 
     private val _isMirrored = MutableStateFlow(false)
@@ -27,7 +29,43 @@ class TeleprompterViewModel(val script: Script) : ViewModel() {
     private val _scrollOffset = MutableStateFlow(0f)
     val scrollOffset: StateFlow<Float> = _scrollOffset.asStateFlow()
 
+    private val _contentHeight = MutableStateFlow(0f)
+    val contentHeight: StateFlow<Float> = _contentHeight.asStateFlow()
+
     private var scrollJob: Job? = null
+
+    // Estimated total scroll distance
+    val totalDistance: Float
+        get() {
+            val measured = _contentHeight.value
+            if (measured > 100f) return measured
+            val charCount = script.cleanTeleprompterText.length.toFloat()
+            val estimatedLines = max(1f, charCount / 38f)
+            return estimatedLines * (_fontSize.value * 1.45f) + 400f
+        }
+
+    val remainingDistance: Float
+        get() = max(0f, totalDistance - _scrollOffset.value)
+
+    val remainingSeconds: Int
+        get() {
+            val speed = max(5f, _scrollSpeed.value)
+            return ceil(remainingDistance / speed).toInt()
+        }
+
+    val remainingTimeString: String
+        get() {
+            val totalSec = remainingSeconds
+            val minutes = totalSec / 60
+            val seconds = totalSec % 60
+            return String.format("%02d:%02d", minutes, seconds)
+        }
+
+    fun setContentHeight(height: Float) {
+        if (height > 0f && height != _contentHeight.value) {
+            _contentHeight.value = height
+        }
+    }
 
     fun togglePlayPause() {
         val next = !_isPlaying.value
@@ -40,34 +78,45 @@ class TeleprompterViewModel(val script: Script) : ViewModel() {
     }
 
     fun setScrollSpeed(speed: Float) {
-        _scrollSpeed.value = speed.coerceIn(15f, 120f)
+        _scrollSpeed.value = speed.coerceIn(10f, 100f)
     }
 
     fun setFontSize(size: Float) {
-        _fontSize.value = size.coerceIn(18f, 60f)
+        _fontSize.value = size.coerceIn(20f, 52f)
     }
 
     fun toggleMirror() {
         _isMirrored.value = !_isMirrored.value
     }
 
-    fun reset() {
+    fun resetPrompter() {
         stopScroll()
         _isPlaying.value = false
         _scrollOffset.value = 0f
     }
 
-    fun updateOffset(delta: Float) {
-        _scrollOffset.value = maxOf(0f, _scrollOffset.value + delta)
+    fun dragBy(deltaY: Float) {
+        // Dragging up (deltaY < 0) advances scroll (increases offset)
+        val newOffset = _scrollOffset.value - deltaY
+        _scrollOffset.value = newOffset.coerceAtLeast(0f)
     }
 
     private fun startScroll() {
         scrollJob?.cancel()
         scrollJob = viewModelScope.launch {
             while (isActive && _isPlaying.value) {
-                delay(30) // ~33 fps
-                val step = _scrollSpeed.value * 0.030f
-                _scrollOffset.value += step
+                delay(33) // ~30 fps tick
+                val step = _scrollSpeed.value * 0.033f
+                val nextOffset = _scrollOffset.value + step
+
+                if (nextOffset >= totalDistance && totalDistance > 0f) {
+                    _scrollOffset.value = totalDistance
+                    _isPlaying.value = false
+                    stopScroll()
+                    break
+                } else {
+                    _scrollOffset.value = nextOffset
+                }
             }
         }
     }
