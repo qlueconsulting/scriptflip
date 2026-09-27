@@ -1,6 +1,7 @@
 package com.qlueconsulting.scriptflip.ui.navigation
 
 sealed class Screen(val route: String) {
+    data object Splash : Screen("splash")
     data object Generator : Screen("generator")
     data object Results : Screen("results")
     data object Teleprompter : Screen("teleprompter")

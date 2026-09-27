@@ -1,6 +1,7 @@
 package com.qlueconsulting.scriptflip.ui.paywall
 
 import android.app.Activity
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -15,7 +16,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -41,11 +44,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.qlueconsulting.scriptflip.R
 import com.qlueconsulting.scriptflip.data.billing.SubscriptionManager
 import com.qlueconsulting.scriptflip.data.model.SubscriptionTier
 import com.qlueconsulting.scriptflip.ui.theme.AccentCyan
@@ -101,6 +109,36 @@ fun PaywallScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Header Logo with ambient glow
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(130.dp, 70.dp)
+                        .background(
+                            brush = Brush.radialGradient(
+                                colors = listOf(
+                                    Color(0x5500E5FF),
+                                    Color(0x1800E5FF),
+                                    Color.Transparent
+                                )
+                            ),
+                            shape = CircleShape
+                        )
+                )
+
+                Image(
+                    painter = painterResource(id = R.drawable.ic_scriptflip_logo),
+                    contentDescription = "ScriptFlip Logo",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .widthIn(max = 200.dp)
+                        .height(90.dp)
+                )
+            }
+
             Text(
                 text = "Unlock ScriptFlip Pro",
                 fontSize = 26.sp,

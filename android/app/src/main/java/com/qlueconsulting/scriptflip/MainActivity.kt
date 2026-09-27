@@ -15,6 +15,7 @@ import com.qlueconsulting.scriptflip.ui.history.HistoryScreen
 import com.qlueconsulting.scriptflip.ui.navigation.Screen
 import com.qlueconsulting.scriptflip.ui.paywall.PaywallScreen
 import com.qlueconsulting.scriptflip.ui.results.ScriptResultsScreen
+import com.qlueconsulting.scriptflip.ui.splash.SplashScreenView
 import com.qlueconsulting.scriptflip.ui.teleprompter.TeleprompterScreen
 import com.qlueconsulting.scriptflip.ui.teleprompter.TeleprompterViewModel
 import com.qlueconsulting.scriptflip.ui.theme.ScriptFlipTheme
@@ -24,14 +25,15 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             ScriptFlipTheme {
-                val navController = rememberNavController()
-                val generatorViewModel: ScriptGeneratorViewModel = viewModel()
+                SplashScreenView {
+                    val navController = rememberNavController()
+                    val generatorViewModel: ScriptGeneratorViewModel = viewModel()
 
-                NavHost(
-                    navController = navController,
-                    startDestination = Screen.Generator.route
-                ) {
-                    composable(Screen.Generator.route) {
+                    NavHost(
+                        navController = navController,
+                        startDestination = Screen.Generator.route
+                    ) {
+                        composable(Screen.Generator.route) {
                         ScriptGeneratorScreen(
                             viewModel = generatorViewModel,
                             onNavigateToResults = {
@@ -111,4 +113,5 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+}
 }

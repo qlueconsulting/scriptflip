@@ -2,8 +2,11 @@ package com.qlueconsulting.scriptflip.ui.about
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,7 +16,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -32,10 +37,16 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.qlueconsulting.scriptflip.R
 import com.qlueconsulting.scriptflip.data.model.SubscriptionTier
 import com.qlueconsulting.scriptflip.ui.generator.ScriptGeneratorViewModel
 import com.qlueconsulting.scriptflip.ui.theme.AccentCyan
@@ -84,8 +95,54 @@ fun AboutScreen(
                 .padding(padding)
                 .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // App Icon & Header
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp, bottom = 8.dp)
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                ) {
+                    // Ambient cyan glow
+                    Box(
+                        modifier = Modifier
+                            .size(140.dp, 80.dp)
+                            .background(
+                                brush = Brush.radialGradient(
+                                    colors = listOf(
+                                        Color(0x5500E5FF),
+                                        Color(0x1800E5FF),
+                                        Color.Transparent
+                                    )
+                                ),
+                                shape = CircleShape
+                            )
+                    )
+
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_scriptflip_logo),
+                        contentDescription = "ScriptFlip Logo",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .widthIn(max = 220.dp)
+                            .height(100.dp)
+                    )
+                }
+
+                Text(
+                    text = "Version 1.0.0 (Build 1)",
+                    fontSize = 12.sp,
+                    fontFamily = FontFamily.Monospace,
+                    color = TextMuted
+                )
+            }
+
             // App Branding Card
             Card(
                 modifier = Modifier.fillMaxWidth(),

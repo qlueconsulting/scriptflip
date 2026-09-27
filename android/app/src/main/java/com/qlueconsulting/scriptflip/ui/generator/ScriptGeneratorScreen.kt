@@ -1,6 +1,7 @@
 package com.qlueconsulting.scriptflip.ui.generator
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -43,9 +44,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.qlueconsulting.scriptflip.R
 import com.qlueconsulting.scriptflip.data.model.Script
 import com.qlueconsulting.scriptflip.data.model.ScriptStyle
 import com.qlueconsulting.scriptflip.ui.theme.AccentCyan
@@ -92,6 +96,15 @@ fun ScriptGeneratorScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_scriptflip_mark),
+                        contentDescription = "ScriptFlip Logo Mark",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "Script",
                         fontSize = 22.sp,
