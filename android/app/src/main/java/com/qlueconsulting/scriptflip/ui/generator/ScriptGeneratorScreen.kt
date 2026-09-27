@@ -201,7 +201,7 @@ fun ScriptGeneratorScreen(
                 )
             )
 
-            // Style Selector
+            // Style Selector Header
             Text(
                 text = "Tone & Creator Style",
                 fontSize = 16.sp,
@@ -209,38 +209,76 @@ fun ScriptGeneratorScreen(
                 color = TextPrimary
             )
 
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            // Vertical list of styles (no horizontal scrolling required)
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                items(ScriptStyle.entries) { style ->
+                ScriptStyle.entries.forEach { style ->
                     val isSelected = style == selectedStyle
-                    Box(
+                    Card(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(if (isSelected) PrimaryPurple else SurfaceDark)
-                            .border(
-                                1.dp,
-                                if (isSelected) SecondaryPurple else CardBorder,
-                                RoundedCornerShape(12.dp)
-                            )
-                            .clickable { viewModel.setSelectedStyle(style) }
-                            .padding(horizontal = 14.dp, vertical = 10.dp)
-                    ) {
-                        Text(
-                            text = style.displayName,
-                            fontSize = 13.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isSelected) TextPrimary else TextSecondary
+                            .fillMaxWidth()
+                            .clickable { viewModel.setSelectedStyle(style) },
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isSelected) SurfaceVariantDark else SurfaceDark
+                        ),
+                        border = androidx.compose.foundation.BorderStroke(
+                            width = if (isSelected) 2.dp else 1.dp,
+                            color = if (isSelected) PrimaryPurple else CardBorder
                         )
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Radio indicator
+                            Box(
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .clip(androidx.compose.foundation.shape.CircleShape)
+                                    .border(
+                                        2.dp,
+                                        if (isSelected) PrimaryPurple else TextMuted,
+                                        androidx.compose.foundation.shape.CircleShape
+                                    )
+                                    .background(if (isSelected) PrimaryPurple else Color.Transparent),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (isSelected) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(8.dp)
+                                            .clip(androidx.compose.foundation.shape.CircleShape)
+                                            .background(Color.White)
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = style.displayName,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isSelected) TextPrimary else TextSecondary
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = style.description,
+                                    fontSize = 12.sp,
+                                    color = TextMuted,
+                                    lineHeight = 16.sp
+                                )
+                            }
+                        }
                     }
                 }
             }
-
-            Text(
-                text = selectedStyle.description,
-                fontSize = 12.sp,
-                color = TextMuted
-            )
 
             // Error Message
             AnimatedVisibility(visible = errorMessage != null) {
