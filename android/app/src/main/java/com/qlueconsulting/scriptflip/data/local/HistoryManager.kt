@@ -21,7 +21,9 @@ data class HistoryItem(
     val body: String,
     val cta: String,
     val visualCues: List<String> = emptyList(),
-    val estimatedDuration: String = "3-5 min"
+    val estimatedDuration: String = "3-5 min",
+    val sourceText: String = "",
+    val isTranscript: Boolean = false
 ) {
     companion object {
         fun fromScript(script: Script): HistoryItem {
@@ -35,7 +37,9 @@ data class HistoryItem(
                 body = script.body,
                 cta = script.cta,
                 visualCues = script.sections.map { it.visualCue },
-                estimatedDuration = script.estimatedDuration
+                estimatedDuration = script.estimatedDuration,
+                sourceText = script.sourceText,
+                isTranscript = script.isTranscript
             )
         }
     }
@@ -78,7 +82,9 @@ data class HistoryItem(
             viralityScore = 95,
             keyTakeaway = "Saved from history.",
             estimatedDuration = estimatedDuration,
-            createdAtEpochMs = timestampEpochMs
+            createdAtEpochMs = timestampEpochMs,
+            sourceText = sourceText,
+            isTranscript = isTranscript
         )
     }
 }

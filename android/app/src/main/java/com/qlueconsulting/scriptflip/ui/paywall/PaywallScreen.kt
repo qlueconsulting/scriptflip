@@ -1,6 +1,8 @@
 package com.qlueconsulting.scriptflip.ui.paywall
 
 import android.app.Activity
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -241,6 +243,65 @@ fun PaywallScreen(
                 }
             ) {
                 Text(text = "Restore Purchases", color = TextSecondary, fontSize = 13.sp)
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = "Subscription auto-renews unless canceled in Google Play Settings at least 24 hours before the end of the current billing period.",
+                fontSize = 11.sp,
+                color = TextMuted,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Privacy Policy",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AccentCyan,
+                    modifier = Modifier.clickable {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://gist.github.com/qlueconsulting/dd318693733c41c5a20ae5e39d585985"))
+                        context.startActivity(intent)
+                    }
+                )
+                Text(
+                    text = "  •  ",
+                    fontSize = 11.sp,
+                    color = TextMuted
+                )
+                Text(
+                    text = "Terms of Use",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AccentCyan,
+                    modifier = Modifier.clickable {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://gist.github.com/qlueconsulting/1b038663d0ea21b8ccda1623b7e67f97"))
+                        context.startActivity(intent)
+                    }
+                )
+                Text(
+                    text = "  •  ",
+                    fontSize = 11.sp,
+                    color = TextMuted
+                )
+                Text(
+                    text = "Support",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AccentCyan,
+                    modifier = Modifier.clickable {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://gist.github.com/qlueconsulting/1b038663d0ea21b8ccda1623b7e67f97"))
+                        context.startActivity(intent)
+                    }
+                )
             }
 
             Spacer(modifier = Modifier.height(20.dp))

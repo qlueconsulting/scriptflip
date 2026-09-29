@@ -87,7 +87,7 @@ class ScriptApiService(
             }
 
             universalDtos.map { dto ->
-                Script.fromDto(dto, style)
+                Script.fromDto(dto, style, originalInput = inputText)
             }
         } catch (e: ScriptApiException) {
             throw e

@@ -28,6 +28,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
@@ -185,7 +186,9 @@ fun AboutScreen(
             ) {
                 Column {
                     LinkRow(title = "Privacy Policy", url = "https://gist.github.com/qlueconsulting/dd318693733c41c5a20ae5e39d585985", context = context)
-                    LinkRow(title = "Terms of Use", url = "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/", context = context)
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
+                    LinkRow(title = "Terms of Use", url = "https://gist.github.com/qlueconsulting/1b038663d0ea21b8ccda1623b7e67f97", context = context)
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
                     LinkRow(title = "Customer Support", url = "https://gist.github.com/qlueconsulting/1b038663d0ea21b8ccda1623b7e67f97", context = context)
                 }
             }

@@ -470,7 +470,9 @@ Output ONLY valid JSON matching this exact structure (no markdown fences, no bac
       callToAction: scriptObj.callToAction || scriptObj.cta || "Follow and share for more daily breakdowns!",
       cta: scriptObj.callToAction || scriptObj.cta || "Follow and share for more daily breakdowns!",
       estimatedDuration: scriptObj.estimatedDuration || "3-5 min",
-      keyTakeaway: scriptObj.keyTakeaway || "Substantive 3-5 minute spoken presentation engineered for maximum retention."
+      keyTakeaway: scriptObj.keyTakeaway || "Substantive 3-5 minute spoken presentation engineered for maximum retention.",
+      transcript: inputText,
+      sourceText: inputText
     }
 
     // 9. Record generation audit and increment quota

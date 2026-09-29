@@ -40,7 +40,9 @@ data class Script(
     val viralityScore: Int = 96,
     val keyTakeaway: String = "",
     val estimatedDuration: String = "3-5 min",
-    val createdAtEpochMs: Long = System.currentTimeMillis()
+    val createdAtEpochMs: Long = System.currentTimeMillis(),
+    val sourceText: String = "",
+    val isTranscript: Boolean = false
 ) {
     val hook: String
         get() = sections.firstOrNull { it.sectionType == SectionType.HOOK }?.spokenText ?: ""
@@ -60,7 +62,7 @@ data class Script(
         get() = sections.joinToString("\n\n") { "[${it.sectionType.displayName}]\n${it.spokenText}" }
 
     companion object {
-        fun fromDto(dto: UniversalScriptDTO, style: ScriptStyle): Script {
+        fun fromDto(dto: UniversalScriptDTO, style: ScriptStyle, originalInput: String = ""): Script {
             val primaryVisualCue = dto.visualCues?.firstOrNull() ?: dto.visualCue
                 ?: "Direct camera eye-contact with natural delivery"
             val bodyVisualCue = if (dto.visualCues != null && dto.visualCues.size > 1) {
@@ -96,6 +98,12 @@ data class Script(
                 )
             )
 
+            val resolvedSourceText = dto.transcript?.takeIf { it.isNotBlank() }
+                ?: dto.sourceText?.takeIf { it.isNotBlank() }
+                ?: originalInput
+
+            val isRealTranscript = !dto.transcript.isNullOrBlank() || (!dto.sourceText.isNullOrBlank() && !dto.sourceText.startsWith("http"))
+
             return Script(
                 title = dto.title?.takeIf { it.isNotBlank() } ?: "Universal Script: ${style.displayName} Angle",
                 hookDurationSeconds = 12,
@@ -104,7 +112,9 @@ data class Script(
                 sections = sections,
                 viralityScore = 96,
                 keyTakeaway = dto.keyTakeaway ?: "3 to 5 minute in-depth spoken presentation engineered for high retention and seamless teleprompter reading.",
-                estimatedDuration = dto.estimatedDuration ?: "3-5 min"
+                estimatedDuration = dto.estimatedDuration ?: "3-5 min",
+                sourceText = resolvedSourceText,
+                isTranscript = isRealTranscript
             )
         }
     }

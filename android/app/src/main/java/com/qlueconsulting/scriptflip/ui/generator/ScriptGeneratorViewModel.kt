@@ -105,11 +105,12 @@ class ScriptGeneratorViewModel(application: Application) : AndroidViewModel(appl
 
                 if (scripts.isNotEmpty()) {
                     val script = scripts.first()
-                    _currentScript.value = script
+                    val finalScript = if (script.sourceText.isBlank()) script.copy(sourceText = text) else script
+                    _currentScript.value = finalScript
                     usageTracker.incrementUsage(activeTier)
-                    historyManager.addScript(script)
+                    historyManager.addScript(finalScript)
                     refreshUsage()
-                    onSuccess(script)
+                    onSuccess(finalScript)
                 } else {
                     _errorMessage.value = "No scripts could be generated. Please try again."
                 }
