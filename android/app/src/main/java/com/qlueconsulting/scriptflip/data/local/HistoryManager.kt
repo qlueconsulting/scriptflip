@@ -23,7 +23,9 @@ data class HistoryItem(
     val visualCues: List<String> = emptyList(),
     val estimatedDuration: String = "3-5 min",
     val sourceText: String = "",
-    val isTranscript: Boolean = false
+    val isTranscript: Boolean = false,
+    val transcriptType: String = "",
+    val platform: String = ""
 ) {
     companion object {
         fun fromScript(script: Script): HistoryItem {
@@ -39,7 +41,9 @@ data class HistoryItem(
                 visualCues = script.sections.map { it.visualCue },
                 estimatedDuration = script.estimatedDuration,
                 sourceText = script.sourceText,
-                isTranscript = script.isTranscript
+                isTranscript = script.isTranscript,
+                transcriptType = script.transcriptType,
+                platform = script.platform
             )
         }
     }
@@ -84,7 +88,9 @@ data class HistoryItem(
             estimatedDuration = estimatedDuration,
             createdAtEpochMs = timestampEpochMs,
             sourceText = sourceText,
-            isTranscript = isTranscript
+            isTranscript = isTranscript,
+            transcriptType = transcriptType,
+            platform = platform
         )
     }
 }

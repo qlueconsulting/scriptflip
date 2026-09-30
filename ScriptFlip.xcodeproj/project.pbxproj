@@ -24,6 +24,7 @@
 		110E /* PaywallContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210E /* PaywallContainerView.swift */; };
 		110F /* ScriptCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210F /* ScriptCardView.swift */; };
 		1110 /* ScriptResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2110 /* ScriptResultsView.swift */; };
+		1140 /* TranscriptSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2140 /* TranscriptSheetView.swift */; };
 		1111 /* TeleprompterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2111 /* TeleprompterView.swift */; };
 		1114 /* NetworkDiagnosticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2114 /* NetworkDiagnosticsView.swift */; };
 		1115 /* DebugLogService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2115 /* DebugLogService.swift */; };
@@ -76,6 +77,7 @@
 		210E /* PaywallContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallContainerView.swift; sourceTree = "<group>"; };
 		210F /* ScriptCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptCardView.swift; sourceTree = "<group>"; };
 		2110 /* ScriptResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptResultsView.swift; sourceTree = "<group>"; };
+		2140 /* TranscriptSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptSheetView.swift; sourceTree = "<group>"; };
 		2111 /* TeleprompterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeleprompterView.swift; sourceTree = "<group>"; };
 		2114 /* NetworkDiagnosticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkDiagnosticsView.swift; sourceTree = "<group>"; };
 		2115 /* DebugLogService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugLogService.swift; sourceTree = "<group>"; };
@@ -231,6 +233,7 @@
 			children = (
 				210F /* ScriptCardView.swift */,
 				2110 /* ScriptResultsView.swift */,
+				2140 /* TranscriptSheetView.swift */,
 			);
 			path = Results;
 			sourceTree = "<group>";
@@ -448,6 +451,7 @@
 				110E /* PaywallContainerView.swift in Sources */,
 				110F /* ScriptCardView.swift in Sources */,
 				1110 /* ScriptResultsView.swift in Sources */,
+				1140 /* TranscriptSheetView.swift in Sources */,
 				1111 /* TeleprompterView.swift in Sources */,
 				1114 /* NetworkDiagnosticsView.swift in Sources */,
 				1115 /* DebugLogService.swift in Sources */,

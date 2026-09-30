@@ -407,12 +407,54 @@ fun ScriptResultsScreen(
                                 color = TextPrimary
                             )
                         }
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = if (current.isTranscript) "Raw captions extracted from source video" else "User input text & reference content",
-                            fontSize = 12.sp,
-                            color = TextMuted
-                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (current.platform.isNotBlank()) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(SurfaceVariantDark)
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = current.platform,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = TextPrimary
+                                    )
+                                }
+                            }
+
+                            val badgeLabel = when (current.transcriptType) {
+                                "whisper" -> "AI Whisper Audio Transcription"
+                                "closed_captions" -> "Official Closed Captions"
+                                "metadata" -> "Post Metadata & Summary"
+                                else -> if (current.isTranscript) "Source Content" else "User Input"
+                            }
+                            val badgeColor = when (current.transcriptType) {
+                                "whisper" -> AccentCyan
+                                "closed_captions" -> AccentGreen
+                                "metadata" -> AccentOrange
+                                else -> PrimaryPurple
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(SurfaceVariantDark)
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = badgeLabel,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = badgeColor
+                                )
+                            }
+                        }
                     }
 
                     IconButton(onClick = { showTranscriptSheet = false }) {

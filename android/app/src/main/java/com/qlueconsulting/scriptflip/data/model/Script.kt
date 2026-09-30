@@ -42,7 +42,9 @@ data class Script(
     val estimatedDuration: String = "3-5 min",
     val createdAtEpochMs: Long = System.currentTimeMillis(),
     val sourceText: String = "",
-    val isTranscript: Boolean = false
+    val isTranscript: Boolean = false,
+    val transcriptType: String = "",
+    val platform: String = ""
 ) {
     val hook: String
         get() = sections.firstOrNull { it.sectionType == SectionType.HOOK }?.spokenText ?: ""
@@ -103,6 +105,15 @@ data class Script(
                 ?: originalInput
 
             val isRealTranscript = !dto.transcript.isNullOrBlank() || (!dto.sourceText.isNullOrBlank() && !dto.sourceText.startsWith("http"))
+            val resolvedType = dto.transcriptType ?: if (originalInput.startsWith("http")) "metadata" else "user_input"
+            val resolvedPlatform = dto.platform ?: when {
+                originalInput.contains("youtube", ignoreCase = true) || originalInput.contains("youtu.be", ignoreCase = true) -> "YouTube"
+                originalInput.contains("tiktok", ignoreCase = true) -> "TikTok"
+                originalInput.contains("instagram", ignoreCase = true) -> "Instagram"
+                originalInput.contains("facebook", ignoreCase = true) || originalInput.contains("fb.watch", ignoreCase = true) -> "Facebook"
+                originalInput.startsWith("http", ignoreCase = true) -> "Web Link"
+                else -> "User Input"
+            }
 
             return Script(
                 title = dto.title?.takeIf { it.isNotBlank() } ?: "Universal Script: ${style.displayName} Angle",
@@ -114,7 +125,9 @@ data class Script(
                 keyTakeaway = dto.keyTakeaway ?: "3 to 5 minute in-depth spoken presentation engineered for high retention and seamless teleprompter reading.",
                 estimatedDuration = dto.estimatedDuration ?: "3-5 min",
                 sourceText = resolvedSourceText,
-                isTranscript = isRealTranscript
+                isTranscript = isRealTranscript,
+                transcriptType = resolvedType,
+                platform = resolvedPlatform
             )
         }
     }

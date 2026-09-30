@@ -41,7 +41,9 @@ data class UniversalScriptDTO(
     val visualCues: List<String>? = null,
     val visualCue: String? = null,
     val transcript: String? = null,
-    val sourceText: String? = null
+    val sourceText: String? = null,
+    val transcriptType: String? = null,
+    val platform: String? = null
 ) {
     val resolvedCTA: String
         get() = callToAction ?: cta ?: "Save and share this video!"

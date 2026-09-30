@@ -12,6 +12,10 @@ public struct HistoryItem: Codable, Identifiable, Hashable, Sendable {
     public let cta: String
     public let visualCues: [String]
     public let estimatedDuration: String
+    public let sourceText: String
+    public let isTranscript: Bool
+    public let transcriptType: String?
+    public let platform: String?
     
     public init(
         id: UUID = UUID(),
@@ -23,7 +27,11 @@ public struct HistoryItem: Codable, Identifiable, Hashable, Sendable {
         body: String,
         cta: String,
         visualCues: [String] = [],
-        estimatedDuration: String = "30-45s"
+        estimatedDuration: String = "3-5 min",
+        sourceText: String = "",
+        isTranscript: Bool = false,
+        transcriptType: String? = nil,
+        platform: String? = nil
     ) {
         self.id = id
         self.timestamp = timestamp
@@ -35,6 +43,29 @@ public struct HistoryItem: Codable, Identifiable, Hashable, Sendable {
         self.cta = cta
         self.visualCues = visualCues
         self.estimatedDuration = estimatedDuration
+        self.sourceText = sourceText
+        self.isTranscript = isTranscript
+        self.transcriptType = transcriptType
+        self.platform = platform
+    }
+    
+    /// Backward-compatible decoder init preventing crashes with legacy saved history
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(UUID.self, forKey: .id)
+        self.timestamp = try container.decode(Date.self, forKey: .timestamp)
+        self.title = try container.decode(String.self, forKey: .title)
+        self.fullScriptText = try container.decode(String.self, forKey: .fullScriptText)
+        self.styleUsed = try container.decode(String.self, forKey: .styleUsed)
+        self.hook = try container.decode(String.self, forKey: .hook)
+        self.body = try container.decode(String.self, forKey: .body)
+        self.cta = try container.decode(String.self, forKey: .cta)
+        self.visualCues = try container.decodeIfPresent([String].self, forKey: .visualCues) ?? []
+        self.estimatedDuration = try container.decodeIfPresent(String.self, forKey: .estimatedDuration) ?? "3-5 min"
+        self.sourceText = try container.decodeIfPresent(String.self, forKey: .sourceText) ?? ""
+        self.isTranscript = try container.decodeIfPresent(Bool.self, forKey: .isTranscript) ?? false
+        self.transcriptType = try container.decodeIfPresent(String.self, forKey: .transcriptType)
+        self.platform = try container.decodeIfPresent(String.self, forKey: .platform)
     }
     
     /// Convenience initializer directly from a `Script` model.
@@ -49,6 +80,10 @@ public struct HistoryItem: Codable, Identifiable, Hashable, Sendable {
         self.cta = script.cta
         self.visualCues = script.sections.map { $0.visualCue }
         self.estimatedDuration = script.estimatedDuration
+        self.sourceText = script.sourceText
+        self.isTranscript = script.isTranscript
+        self.transcriptType = script.transcriptType
+        self.platform = script.platform
     }
 }
 
@@ -180,7 +215,11 @@ public final class HistoryManager: @unchecked Sendable {
             sections: sections,
             viralityScore: 95,
             keyTakeaway: "Saved from history — universal 3-second hook format.",
-            estimatedDuration: item.estimatedDuration
+            estimatedDuration: item.estimatedDuration,
+            sourceText: item.sourceText,
+            isTranscript: item.isTranscript,
+            transcriptType: item.transcriptType,
+            platform: item.platform
         )
     }
 }

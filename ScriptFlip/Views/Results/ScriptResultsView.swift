@@ -7,6 +7,7 @@ public struct ScriptResultsView: View {
     
     @Environment(\.dismiss) private var dismiss
     @State private var selectedIndex: Int = 0
+    @State private var showTopTranscriptSheet: Bool = false
     
     public init(scripts: [Script], onLaunchPrompter: @escaping (Script) -> Void) {
         self.scripts = scripts
@@ -52,6 +53,24 @@ public struct ScriptResultsView: View {
                     }
                     .foregroundStyle(.cyan)
                     .font(.body.bold())
+                }
+                
+                ToolbarItem(placement: .topBarTrailing) {
+                    if let firstScript = scripts.first {
+                        Button(action: { showTopTranscriptSheet = true }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "doc.text.magnifyingglass")
+                                Text("Transcript")
+                            }
+                            .foregroundStyle(.cyan)
+                            .font(.subheadline.bold())
+                        }
+                    }
+                }
+            }
+            .sheet(isPresented: $showTopTranscriptSheet) {
+                if let firstScript = scripts.first {
+                    TranscriptSheetView(script: firstScript)
                 }
             }
             .onAppear {

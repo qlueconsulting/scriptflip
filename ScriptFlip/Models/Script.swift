@@ -45,6 +45,10 @@ public struct Script: Codable, Identifiable, Hashable, Sendable {
     public var viralityScore: Int // 1 to 100
     public var keyTakeaway: String
     public var estimatedDuration: String
+    public var sourceText: String
+    public var isTranscript: Bool
+    public var transcriptType: String?
+    public var platform: String?
     
     // Convenience properties for Edge Function output format
     public var hook: String {
@@ -88,7 +92,11 @@ public struct Script: Codable, Identifiable, Hashable, Sendable {
         sections: [ScriptSection],
         viralityScore: Int = 94,
         keyTakeaway: String,
-        estimatedDuration: String = "30-45s"
+        estimatedDuration: String = "30-45s",
+        sourceText: String = "",
+        isTranscript: Bool = false,
+        transcriptType: String? = nil,
+        platform: String? = nil
     ) {
         self.id = id
         self.title = title
@@ -100,10 +108,14 @@ public struct Script: Codable, Identifiable, Hashable, Sendable {
         self.viralityScore = viralityScore
         self.keyTakeaway = keyTakeaway
         self.estimatedDuration = estimatedDuration
+        self.sourceText = sourceText
+        self.isTranscript = isTranscript
+        self.transcriptType = transcriptType
+        self.platform = platform
     }
     
     /// Initialize full `Script` model from single `UniversalScriptDTO`
-    public init(dto: UniversalScriptDTO, index: Int = 1, style: ScriptStyle = .casual) {
+    public init(dto: UniversalScriptDTO, index: Int = 1, style: ScriptStyle = .casual, originalInput: String = "") {
         self.id = UUID()
         self.title = dto.title?.isEmpty == false ? dto.title! : "Universal Script: \(style.rawValue) Angle"
         self.hookDurationSeconds = 12
@@ -140,6 +152,28 @@ public struct Script: Codable, Identifiable, Hashable, Sendable {
         
         self.viralityScore = 96
         self.keyTakeaway = dto.keyTakeaway ?? "3 to 5 minute in-depth spoken presentation engineered for high retention and seamless teleprompter reading."
+        
+        let resolvedSource = dto.transcript?.isEmpty == false ? dto.transcript! : (dto.sourceText?.isEmpty == false ? dto.sourceText! : originalInput)
+        let isRealTranscript = (dto.transcript?.isEmpty == false) || (dto.sourceText?.isEmpty == false && !dto.sourceText!.starts(with: "http"))
+        self.sourceText = resolvedSource
+        self.isTranscript = isRealTranscript
+        self.transcriptType = dto.transcriptType ?? (originalInput.starts(with: "http") ? "metadata" : "user_input")
+        
+        if let explicitPlatform = dto.platform, !explicitPlatform.isEmpty {
+            self.platform = explicitPlatform
+        } else if originalInput.localizedCaseInsensitiveContains("youtube") || originalInput.localizedCaseInsensitiveContains("youtu.be") {
+            self.platform = "YouTube"
+        } else if originalInput.localizedCaseInsensitiveContains("tiktok") {
+            self.platform = "TikTok"
+        } else if originalInput.localizedCaseInsensitiveContains("instagram") {
+            self.platform = "Instagram"
+        } else if originalInput.localizedCaseInsensitiveContains("facebook") || originalInput.localizedCaseInsensitiveContains("fb.watch") {
+            self.platform = "Facebook"
+        } else if originalInput.starts(with: "http") {
+            self.platform = "Web Link"
+        } else {
+            self.platform = "User Input"
+        }
     }
     
     /// Initialize full `Script` model from legacy `GeneratedScriptDTO`

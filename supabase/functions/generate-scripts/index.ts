@@ -14,11 +14,70 @@ const supabase = (supabaseUrl && supabaseServiceKey)
   : null
 
 const ANTHROPIC_ENDPOINT = "https://api.anthropic.com/v1/messages"
-const MAX_INPUT_CHARS = 3000
+const MAX_INPUT_CHARS = 3500
 
 /**
- * Robustly extract clean 11-character YouTube video IDs from any URL format,
- * automatically discarding tracking query params like ?si=, ?is=, &t=, etc.
+ * SHA-256 hash helper for O(1) transcript cache lookup.
+ */
+async function hashUrl(url: string): Promise<string> {
+  const msgUint8 = new TextEncoder().encode(url.trim().toLowerCase())
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8)
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
+/**
+ * Check if a transcript has already been scraped/transcribed and cached.
+ */
+async function getCachedTranscript(urlHash: string): Promise<{ transcript: string; transcriptType: string; platform: string; title?: string; creator?: string } | null> {
+  if (!supabase) return null
+  try {
+    const { data, error } = await supabase
+      .from('video_transcripts')
+      .select('transcript, transcript_type, platform, title, creator')
+      .eq('url_hash', urlHash)
+      .maybeSingle()
+    if (!error && data && data.transcript) {
+      console.log(`[generate-scripts] Cache HIT for hash ${urlHash.substring(0, 10)} (${data.platform})`)
+      return {
+        transcript: data.transcript,
+        transcriptType: data.transcript_type || 'whisper',
+        platform: data.platform,
+        title: data.title,
+        creator: data.creator
+      }
+    }
+  } catch (e: any) {
+    console.warn("[generate-scripts] Cache check notice (continuing without cache):", e?.message || e)
+  }
+  return null
+}
+
+/**
+ * Save newly resolved transcript to the database cache.
+ */
+async function saveCachedTranscript(urlHash: string, sourceUrl: string, platform: string, transcript: string, transcriptType: string, title?: string, creator?: string) {
+  if (!supabase || !transcript || transcript.length < 20) return
+  try {
+    await supabase
+      .from('video_transcripts')
+      .upsert({
+        url_hash: urlHash,
+        source_url: sourceUrl,
+        platform,
+        transcript,
+        transcript_type: transcriptType,
+        title: title || null,
+        creator: creator || null
+      }, { onConflict: 'url_hash' })
+    console.log(`[generate-scripts] Saved cache record for ${platform} (${urlHash.substring(0, 10)})`)
+  } catch (e: any) {
+    console.warn("[generate-scripts] Cache save notice (continuing without cache):", e?.message || e)
+  }
+}
+
+/**
+ * Robustly extract clean 11-character YouTube video IDs from any URL format.
  */
 function extractYouTubeVideoId(input: string): string | null {
   const trimmed = input.trim()
@@ -37,9 +96,7 @@ function extractYouTubeVideoId(input: string): string | null {
       const idMatch = url.pathname.match(/^\/([a-zA-Z0-9_-]{11})/)
       if (idMatch) return idMatch[1]
     }
-  } catch (_) {
-    // fallback to regex matching
-  }
+  } catch (_) {}
 
   const patterns = [
     /[?&]v=([a-zA-Z0-9_-]{11})(?:[&?]|$)/,
@@ -77,10 +134,10 @@ function detectVideoPlatform(input: string): { platform: string; isVideoUrl: boo
 }
 
 /**
- * Tier 1: Attempt to fetch automated or creator captions from YouTube player response.
+ * Tier 1: Fetch official creator or automated closed captions directly from YouTube player.
  */
 async function fetchYouTubeTranscript(videoId: string): Promise<string | null> {
-  console.log(`[generate-scripts] [YouTube Tier 1] Fetching transcript for videoId: ${videoId}`)
+  console.log(`[generate-scripts] [YouTube Tier 1] Fetching caption tracks for videoId: ${videoId}`)
   try {
     const watchUrl = `https://www.youtube.com/watch?v=${videoId}`
     const pageResp = await fetch(watchUrl, {
@@ -141,7 +198,7 @@ async function fetchYouTubeTranscript(videoId: string): Promise<string | null> {
 }
 
 /**
- * Universal video metadata resolution (YouTube, TikTok, Instagram, Facebook)
+ * Universal video metadata resolution via OpenGraph & oEmbed
  */
 async function fetchUniversalVideoMetadata(rawUrl: string, platform: string): Promise<string> {
   console.log(`[generate-scripts] Resolving video metadata for platform: ${platform} - URL: ${rawUrl}`)
@@ -199,7 +256,6 @@ async function fetchUniversalVideoMetadata(rawUrl: string, platform: string): Pr
     console.warn("[generate-scripts] Universal metadata scrape notice:", e)
   }
 
-  // Build clean structured context
   const lines = [
     `Platform: ${platform}`,
     `Source URL: ${rawUrl}`,
@@ -213,6 +269,193 @@ async function fetchUniversalVideoMetadata(rawUrl: string, platform: string): Pr
   }
 
   return lines.join("\n\n")
+}
+
+/**
+ * Dedicated TikTok media resolver via TikWM API (retrieves direct MP3 audio stream).
+ */
+async function fetchTikTokMedia(rawUrl: string): Promise<{ audioUrl: string | null; title?: string; creator?: string }> {
+  console.log(`[generate-scripts] Querying TikWM audio extraction for: ${rawUrl}`)
+  try {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 6000)
+    const resp = await fetch(`https://www.tikwm.com/api/?url=${encodeURIComponent(rawUrl)}`, {
+      signal: controller.signal,
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+      }
+    })
+    clearTimeout(timeoutId)
+
+    if (resp.ok) {
+      const json = await resp.json()
+      if (json.code === 0 && json.data) {
+        const audioUrl = json.data.music_info?.play || json.data.music || json.data.play || null
+        const title = json.data.title || ""
+        const creator = json.data.author?.nickname || json.data.author?.unique_id || ""
+        if (audioUrl) {
+          console.log(`[generate-scripts] TikWM found audio URL: ${audioUrl.substring(0, 50)}...`)
+          return { audioUrl, title, creator }
+        }
+      }
+    }
+  } catch (e: any) {
+    console.warn("[generate-scripts] TikWM notice:", e?.message || e)
+  }
+  return { audioUrl: null }
+}
+
+/**
+ * Managed Social Video Downloader via RapidAPI (supports TikTok, Instagram Reels, Facebook Reels, YouTube).
+ */
+async function fetchRapidAPIMedia(rawUrl: string): Promise<{ audioUrl: string | null; title?: string; creator?: string }> {
+  const rapidApiKey = Deno.env.get("RAPIDAPI_KEY")?.trim().replace(/^["']|["']$/g, "")
+  if (!rapidApiKey) {
+    return { audioUrl: null }
+  }
+
+  console.log(`[generate-scripts] Querying RapidAPI Downloader for: ${rawUrl}`)
+  const hosts = [
+    "all-in-one-video-downloader.p.rapidapi.com",
+    "social-media-video-downloader.p.rapidapi.com"
+  ]
+
+  for (const host of hosts) {
+    try {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 6000)
+
+      const endpoint = `https://${host}/download?url=${encodeURIComponent(rawUrl)}`
+      const resp = await fetch(endpoint, {
+        signal: controller.signal,
+        headers: {
+          "X-RapidAPI-Key": rapidApiKey,
+          "X-RapidAPI-Host": host
+        }
+      })
+      clearTimeout(timeoutId)
+
+      if (resp.ok) {
+        const json = await resp.json()
+        let audioUrl: string | null = null
+        if (Array.isArray(json.medias)) {
+          const audioMedia = json.medias.find((m: any) => m.type === 'audio' || m.extension === 'mp3' || m.extension === 'm4a')
+          if (audioMedia?.url) audioUrl = audioMedia.url
+          if (!audioUrl) {
+            const videoMedia = json.medias.find((m: any) => m.type === 'video' || m.extension === 'mp4')
+            if (videoMedia?.url) audioUrl = videoMedia.url
+          }
+        } else if (json.url || json.result?.url || json.data?.url) {
+          audioUrl = json.url || json.result?.url || json.data?.url
+        }
+
+        const title = json.title || json.result?.title || ""
+        const creator = json.author || json.result?.author || ""
+        if (audioUrl) {
+          console.log(`[generate-scripts] RapidAPI ${host} returned media URL`)
+          return { audioUrl, title, creator }
+        }
+      }
+    } catch (e: any) {
+      console.warn(`[generate-scripts] RapidAPI ${host} error:`, e?.message || e)
+    }
+  }
+  return { audioUrl: null }
+}
+
+/**
+ * Downloads audio stream and sends to Groq Whisper Large v3 Turbo (with OpenAI Whisper fallback).
+ */
+async function transcribeAudioWithWhisper(audioUrl: string): Promise<string | null> {
+  const groqApiKey = Deno.env.get("GROQ_API_KEY")?.trim().replace(/^["']|["']$/g, "")
+  const openaiApiKey = Deno.env.get("OPENAI_API_KEY")?.trim().replace(/^["']|["']$/g, "")
+
+  if (!groqApiKey && !openaiApiKey) {
+    console.log("[generate-scripts] Neither GROQ_API_KEY nor OPENAI_API_KEY is configured. Skipping Whisper.")
+    return null
+  }
+
+  console.log(`[generate-scripts] Streaming audio from: ${audioUrl.substring(0, 70)}...`)
+  try {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 12000)
+
+    const audioResp = await fetch(audioUrl, {
+      signal: controller.signal,
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+      }
+    })
+    clearTimeout(timeoutId)
+
+    if (!audioResp.ok) {
+      console.warn(`[generate-scripts] Audio stream fetch failed with HTTP ${audioResp.status}`)
+      return null
+    }
+
+    const audioBlob = await audioResp.blob()
+    const sizeKb = Math.round(audioBlob.size / 1024)
+    console.log(`[generate-scripts] Audio stream downloaded (${sizeKb} KB). Forwarding to Whisper...`)
+    if (audioBlob.size < 2048) {
+      console.warn("[generate-scripts] Audio stream is empty or too small.")
+      return null
+    }
+
+    // 1. Priority: Groq Whisper Large v3 Turbo (<400ms, $0.00066/min)
+    if (groqApiKey) {
+      const groqFormData = new FormData()
+      groqFormData.append("file", audioBlob, "audio.mp3")
+      groqFormData.append("model", "whisper-large-v3-turbo")
+      groqFormData.append("response_format", "json")
+      groqFormData.append("temperature", "0.0")
+
+      const startTime = performance.now()
+      const groqResp = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${groqApiKey}` },
+        body: groqFormData
+      })
+
+      if (groqResp.ok) {
+        const groqJson = await groqResp.json()
+        const text = groqJson.text?.trim()
+        const duration = Math.round(performance.now() - startTime)
+        if (text && text.length >= 25) {
+          console.log(`[generate-scripts] Groq Whisper Turbo transcription SUCCESS in ${duration}ms (${text.length} chars)`)
+          return text
+        }
+      } else {
+        const errText = await groqResp.text()
+        console.warn(`[generate-scripts] Groq Whisper failed (${groqResp.status}):`, errText)
+      }
+    }
+
+    // 2. Fallback: OpenAI Whisper-1
+    if (openaiApiKey) {
+      const oaiFormData = new FormData()
+      oaiFormData.append("file", audioBlob, "audio.mp3")
+      oaiFormData.append("model", "whisper-1")
+      oaiFormData.append("response_format", "json")
+
+      const oaiResp = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${openaiApiKey}` },
+        body: oaiFormData
+      })
+
+      if (oaiResp.ok) {
+        const oaiJson = await oaiResp.json()
+        const text = oaiJson.text?.trim()
+        if (text && text.length >= 25) {
+          console.log(`[generate-scripts] OpenAI Whisper-1 transcription SUCCESS (${text.length} chars)`)
+          return text
+        }
+      }
+    }
+  } catch (err: any) {
+    console.warn("[generate-scripts] Whisper audio pipeline exception:", err?.message || err)
+  }
+  return null
 }
 
 serve(async (req) => {
@@ -248,14 +491,14 @@ serve(async (req) => {
     try {
       const bodyText = await req.text()
       payload = JSON.parse(bodyText)
-    } catch (parseError) {
+    } catch (parseError: any) {
       return new Response(
         JSON.stringify({ error: `Malformed JSON request body: ${parseError.message}` }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       )
     }
 
-    // 1. Quota Enforcement via Supabase Postgres RPC (Zero Anthropic Token Cost if Quota Reached)
+    // 1. Quota Enforcement via Supabase Postgres RPC
     let quotaCheck: any = null
     if (supabase && payload.anonymousUserId) {
       try {
@@ -271,7 +514,7 @@ serve(async (req) => {
           console.log(`[generate-scripts] Quota check result:`, quotaCheck)
           if (quotaCheck.allowed === false) {
             return new Response(
-              JSON.stringify({
+              JSON.stringify({ 
                 error: `Usage limit reached (${quotaCheck.limit - quotaCheck.remaining}/${quotaCheck.limit}). Upgrade to Pro for more generations.`,
                 quota: quotaCheck
               }),
@@ -298,27 +541,87 @@ serve(async (req) => {
       )
     }
 
-    // 3. Universal Video Link Resolution (#10: YouTube, TikTok, Instagram Reels, Facebook Reels)
-    const { platform, isVideoUrl } = detectVideoPlatform(inputText.trim())
+    const rawOriginalInput = inputText.trim()
+    const { platform, isVideoUrl } = detectVideoPlatform(rawOriginalInput)
+    let resolvedPlatform = isVideoUrl ? platform : "User Input"
+    let resolvedTranscriptType = isVideoUrl ? "metadata" : "user_input"
+    let finalTranscript = rawOriginalInput
+
+    // 3. Multi-Platform Video Audio Extraction & Transcript Resolution
     if (inputType === 'video' || inputType === 'youtube' || inputType === 'url' || isVideoUrl) {
-      const ytId = extractYouTubeVideoId(inputText)
-      if (ytId) {
-        const transcript = await fetchYouTubeTranscript(ytId)
-        if (transcript) {
-          inputText = transcript
-        } else {
-          inputText = await fetchUniversalVideoMetadata(inputText, "YouTube")
-        }
+      const urlHash = await hashUrl(rawOriginalInput)
+
+      // Step A: Check DB Cache
+      const cached = await getCachedTranscript(urlHash)
+      if (cached) {
+        finalTranscript = cached.transcript
+        resolvedTranscriptType = cached.transcriptType
+        resolvedPlatform = cached.platform
       } else {
-        inputText = await fetchUniversalVideoMetadata(inputText, platform)
+        // Step B: YouTube Fast-Path (Public Closed Captions)
+        if (resolvedPlatform === "YouTube") {
+          const ytId = extractYouTubeVideoId(rawOriginalInput)
+          if (ytId) {
+            const captions = await fetchYouTubeTranscript(ytId)
+            if (captions) {
+              finalTranscript = captions
+              resolvedTranscriptType = "closed_captions"
+            }
+          }
+        }
+
+        // Step C: Audio Extraction + Whisper AI (TikTok, Instagram Reels, Facebook Reels, or YouTube without CCs)
+        if (resolvedTranscriptType === "metadata" || resolvedTranscriptType === "user_input") {
+          let audioUrl: string | null = null
+          let videoTitle: string | undefined = undefined
+          let creatorName: string | undefined = undefined
+
+          // 1. TikTok dedicated extraction
+          if (resolvedPlatform === "TikTok") {
+            const tikMedia = await fetchTikTokMedia(rawOriginalInput)
+            if (tikMedia.audioUrl) {
+              audioUrl = tikMedia.audioUrl
+              videoTitle = tikMedia.title
+              creatorName = tikMedia.creator
+            }
+          }
+
+          // 2. RapidAPI Social Downloader (Instagram Reels, Facebook Reels, or fallback)
+          if (!audioUrl) {
+            const rapidMedia = await fetchRapidAPIMedia(rawOriginalInput)
+            if (rapidMedia.audioUrl) {
+              audioUrl = rapidMedia.audioUrl
+              if (!videoTitle) videoTitle = rapidMedia.title
+              if (!creatorName) creatorName = rapidMedia.creator
+            }
+          }
+
+          // 3. Forward audio to Groq Whisper LPU
+          if (audioUrl) {
+            const whisperText = await transcribeAudioWithWhisper(audioUrl)
+            if (whisperText) {
+              finalTranscript = whisperText
+              resolvedTranscriptType = "whisper"
+            }
+          }
+        }
+
+        // Step D: OpenGraph Metadata Fallback (Guaranteed Resilient Fallback)
+        if (resolvedTranscriptType !== "closed_captions" && resolvedTranscriptType !== "whisper") {
+          finalTranscript = await fetchUniversalVideoMetadata(rawOriginalInput, resolvedPlatform)
+          resolvedTranscriptType = "metadata"
+        }
+
+        // Step E: Save to Transcript Cache
+        await saveCachedTranscript(urlHash, rawOriginalInput, resolvedPlatform, finalTranscript, resolvedTranscriptType)
       }
     }
 
-    // 4. Streamlined Input Clamping (3000 chars limit for high-signal, cost-effective requests)
-    const trimmedInput = inputText.trim()
-    const sanitizedInput = trimmedInput.length > MAX_INPUT_CHARS
-      ? trimmedInput.substring(0, MAX_INPUT_CHARS) + "\n[...content truncated for concise processing...]"
-      : trimmedInput
+    // 4. Streamlined Input Clamping for Claude Prompting
+    const trimmedForPrompt = finalTranscript.trim()
+    const sanitizedInput = trimmedForPrompt.length > MAX_INPUT_CHARS
+      ? trimmedForPrompt.substring(0, MAX_INPUT_CHARS) + "\n[...content truncated for concise processing...]"
+      : trimmedForPrompt
 
     const requestHeaders = {
       "x-api-key": anthropicApiKey,
@@ -326,10 +629,7 @@ serve(async (req) => {
       "content-type": "application/json",
     }
 
-    // 5. Model selection — driven entirely by ANTHROPIC_MODEL Supabase secret (no hardcoded fallbacks).
-    //    Set this secret in: Supabase Dashboard → your project → Edge Functions → Secrets → ANTHROPIC_MODEL
-    //    Supports a comma-separated list for your own fallback chain, e.g:
-    //      ANTHROPIC_MODEL = "claude-3-5-sonnet-20241022,claude-3-5-haiku-20241022"
+    // 5. Model selection driven by ANTHROPIC_MODEL secret
     const anthropicModelSecret = Deno.env.get("ANTHROPIC_MODEL")
     if (!anthropicModelSecret || anthropicModelSecret.trim() === "") {
       return new Response(
@@ -338,11 +638,10 @@ serve(async (req) => {
       )
     }
 
-    // Build model list: per-request override first, then the secret's comma-separated list
     const secretModels = anthropicModelSecret.split(",").map(m => m.trim()).filter(Boolean)
     const modelHierarchy = Array.from(new Set([payload.model, ...secretModels].filter(Boolean) as string[]))
 
-    // 6. Style-Specific System Prompts for 3-5 Minute Continuous Spoken Monologue (No Clip Cues)
+    // 6. Style-Specific System Prompts for 3-5 Minute Continuous Spoken Monologue
     const stylePrompts: Record<string, string> = {
       'Casual & Relatable': `You are an engaging, relatable creator filming a direct-to-camera commentary and breakdown video. Speak directly to your audience like a close friend breaking down an eye-opening revelation. Use natural conversational rhythm, rhetorical questions, and authentic enthusiasm.`,
 
@@ -377,7 +676,6 @@ Output ONLY valid JSON matching this exact structure (no markdown fences, no bac
   }
 }`
 
-    // 7. Token Budget: 4,400 tokens allows ~1,000 words of rich JSON body output
     const maxTokensBudget = 4400
 
     let finalResponse: Response | null = null
@@ -399,38 +697,34 @@ Output ONLY valid JSON matching this exact structure (no markdown fences, no bac
         const resp = await fetch(ANTHROPIC_ENDPOINT, {
           method: "POST",
           headers: requestHeaders,
-          body: JSON.stringify(requestBody),
+          body: JSON.stringify(requestBody)
         })
 
-        const text = await resp.text()
         if (resp.ok) {
-          finalResponse = resp
-          rawResponseText = text
+          rawResponseText = await resp.text()
           successfulModel = currentModel
+          finalResponse = resp
+          console.log(`[generate-scripts] Model '${currentModel}' succeeded.`)
           break
         } else {
-          let errMsg = text.substring(0, 200)
-          try { errMsg = JSON.parse(text)?.error?.message || errMsg } catch (_) {}
-          const modelErr = `${currentModel} (HTTP ${resp.status}): ${errMsg}`
-          modelErrors.push(modelErr)
-          console.warn(`[generate-scripts] Model failed — ${modelErr}`)
-          finalResponse = resp
-          rawResponseText = text
-          if (resp.status === 401 || resp.status === 403) break
+          const errBody = await resp.text()
+          const errMsg = `Model '${currentModel}' failed (${resp.status}): ${errBody}`
+          console.warn(`[generate-scripts] ${errMsg}`)
+          modelErrors.push(errMsg)
         }
-      } catch (fetchErr) {
-        const netErr = `${currentModel}: network error — ${fetchErr}`
-        modelErrors.push(netErr)
-        console.error(`[generate-scripts] ${netErr}`)
+      } catch (networkErr: any) {
+        const errMsg = `Model '${currentModel}' network error: ${networkErr?.message || networkErr}`
+        console.warn(`[generate-scripts] ${errMsg}`)
+        modelErrors.push(errMsg)
       }
     }
 
-    if (!finalResponse || !finalResponse.ok) {
+    if (!finalResponse || !rawResponseText) {
       const combinedErrors = modelErrors.join(" | ")
       console.error(`[generate-scripts] All models failed: ${combinedErrors}`)
       return new Response(
         JSON.stringify({ 
-          error: `Anthropic API Error: ${combinedErrors}`
+          error: `Anthropic API Error: ${combinedErrors}` 
         }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       )
@@ -453,7 +747,7 @@ Output ONLY valid JSON matching this exact structure (no markdown fences, no bac
     let parsedJSON: any
     try {
       parsedJSON = JSON.parse(contentText)
-    } catch (jsonErr) {
+    } catch (jsonErr: any) {
       console.error("[generate-scripts] JSON parse error:", contentText)
       return new Response(
         JSON.stringify({ error: `Failed to parse generated script JSON: ${jsonErr.message}` }),
@@ -471,8 +765,10 @@ Output ONLY valid JSON matching this exact structure (no markdown fences, no bac
       cta: scriptObj.callToAction || scriptObj.cta || "Follow and share for more daily breakdowns!",
       estimatedDuration: scriptObj.estimatedDuration || "3-5 min",
       keyTakeaway: scriptObj.keyTakeaway || "Substantive 3-5 minute spoken presentation engineered for maximum retention.",
-      transcript: inputText,
-      sourceText: inputText
+      transcript: finalTranscript,
+      sourceText: finalTranscript,
+      transcriptType: resolvedTranscriptType,
+      platform: resolvedPlatform
     }
 
     // 9. Record generation audit and increment quota
@@ -512,7 +808,7 @@ Output ONLY valid JSON matching this exact structure (no markdown fences, no bac
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     )
-  } catch (error) {
+  } catch (error: any) {
     console.error("[generate-scripts] Unhandled error:", error)
     return new Response(
       JSON.stringify({ error: `Internal Server Error: ${error.message}` }),

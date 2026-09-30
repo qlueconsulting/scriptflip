@@ -7,6 +7,7 @@ public struct ScriptCardView: View {
     
     @State private var isCopied: Bool = false
     @State private var isSavedToHistory: Bool = false
+    @State private var showTranscriptSheet: Bool = false
     
     public init(script: Script, onLaunchPrompter: @escaping (Script) -> Void) {
         self.script = script
@@ -134,6 +135,26 @@ public struct ScriptCardView: View {
                     .shadow(color: Color.cyan.opacity(0.3), radius: 8, y: 3)
                 }
                 
+                // View Transcript / Source Input Button
+                Button(action: { showTranscriptSheet = true }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "doc.text.magnifyingglass")
+                            .font(.subheadline)
+                            .foregroundStyle(.cyan)
+                        Text(script.isTranscript ? "View Video Transcript" : "View Source Input & Notes")
+                            .font(.subheadline.bold())
+                            .foregroundStyle(.white)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .background(Color.white.opacity(0.08))
+                    .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                    )
+                }
+                
                 // Secondary Action Row: Copy, Save to History, Share
                 HStack(spacing: 10) {
                     // Copy to Clipboard
@@ -195,6 +216,9 @@ public struct ScriptCardView: View {
                 .stroke(Color.white.opacity(0.1), lineWidth: 1)
         )
         .cornerRadius(20)
+        .sheet(isPresented: $showTranscriptSheet) {
+            TranscriptSheetView(script: script)
+        }
     }
     
     private func badgeColor(for type: ScriptSection.SectionType) -> Color {

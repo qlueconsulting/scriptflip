@@ -439,7 +439,7 @@ public final class ScriptAPIService: ScriptAPIServiceProtocol, @unchecked Sendab
         
         let selectedStyle = ScriptStyle(rawValue: request.scriptStyle) ?? .casual
         return universalDTOs.enumerated().map { index, dto in
-            Script(dto: dto, index: index + 1, style: selectedStyle)
+            Script(dto: dto, index: index + 1, style: selectedStyle, originalInput: request.inputText)
         }
     }
     

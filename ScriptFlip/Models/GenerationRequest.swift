@@ -67,6 +67,10 @@ public struct UniversalScriptDTO: Codable, Sendable {
     public let keyTakeaway: String?
     public let visualCues: [String]?
     public let visualCue: String?
+    public let transcript: String?
+    public let sourceText: String?
+    public let transcriptType: String?
+    public let platform: String?
     
     public init(
         title: String? = nil,
@@ -77,7 +81,11 @@ public struct UniversalScriptDTO: Codable, Sendable {
         estimatedDuration: String? = "3-5 min",
         keyTakeaway: String? = nil,
         visualCues: [String]? = nil,
-        visualCue: String? = nil
+        visualCue: String? = nil,
+        transcript: String? = nil,
+        sourceText: String? = nil,
+        transcriptType: String? = nil,
+        platform: String? = nil
     ) {
         self.title = title
         self.hook = hook
@@ -88,6 +96,10 @@ public struct UniversalScriptDTO: Codable, Sendable {
         self.keyTakeaway = keyTakeaway
         self.visualCues = visualCues
         self.visualCue = visualCue
+        self.transcript = transcript
+        self.sourceText = sourceText
+        self.transcriptType = transcriptType
+        self.platform = platform
     }
     
     public var resolvedCTA: String {
