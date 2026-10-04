@@ -308,14 +308,16 @@ async function fetchTikTokMedia(rawUrl: string): Promise<{ audioUrl: string | nu
 /**
  * Managed Social Video Downloader via RapidAPI (supports TikTok, Instagram Reels, Facebook Reels, YouTube).
  */
-async function fetchRapidAPIMedia(rawUrl: string): Promise<{ audioUrl: string | null; title?: string; creator?: string }> {
+async function fetchRapidAPIMedia(rawUrl: string, diagnostics?: any): Promise<{ audioUrl: string | null; title?: string; creator?: string }> {
   const rapidApiKey = Deno.env.get("RAPIDAPI_KEY")?.trim().replace(/^["']|["']$/g, "")
   if (!rapidApiKey) {
+    if (diagnostics) diagnostics.rapidApi = { status: "missing_key" }
     return { audioUrl: null }
   }
 
   console.log(`[generate-scripts] Querying RapidAPI Downloader for: ${rawUrl}`)
   const hosts = [
+    "all-in-one-media-downloader-api.p.rapidapi.com",
     "all-in-one-video-downloader.p.rapidapi.com",
     "social-media-video-downloader.p.rapidapi.com"
   ]
@@ -323,7 +325,7 @@ async function fetchRapidAPIMedia(rawUrl: string): Promise<{ audioUrl: string | 
   for (const host of hosts) {
     try {
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 6000)
+      const timeoutId = setTimeout(() => controller.abort(), 9000)
 
       const endpoint = `https://${host}/download?url=${encodeURIComponent(rawUrl)}`
       const resp = await fetch(endpoint, {
@@ -335,29 +337,51 @@ async function fetchRapidAPIMedia(rawUrl: string): Promise<{ audioUrl: string | 
       })
       clearTimeout(timeoutId)
 
+      if (diagnostics) {
+        diagnostics.rapidApi = {
+          host,
+          status: resp.status,
+          statusText: resp.statusText
+        }
+      }
+
       if (resp.ok) {
         const json = await resp.json()
+        if (diagnostics) {
+          diagnostics.rapidApiResponse = JSON.stringify(json).substring(0, 500)
+        }
         let audioUrl: string | null = null
-        if (Array.isArray(json.medias)) {
-          const audioMedia = json.medias.find((m: any) => m.type === 'audio' || m.extension === 'mp3' || m.extension === 'm4a')
+
+        // Support both json.data.medias (dYOY / EaseAPI) and json.medias / json.result
+        const mediaList = Array.isArray(json.data?.medias) 
+          ? json.data.medias 
+          : (Array.isArray(json.medias) ? json.medias : [])
+
+        if (mediaList.length > 0) {
+          const audioMedia = mediaList.find((m: any) => m.type === 'audio' || m.extension === 'mp3' || m.extension === 'm4a')
           if (audioMedia?.url) audioUrl = audioMedia.url
           if (!audioUrl) {
-            const videoMedia = json.medias.find((m: any) => m.type === 'video' || m.extension === 'mp4')
+            const videoMedia = mediaList.find((m: any) => m.type === 'video' || m.extension === 'mp4')
             if (videoMedia?.url) audioUrl = videoMedia.url
           }
-        } else if (json.url || json.result?.url || json.data?.url) {
-          audioUrl = json.url || json.result?.url || json.data?.url
+        } else if (json.data?.url || json.url || json.result?.url) {
+          audioUrl = json.data?.url || json.url || json.result?.url
         }
 
-        const title = json.title || json.result?.title || ""
-        const creator = json.author || json.result?.author || ""
+        const title = json.data?.title || json.title || json.result?.title || ""
+        const creator = json.data?.author || json.author || json.result?.author || ""
         if (audioUrl) {
           console.log(`[generate-scripts] RapidAPI ${host} returned media URL`)
           return { audioUrl, title, creator }
         }
+      } else {
+        const errBody = await resp.text().catch(() => "")
+        console.warn(`[generate-scripts] RapidAPI ${host} returned status: ${resp.status}`, errBody)
+        if (diagnostics) diagnostics.rapidApi.errorBody = errBody.substring(0, 300)
       }
     } catch (e: any) {
       console.warn(`[generate-scripts] RapidAPI ${host} error:`, e?.message || e)
+      if (diagnostics) diagnostics.rapidApi = { host, error: e?.message || String(e) }
     }
   }
   return { audioUrl: null }
@@ -366,12 +390,13 @@ async function fetchRapidAPIMedia(rawUrl: string): Promise<{ audioUrl: string | 
 /**
  * Downloads audio stream and sends to Groq Whisper Large v3 Turbo (with OpenAI Whisper fallback).
  */
-async function transcribeAudioWithWhisper(audioUrl: string): Promise<string | null> {
+async function transcribeAudioWithWhisper(audioUrl: string, diagnostics?: any): Promise<string | null> {
   const groqApiKey = Deno.env.get("GROQ_API_KEY")?.trim().replace(/^["']|["']$/g, "")
   const openaiApiKey = Deno.env.get("OPENAI_API_KEY")?.trim().replace(/^["']|["']$/g, "")
 
   if (!groqApiKey && !openaiApiKey) {
     console.log("[generate-scripts] Neither GROQ_API_KEY nor OPENAI_API_KEY is configured. Skipping Whisper.")
+    if (diagnostics) diagnostics.whisper = { status: "no_whisper_keys" }
     return null
   }
 
@@ -390,12 +415,14 @@ async function transcribeAudioWithWhisper(audioUrl: string): Promise<string | nu
 
     if (!audioResp.ok) {
       console.warn(`[generate-scripts] Audio stream fetch failed with HTTP ${audioResp.status}`)
+      if (diagnostics) diagnostics.whisper = { audioFetchStatus: audioResp.status }
       return null
     }
 
     const audioBlob = await audioResp.blob()
     const sizeKb = Math.round(audioBlob.size / 1024)
     console.log(`[generate-scripts] Audio stream downloaded (${sizeKb} KB). Forwarding to Whisper...`)
+    if (diagnostics) diagnostics.whisper = { audioBlobSizeKb: sizeKb }
     if (audioBlob.size < 2048) {
       console.warn("[generate-scripts] Audio stream is empty or too small.")
       return null
@@ -420,6 +447,9 @@ async function transcribeAudioWithWhisper(audioUrl: string): Promise<string | nu
         const groqJson = await groqResp.json()
         const text = groqJson.text?.trim()
         const duration = Math.round(performance.now() - startTime)
+        if (diagnostics) {
+          diagnostics.whisper.groq = { status: 200, durationMs: duration, textLength: text?.length || 0 }
+        }
         if (text && text.length >= 25) {
           console.log(`[generate-scripts] Groq Whisper Turbo transcription SUCCESS in ${duration}ms (${text.length} chars)`)
           return text
@@ -427,6 +457,7 @@ async function transcribeAudioWithWhisper(audioUrl: string): Promise<string | nu
       } else {
         const errText = await groqResp.text()
         console.warn(`[generate-scripts] Groq Whisper failed (${groqResp.status}):`, errText)
+        if (diagnostics) diagnostics.whisper.groq = { status: groqResp.status, error: errText }
       }
     }
 
@@ -547,17 +578,24 @@ serve(async (req) => {
     let resolvedTranscriptType = isVideoUrl ? "metadata" : "user_input"
     let finalTranscript = rawOriginalInput
 
+    const diagnostics: any = payload.debug ? {} : null
+
     // 3. Multi-Platform Video Audio Extraction & Transcript Resolution
     if (inputType === 'video' || inputType === 'youtube' || inputType === 'url' || isVideoUrl) {
       const urlHash = await hashUrl(rawOriginalInput)
 
-      // Step A: Check DB Cache
-      const cached = await getCachedTranscript(urlHash)
-      if (cached) {
+      // Step A: Check DB Cache (Bypass if requested or if existing cache is only metadata and we now have extraction keys)
+      const cached = (payload.bypassCache === true) ? null : await getCachedTranscript(urlHash)
+      const hasExtractionKeys = Boolean(Deno.env.get("RAPIDAPI_KEY") || Deno.env.get("GROQ_API_KEY"))
+
+      if (cached && (cached.transcriptType === 'whisper' || cached.transcriptType === 'closed_captions' || !hasExtractionKeys)) {
         finalTranscript = cached.transcript
         resolvedTranscriptType = cached.transcriptType
         resolvedPlatform = cached.platform
+        if (diagnostics) diagnostics.cache = "hit"
       } else {
+        if (diagnostics) diagnostics.cache = cached ? "upgrade_metadata" : "miss"
+
         // Step B: YouTube Fast-Path (Public Closed Captions)
         if (resolvedPlatform === "YouTube") {
           const ytId = extractYouTubeVideoId(rawOriginalInput)
@@ -588,7 +626,7 @@ serve(async (req) => {
 
           // 2. RapidAPI Social Downloader (Instagram Reels, Facebook Reels, or fallback)
           if (!audioUrl) {
-            const rapidMedia = await fetchRapidAPIMedia(rawOriginalInput)
+            const rapidMedia = await fetchRapidAPIMedia(rawOriginalInput, diagnostics)
             if (rapidMedia.audioUrl) {
               audioUrl = rapidMedia.audioUrl
               if (!videoTitle) videoTitle = rapidMedia.title
@@ -598,7 +636,7 @@ serve(async (req) => {
 
           // 3. Forward audio to Groq Whisper LPU
           if (audioUrl) {
-            const whisperText = await transcribeAudioWithWhisper(audioUrl)
+            const whisperText = await transcribeAudioWithWhisper(audioUrl, diagnostics)
             if (whisperText) {
               finalTranscript = whisperText
               resolvedTranscriptType = "whisper"
@@ -798,14 +836,19 @@ Output ONLY valid JSON matching this exact structure (no markdown fences, no bac
       }
     }
 
+    const responsePayload: any = { 
+      script: normalizedScript,
+      data: [normalizedScript],
+      scripts: [normalizedScript],
+      activeModel: successfulModel,
+      quota: finalQuota
+    }
+    if (diagnostics) {
+      responsePayload.diagnostics = diagnostics
+    }
+
     return new Response(
-      JSON.stringify({ 
-        script: normalizedScript,
-        data: [normalizedScript],
-        scripts: [normalizedScript],
-        activeModel: successfulModel,
-        quota: finalQuota
-      }),
+      JSON.stringify(responsePayload),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     )
   } catch (error: any) {
