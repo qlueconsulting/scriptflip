@@ -321,6 +321,13 @@ private fun TranscriptTabContent(
                 }
 
                 if (script.transcriptType == "metadata") {
+                    val isDurationExceeded = script.sourceText.contains("exceeds the 20-minute audio limit")
+                    val noticeText = if (isDurationExceeded) {
+                        "Notice: Video duration exceeds the 20-minute audio limit. AI response generated from video metadata & summary."
+                    } else {
+                        "Notice: Platform captions and direct audio extraction were unavailable for this video. AI response generated from video metadata & summary."
+                    }
+
                     Spacer(modifier = Modifier.height(12.dp))
                     Box(
                         modifier = Modifier
@@ -339,7 +346,7 @@ private fun TranscriptTabContent(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Notice: Video exceeded the 20-minute audio limit or platform captions were unavailable. AI response generated from metadata & summary.",
+                                text = noticeText,
                                 fontSize = 12.sp,
                                 color = TextPrimary,
                                 lineHeight = 17.sp

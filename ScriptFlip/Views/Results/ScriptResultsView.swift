@@ -146,11 +146,15 @@ public struct ScriptResultsView: View {
             
             // Over-20-min / Metadata Notice
             if firstScript?.transcriptType == "metadata" {
+                let isDurationExceeded = firstScript?.sourceText.contains("exceeds the 20-minute audio limit") ?? false
+                let noticeText = isDurationExceeded
+                    ? "Notice: Video duration exceeds the 20-minute audio limit. AI response generated from video metadata & summary."
+                    : "Notice: Platform captions and direct audio extraction were unavailable for this video. AI response generated from video metadata & summary."
                 HStack(alignment: .top, spacing: 10) {
                     Image(systemName: "info.circle.fill")
                         .foregroundStyle(.orange)
                         .font(.body)
-                    Text("Notice: Video exceeded 20-minute audio limit or platform captions were unavailable. AI response generated from metadata & summary.")
+                    Text(noticeText)
                         .font(.caption)
                         .foregroundStyle(.white.opacity(0.9))
                 }

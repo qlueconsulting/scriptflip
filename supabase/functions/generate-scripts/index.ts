@@ -150,7 +150,7 @@ function formatDuration(seconds: number): string {
 /**
  * Tier 1: Fetch official creator or automated closed captions directly from YouTube player, plus metadata and duration.
  */
-async function fetchYouTubeData(videoId: string): Promise<{ 
+async function fetchYouTubeData(videoId: string, diagnostics?: any): Promise<{ 
   transcript: string | null; 
   durationSeconds: number; 
   title?: string; 
@@ -168,13 +168,19 @@ async function fetchYouTubeData(videoId: string): Promise<{
       }
     })
 
-    if (!pageResp.ok) return { transcript: null, durationSeconds: 0 }
+    if (!pageResp.ok) {
+      if (diagnostics) diagnostics.youtube = { pageStatus: pageResp.status }
+      return { transcript: null, durationSeconds: 0 }
+    }
     const html = await pageResp.text()
 
     const playerResponseMatch = html.match(/ytInitialPlayerResponse\s*=\s*({.+?});(?:var|\n|<\/script>)/) ||
                                 html.match(/var ytInitialPlayerResponse = ({.+?});/)
     
-    if (!playerResponseMatch || !playerResponseMatch[1]) return { transcript: null, durationSeconds: 0 }
+    if (!playerResponseMatch || !playerResponseMatch[1]) {
+      if (diagnostics) diagnostics.youtube = { playerResponseFound: false }
+      return { transcript: null, durationSeconds: 0 }
+    }
 
     let playerResponse: any
     try {
@@ -189,6 +195,13 @@ async function fetchYouTubeData(videoId: string): Promise<{
     const description = playerResponse?.videoDetails?.shortDescription || ""
 
     const captionTracks = playerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks
+    if (diagnostics) {
+      diagnostics.youtube = {
+        title,
+        durationSeconds,
+        tracksCount: Array.isArray(captionTracks) ? captionTracks.length : 0
+      }
+    }
     if (!captionTracks || !Array.isArray(captionTracks) || captionTracks.length === 0) {
       return { transcript: null, durationSeconds, title, creator, description }
     }
@@ -198,16 +211,31 @@ async function fetchYouTubeData(videoId: string): Promise<{
       return { transcript: null, durationSeconds, title, creator, description }
     }
 
+    if (diagnostics && diagnostics.youtube) {
+      diagnostics.youtube.selectedLang = selectedTrack.languageCode || selectedTrack.vssId
+      diagnostics.youtube.trackName = selectedTrack.name?.simpleText
+    }
+
     const transcriptResp = await fetch(selectedTrack.baseUrl, {
       headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Referer": "https://www.youtube.com/"
       }
     })
+    if (diagnostics && diagnostics.youtube) {
+      diagnostics.youtube.transcriptHttpStatus = transcriptResp.status
+    }
     if (!transcriptResp.ok) {
       return { transcript: null, durationSeconds, title, creator, description }
     }
 
     const transcriptXml = await transcriptResp.text()
+    if (diagnostics && diagnostics.youtube) {
+      diagnostics.youtube.xmlLength = transcriptXml.length
+      if (transcriptXml.length > 0) {
+        diagnostics.youtube.xmlPreview = transcriptXml.substring(0, 100)
+      }
+    }
     if (!transcriptXml || transcriptXml.trim() === "") {
       return { transcript: null, durationSeconds, title, creator, description }
     }
@@ -227,6 +255,7 @@ async function fetchYouTubeData(videoId: string): Promise<{
     return { transcript, durationSeconds, title, creator, description }
   } catch (err) {
     console.warn("[generate-scripts] [YouTube Tier 1] Transcript extraction error:", err)
+    if (diagnostics) diagnostics.youtube = { error: String(err) }
     return { transcript: null, durationSeconds: 0 }
   }
 }
@@ -674,7 +703,7 @@ serve(async (req) => {
         if (resolvedPlatform === "YouTube") {
           const ytId = extractYouTubeVideoId(rawOriginalInput)
           if (ytId) {
-            const ytData = await fetchYouTubeData(ytId)
+            const ytData = await fetchYouTubeData(ytId, diagnostics)
             videoTitle = ytData.title
             creatorName = ytData.creator
             videoDescription = ytData.description
@@ -744,13 +773,17 @@ serve(async (req) => {
 
           // If neither platform transcript nor Whisper was available, fall back to metadata
           if (resolvedTranscriptType !== "closed_captions" && resolvedTranscriptType !== "whisper") {
+            const durationStr = durationSeconds > 0 ? formatDuration(durationSeconds) : ""
             finalTranscript = buildMetadataDisplayText(
               resolvedPlatform,
               rawOriginalInput,
               videoTitle,
               creatorName,
               videoDescription,
-              durationSeconds
+              durationSeconds,
+              durationStr
+                ? `Video duration is ${durationStr}. Platform captions and direct audio extraction were unavailable for this video. Response generated from video metadata & summary.`
+                : `Platform captions and direct audio extraction were unavailable for this video. Response generated from video metadata & summary.`
             )
             resolvedTranscriptType = "metadata"
           }
