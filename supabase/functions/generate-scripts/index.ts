@@ -133,11 +133,31 @@ function detectVideoPlatform(input: string): { platform: string; isVideoUrl: boo
   return { platform: "Generic", isVideoUrl: input.startsWith("http://") || input.startsWith("https://") }
 }
 
+const MAX_AUDIO_EXTRACTION_DURATION_SECONDS = 20 * 60 // 20 minutes (1200 seconds)
+
+function formatDuration(seconds: number): string {
+  if (seconds <= 0) return ""
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  if (m >= 60) {
+    const h = Math.floor(m / 60)
+    const remM = m % 60
+    return `${h} hr ${remM} min`
+  }
+  return s > 0 ? `${m} min ${s}s` : `${m} min`
+}
+
 /**
- * Tier 1: Fetch official creator or automated closed captions directly from YouTube player.
+ * Tier 1: Fetch official creator or automated closed captions directly from YouTube player, plus metadata and duration.
  */
-async function fetchYouTubeTranscript(videoId: string): Promise<string | null> {
-  console.log(`[generate-scripts] [YouTube Tier 1] Fetching caption tracks for videoId: ${videoId}`)
+async function fetchYouTubeData(videoId: string): Promise<{ 
+  transcript: string | null; 
+  durationSeconds: number; 
+  title?: string; 
+  creator?: string;
+  description?: string;
+}> {
+  console.log(`[generate-scripts] [YouTube Tier 1] Fetching caption tracks and details for videoId: ${videoId}`)
   try {
     const watchUrl = `https://www.youtube.com/watch?v=${videoId}`
     const pageResp = await fetch(watchUrl, {
@@ -148,36 +168,49 @@ async function fetchYouTubeTranscript(videoId: string): Promise<string | null> {
       }
     })
 
-    if (!pageResp.ok) return null
+    if (!pageResp.ok) return { transcript: null, durationSeconds: 0 }
     const html = await pageResp.text()
 
     const playerResponseMatch = html.match(/ytInitialPlayerResponse\s*=\s*({.+?});(?:var|\n|<\/script>)/) ||
                                 html.match(/var ytInitialPlayerResponse = ({.+?});/)
     
-    if (!playerResponseMatch || !playerResponseMatch[1]) return null
+    if (!playerResponseMatch || !playerResponseMatch[1]) return { transcript: null, durationSeconds: 0 }
 
     let playerResponse: any
     try {
       playerResponse = JSON.parse(playerResponseMatch[1])
     } catch (_) {
-      return null
+      return { transcript: null, durationSeconds: 0 }
     }
 
+    const durationSeconds = Number(playerResponse?.videoDetails?.lengthSeconds) || 0
+    const title = playerResponse?.videoDetails?.title || ""
+    const creator = playerResponse?.videoDetails?.author || ""
+    const description = playerResponse?.videoDetails?.shortDescription || ""
+
     const captionTracks = playerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks
-    if (!captionTracks || !Array.isArray(captionTracks) || captionTracks.length === 0) return null
+    if (!captionTracks || !Array.isArray(captionTracks) || captionTracks.length === 0) {
+      return { transcript: null, durationSeconds, title, creator, description }
+    }
 
     const selectedTrack = captionTracks.find((t: any) => t.languageCode === 'en' || t.vssId?.includes('.en')) || captionTracks[0]
-    if (!selectedTrack?.baseUrl) return null
+    if (!selectedTrack?.baseUrl) {
+      return { transcript: null, durationSeconds, title, creator, description }
+    }
 
     const transcriptResp = await fetch(selectedTrack.baseUrl, {
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
       }
     })
-    if (!transcriptResp.ok) return null
+    if (!transcriptResp.ok) {
+      return { transcript: null, durationSeconds, title, creator, description }
+    }
 
     const transcriptXml = await transcriptResp.text()
-    if (!transcriptXml || transcriptXml.trim() === "") return null
+    if (!transcriptXml || transcriptXml.trim() === "") {
+      return { transcript: null, durationSeconds, title, creator, description }
+    }
 
     const cleanText = transcriptXml
       .replace(/&amp;/g, '&')
@@ -190,21 +223,28 @@ async function fetchYouTubeTranscript(videoId: string): Promise<string | null> {
       .replace(/\s+/g, ' ')
       .trim()
 
-    return cleanText.length >= 30 ? cleanText : null
+    const transcript = cleanText.length >= 30 ? cleanText : null
+    return { transcript, durationSeconds, title, creator, description }
   } catch (err) {
     console.warn("[generate-scripts] [YouTube Tier 1] Transcript extraction error:", err)
-    return null
+    return { transcript: null, durationSeconds: 0 }
   }
 }
 
 /**
  * Universal video metadata resolution via OpenGraph & oEmbed
  */
-async function fetchUniversalVideoMetadata(rawUrl: string, platform: string): Promise<string> {
+async function fetchUniversalVideoMetadata(rawUrl: string, platform: string): Promise<{
+  title?: string;
+  creator?: string;
+  description?: string;
+  durationSeconds?: number;
+}> {
   console.log(`[generate-scripts] Resolving video metadata for platform: ${platform} - URL: ${rawUrl}`)
   let title = ""
   let description = ""
   let creator = ""
+  let durationSeconds = 0
 
   // 1. YouTube specific oEmbed
   if (platform === "YouTube") {
@@ -251,16 +291,36 @@ async function fetchUniversalVideoMetadata(rawUrl: string, platform: string): Pr
             .trim()
         }
       }
+      const durMatch = html.match(/"lengthSeconds":"(\d+)"/) || html.match(/<meta property="video:duration" content="(\d+)"/)
+      if (durMatch && durMatch[1]) {
+        durationSeconds = Number(durMatch[1]) || 0
+      }
     }
   } catch (e) {
     console.warn("[generate-scripts] Universal metadata scrape notice:", e)
   }
 
+  return { title, creator, description, durationSeconds }
+}
+
+function buildMetadataDisplayText(
+  platform: string,
+  rawUrl: string,
+  title?: string,
+  creator?: string,
+  description?: string,
+  durationSeconds?: number,
+  limitNotice?: string
+): string {
+  const durationText = durationSeconds && durationSeconds > 0 ? formatDuration(durationSeconds) : null
+
   const lines = [
     `Platform: ${platform}`,
     `Source URL: ${rawUrl}`,
+    durationText ? `Video Duration: ${durationText}` : null,
     title ? `Video Title: ${title}` : null,
     creator ? `Creator: ${creator}` : null,
+    limitNotice ? `Notice: ${limitNotice}` : null,
     description ? `Description / Summary:\n${description}` : null
   ].filter(Boolean)
 
@@ -274,7 +334,7 @@ async function fetchUniversalVideoMetadata(rawUrl: string, platform: string): Pr
 /**
  * Dedicated TikTok media resolver via TikWM API (retrieves direct MP3 audio stream).
  */
-async function fetchTikTokMedia(rawUrl: string): Promise<{ audioUrl: string | null; title?: string; creator?: string }> {
+async function fetchTikTokMedia(rawUrl: string): Promise<{ audioUrl: string | null; title?: string; creator?: string; durationSeconds?: number }> {
   console.log(`[generate-scripts] Querying TikWM audio extraction for: ${rawUrl}`)
   try {
     const controller = new AbortController()
@@ -293,9 +353,10 @@ async function fetchTikTokMedia(rawUrl: string): Promise<{ audioUrl: string | nu
         const audioUrl = json.data.music_info?.play || json.data.music || json.data.play || null
         const title = json.data.title || ""
         const creator = json.data.author?.nickname || json.data.author?.unique_id || ""
+        const durationSeconds = Number(json.data.duration) || 0
         if (audioUrl) {
           console.log(`[generate-scripts] TikWM found audio URL: ${audioUrl.substring(0, 50)}...`)
-          return { audioUrl, title, creator }
+          return { audioUrl, title, creator, durationSeconds }
         }
       }
     }
@@ -308,7 +369,7 @@ async function fetchTikTokMedia(rawUrl: string): Promise<{ audioUrl: string | nu
 /**
  * Managed Social Video Downloader via RapidAPI (supports TikTok, Instagram Reels, Facebook Reels, YouTube).
  */
-async function fetchRapidAPIMedia(rawUrl: string, diagnostics?: any): Promise<{ audioUrl: string | null; title?: string; creator?: string }> {
+async function fetchRapidAPIMedia(rawUrl: string, diagnostics?: any): Promise<{ audioUrl: string | null; title?: string; creator?: string; durationSeconds?: number }> {
   const rapidApiKey = Deno.env.get("RAPIDAPI_KEY")?.trim().replace(/^["']|["']$/g, "")
   if (!rapidApiKey) {
     if (diagnostics) diagnostics.rapidApi = { status: "missing_key" }
@@ -317,9 +378,7 @@ async function fetchRapidAPIMedia(rawUrl: string, diagnostics?: any): Promise<{ 
 
   console.log(`[generate-scripts] Querying RapidAPI Downloader for: ${rawUrl}`)
   const hosts = [
-    "all-in-one-media-downloader-api.p.rapidapi.com",
-    "all-in-one-video-downloader.p.rapidapi.com",
-    "social-media-video-downloader.p.rapidapi.com"
+    "all-in-one-media-downloader-api.p.rapidapi.com"
   ]
 
   for (const host of hosts) {
@@ -358,7 +417,13 @@ async function fetchRapidAPIMedia(rawUrl: string, diagnostics?: any): Promise<{ 
           : (Array.isArray(json.medias) ? json.medias : [])
 
         if (mediaList.length > 0) {
-          const audioMedia = mediaList.find((m: any) => m.type === 'audio' || m.extension === 'mp3' || m.extension === 'm4a')
+          const audioMedia = mediaList.find((m: any) => 
+            m.type === 'audio' || 
+            m.type === 'music' || 
+            m.extension === 'mp3' || 
+            m.extension === 'm4a' ||
+            (typeof m.url === 'string' && (m.url.includes('/music/') || m.url.includes('.mp3')))
+          )
           if (audioMedia?.url) audioUrl = audioMedia.url
           if (!audioUrl) {
             const videoMedia = mediaList.find((m: any) => m.type === 'video' || m.extension === 'mp4')
@@ -370,9 +435,10 @@ async function fetchRapidAPIMedia(rawUrl: string, diagnostics?: any): Promise<{ 
 
         const title = json.data?.title || json.title || json.result?.title || ""
         const creator = json.data?.author || json.author || json.result?.author || ""
+        const durationSeconds = Number(json.data?.duration || json.duration) || 0
         if (audioUrl) {
           console.log(`[generate-scripts] RapidAPI ${host} returned media URL`)
-          return { audioUrl, title, creator }
+          return { audioUrl, title, creator, durationSeconds }
         }
       } else {
         const errBody = await resp.text().catch(() => "")
@@ -596,62 +662,102 @@ serve(async (req) => {
       } else {
         if (diagnostics) diagnostics.cache = cached ? "upgrade_metadata" : "miss"
 
-        // Step B: YouTube Fast-Path (Public Closed Captions)
+        // 1. Find video metadata across any platform
+        let videoTitle: string | undefined = undefined
+        let creatorName: string | undefined = undefined
+        let videoDescription: string | undefined = undefined
+        let durationSeconds: number = 0
+        let platformCaptions: string | null = null
+        let audioUrl: string | null = null
+
+        // Step 1A: YouTube Specific Data (Captions, Metadata, Duration)
         if (resolvedPlatform === "YouTube") {
           const ytId = extractYouTubeVideoId(rawOriginalInput)
           if (ytId) {
-            const captions = await fetchYouTubeTranscript(ytId)
-            if (captions) {
-              finalTranscript = captions
-              resolvedTranscriptType = "closed_captions"
-            }
+            const ytData = await fetchYouTubeData(ytId)
+            videoTitle = ytData.title
+            creatorName = ytData.creator
+            videoDescription = ytData.description
+            durationSeconds = ytData.durationSeconds
+            platformCaptions = ytData.transcript
           }
         }
 
-        // Step C: Audio Extraction + Whisper AI (TikTok, Instagram Reels, Facebook Reels, or YouTube without CCs)
-        if (resolvedTranscriptType === "metadata" || resolvedTranscriptType === "user_input") {
-          let audioUrl: string | null = null
-          let videoTitle: string | undefined = undefined
-          let creatorName: string | undefined = undefined
+        // Step 1B: TikTok Dedicated Data
+        if (resolvedPlatform === "TikTok") {
+          const tikMedia = await fetchTikTokMedia(rawOriginalInput)
+          if (tikMedia.title) videoTitle = tikMedia.title
+          if (tikMedia.creator) creatorName = tikMedia.creator
+          if (tikMedia.durationSeconds) durationSeconds = tikMedia.durationSeconds
+          if (tikMedia.audioUrl) audioUrl = tikMedia.audioUrl
+        }
 
-          // 1. TikTok dedicated extraction
-          if (resolvedPlatform === "TikTok") {
-            const tikMedia = await fetchTikTokMedia(rawOriginalInput)
-            if (tikMedia.audioUrl) {
-              audioUrl = tikMedia.audioUrl
-              videoTitle = tikMedia.title
-              creatorName = tikMedia.creator
-            }
+        // Step 1C: RapidAPI Downloader (for Instagram Reels, Facebook Reels, TikTok fallback, etc.)
+        if (!audioUrl || !videoTitle || durationSeconds === 0) {
+          const rapidMedia = await fetchRapidAPIMedia(rawOriginalInput, diagnostics)
+          if (rapidMedia.title && !videoTitle) videoTitle = rapidMedia.title
+          if (rapidMedia.creator && !creatorName) creatorName = rapidMedia.creator
+          if (rapidMedia.durationSeconds && durationSeconds === 0) durationSeconds = rapidMedia.durationSeconds
+          if (rapidMedia.audioUrl && !audioUrl) audioUrl = rapidMedia.audioUrl
+        }
+
+        // Step 1D: Universal OpenGraph fallback for missing title, author, or description
+        if (!videoTitle || !videoDescription) {
+          const ogMeta = await fetchUniversalVideoMetadata(rawOriginalInput, resolvedPlatform)
+          if (ogMeta.title && !videoTitle) videoTitle = ogMeta.title
+          if (ogMeta.creator && !creatorName) creatorName = ogMeta.creator
+          if (ogMeta.description && !videoDescription) videoDescription = ogMeta.description
+          if (ogMeta.durationSeconds && durationSeconds === 0) durationSeconds = ogMeta.durationSeconds
+        }
+
+        // 2a. If OVER 20 minutes (1200 seconds): return metadata & generate AI response (no Whisper)
+        if (durationSeconds > MAX_AUDIO_EXTRACTION_DURATION_SECONDS) {
+          const durationStr = formatDuration(durationSeconds)
+          console.log(`[generate-scripts] Video duration is ${durationStr} (> 20 min limit). Generating response from metadata.`)
+          finalTranscript = buildMetadataDisplayText(
+            resolvedPlatform,
+            rawOriginalInput,
+            videoTitle,
+            creatorName,
+            videoDescription,
+            durationSeconds,
+            `Video duration is ${durationStr} (exceeds the 20-minute audio limit). Response generated from video metadata & summary.`
+          )
+          resolvedTranscriptType = "metadata"
+          if (diagnostics) {
+            diagnostics.durationExceededLimit = { durationSeconds, formatted: durationStr }
           }
-
-          // 2. RapidAPI Social Downloader (Instagram Reels, Facebook Reels, or fallback)
-          if (!audioUrl) {
-            const rapidMedia = await fetchRapidAPIMedia(rawOriginalInput, diagnostics)
-            if (rapidMedia.audioUrl) {
-              audioUrl = rapidMedia.audioUrl
-              if (!videoTitle) videoTitle = rapidMedia.title
-              if (!creatorName) creatorName = rapidMedia.creator
-            }
-          }
-
-          // 3. Forward audio to Groq Whisper LPU
-          if (audioUrl) {
+        } else {
+          // 2b. If UNDER 20 minutes:
+          // Check if platform transcript (e.g., closed captions) is available directly
+          if (platformCaptions) {
+            finalTranscript = platformCaptions
+            resolvedTranscriptType = "closed_captions"
+          } else if (audioUrl) {
+            // Transcript not available on platform -> send to Groq for transcription
             const whisperText = await transcribeAudioWithWhisper(audioUrl, diagnostics)
             if (whisperText) {
               finalTranscript = whisperText
               resolvedTranscriptType = "whisper"
             }
           }
-        }
 
-        // Step D: OpenGraph Metadata Fallback (Guaranteed Resilient Fallback)
-        if (resolvedTranscriptType !== "closed_captions" && resolvedTranscriptType !== "whisper") {
-          finalTranscript = await fetchUniversalVideoMetadata(rawOriginalInput, resolvedPlatform)
-          resolvedTranscriptType = "metadata"
+          // If neither platform transcript nor Whisper was available, fall back to metadata
+          if (resolvedTranscriptType !== "closed_captions" && resolvedTranscriptType !== "whisper") {
+            finalTranscript = buildMetadataDisplayText(
+              resolvedPlatform,
+              rawOriginalInput,
+              videoTitle,
+              creatorName,
+              videoDescription,
+              durationSeconds
+            )
+            resolvedTranscriptType = "metadata"
+          }
         }
 
         // Step E: Save to Transcript Cache
-        await saveCachedTranscript(urlHash, rawOriginalInput, resolvedPlatform, finalTranscript, resolvedTranscriptType)
+        await saveCachedTranscript(urlHash, rawOriginalInput, resolvedPlatform, finalTranscript, resolvedTranscriptType, videoTitle, creatorName)
       }
     }
 

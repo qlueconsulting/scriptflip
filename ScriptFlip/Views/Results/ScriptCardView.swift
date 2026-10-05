@@ -1,17 +1,23 @@
 import SwiftUI
 
-/// Component card displaying individual generated script with sections, cues, copy, save to history, and teleprompter launch.
+/// Component card displaying individual generated script with sections, cues, copy, save to history, and teleprompter launch at the bottom.
 public struct ScriptCardView: View {
     public let script: Script
     public let onLaunchPrompter: (Script) -> Void
+    public var onSwitchToTranscript: (() -> Void)? = nil
     
     @State private var isCopied: Bool = false
     @State private var isSavedToHistory: Bool = false
     @State private var showTranscriptSheet: Bool = false
     
-    public init(script: Script, onLaunchPrompter: @escaping (Script) -> Void) {
+    public init(
+        script: Script,
+        onLaunchPrompter: @escaping (Script) -> Void,
+        onSwitchToTranscript: (() -> Void)? = nil
+    ) {
         self.script = script
         self.onLaunchPrompter = onLaunchPrompter
+        self.onSwitchToTranscript = onSwitchToTranscript
     }
     
     public var body: some View {
@@ -92,7 +98,7 @@ public struct ScriptCardView: View {
                                 Text(audio)
                                     .font(.caption)
                                     .foregroundStyle(.gray)
-                            }
+                                }
                         }
                     }
                 }
@@ -112,49 +118,7 @@ public struct ScriptCardView: View {
             .cornerRadius(10)
             
             // Actions Toolbar
-            VStack(spacing: 10) {
-                // Primary Launch Teleprompter Button
-                Button(action: { onLaunchPrompter(script) }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "play.tv.fill")
-                            .font(.headline)
-                        Text("Open in Teleprompter")
-                            .font(.headline.bold())
-                    }
-                    .foregroundStyle(.black)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 48)
-                    .background(
-                        LinearGradient(
-                            colors: [.cyan, .mint],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .cornerRadius(12)
-                    .shadow(color: Color.cyan.opacity(0.3), radius: 8, y: 3)
-                }
-                
-                // View Transcript / Source Input Button
-                Button(action: { showTranscriptSheet = true }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "doc.text.magnifyingglass")
-                            .font(.subheadline)
-                            .foregroundStyle(.cyan)
-                        Text(script.isTranscript ? "View Video Transcript" : "View Source Input & Notes")
-                            .font(.subheadline.bold())
-                            .foregroundStyle(.white)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 44)
-                    .background(Color.white.opacity(0.08))
-                    .cornerRadius(12)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.white.opacity(0.12), lineWidth: 1)
-                    )
-                }
-                
+            VStack(spacing: 12) {
                 // Secondary Action Row: Copy, Save to History, Share
                 HStack(spacing: 10) {
                     // Copy to Clipboard
@@ -207,6 +171,28 @@ public struct ScriptCardView: View {
                             .cornerRadius(10)
                     }
                 }
+                
+                // Primary Launch Teleprompter Button placed at the bottom of the response tab
+                Button(action: { onLaunchPrompter(script) }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "play.tv.fill")
+                            .font(.headline)
+                        Text("Open in Teleprompter")
+                            .font(.headline.bold())
+                    }
+                    .foregroundStyle(.black)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+                    .background(
+                        LinearGradient(
+                            colors: [.cyan, .mint],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .cornerRadius(12)
+                    .shadow(color: Color.cyan.opacity(0.3), radius: 8, y: 3)
+                }
             }
         }
         .padding(20)
@@ -230,4 +216,3 @@ public struct ScriptCardView: View {
         }
     }
 }
-
