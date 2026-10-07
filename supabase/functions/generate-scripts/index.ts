@@ -148,6 +148,145 @@ function formatDuration(seconds: number): string {
 }
 
 /**
+ * Tier 0 (Self-Hosted Priority): MediaMetaData_Transcriber Microservice
+ * Resolves metadata and transcribes audio via local residential GPU server.
+ */
+interface MediaServiceMetadata {
+  job_id?: string | null
+  url: string
+  title?: string
+  creator?: string
+  uploader?: string
+  duration_seconds?: number
+  duration_formatted?: string
+  platform?: string
+  description?: string
+  exceeds_duration_limit?: boolean
+  max_duration_seconds?: number
+  allowed_for_transcription?: boolean
+}
+
+interface MediaServiceTranscribe {
+  job_id?: string
+  url?: string
+  status?: string
+  elapsed_time?: number
+  metadata?: {
+    title?: string
+    duration_seconds?: number
+    duration_formatted?: string
+  }
+  transcript?: {
+    text?: string
+    language?: string
+    engine?: string
+    segments?: any[]
+  }
+}
+
+async function callMediaServiceMetadata(url: string, bypassCache: boolean = false, diagnostics?: any): Promise<MediaServiceMetadata | null> {
+  const baseUrl = Deno.env.get("MEDIA_SERVICE_URL")?.trim()
+  const apiKey = Deno.env.get("MEDIA_SERVICE_KEY")?.trim()
+  if (!baseUrl) return null
+
+  try {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 45000)
+    const normalizedUrl = baseUrl.replace(/\/+$/, '')
+    console.log(`[generate-scripts] [MediaService] Requesting metadata for: ${url} via ${normalizedUrl}`)
+
+    const resp = await fetch(`${normalizedUrl}/api/metadata`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(apiKey ? { "X-API-Key": apiKey } : {})
+      },
+      body: JSON.stringify({
+        url,
+        bypass_cache: bypassCache,
+        max_duration_minutes: 20
+      }),
+      signal: controller.signal
+    })
+    clearTimeout(timeoutId)
+
+    if (diagnostics) {
+      diagnostics.mediaService = { metadataStatus: resp.status }
+    }
+
+    if (resp.ok) {
+      const data = await resp.json()
+      console.log(`[generate-scripts] [MediaService] Metadata received: "${data.title}" (${data.duration_formatted || data.duration_seconds + 's'})`)
+      return data
+    } else {
+      console.warn(`[generate-scripts] [MediaService] Metadata returned HTTP ${resp.status}`)
+    }
+  } catch (err: any) {
+    console.warn(`[generate-scripts] [MediaService] Metadata notice:`, err?.message || err)
+    if (diagnostics) {
+      diagnostics.mediaService = { ...(diagnostics.mediaService || {}), metadataError: err?.message || String(err) }
+    }
+  }
+  return null
+}
+
+async function callMediaServiceTranscribe(url: string, bypassCache: boolean = false, diagnostics?: any): Promise<MediaServiceTranscribe | null> {
+  const baseUrl = Deno.env.get("MEDIA_SERVICE_URL")?.trim()
+  const apiKey = Deno.env.get("MEDIA_SERVICE_KEY")?.trim()
+  if (!baseUrl) return null
+
+  try {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 120000) // 120s timeout for GPU inference
+    const normalizedUrl = baseUrl.replace(/\/+$/, '')
+    console.log(`[generate-scripts] [MediaService] Requesting transcription for: ${url} via ${normalizedUrl}`)
+
+    const resp = await fetch(`${normalizedUrl}/api/transcribe`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(apiKey ? { "X-API-Key": apiKey } : {})
+      },
+      body: JSON.stringify({
+        url,
+        speed_profile: "adaptive",
+        bypass_cache: bypassCache,
+        max_duration_minutes: 20
+      }),
+      signal: controller.signal
+    })
+    clearTimeout(timeoutId)
+
+    if (diagnostics) {
+      diagnostics.mediaService = { ...(diagnostics.mediaService || {}), transcribeStatus: resp.status }
+    }
+
+    if (resp.ok) {
+      const data = await resp.json()
+      const textLen = data.transcript?.text?.length || 0
+      console.log(`[generate-scripts] [MediaService] Transcription SUCCESS in ${data.elapsed_time}s (${textLen} chars, engine: ${data.transcript?.engine})`)
+      if (diagnostics) {
+        diagnostics.mediaService.transcribeResult = {
+          elapsed: data.elapsed_time,
+          engine: data.transcript?.engine,
+          textLength: textLen
+        }
+      }
+      return data
+    } else {
+      const errText = await resp.text().catch(() => "")
+      console.warn(`[generate-scripts] [MediaService] Transcription returned HTTP ${resp.status}:`, errText)
+    }
+  } catch (err: any) {
+    console.warn(`[generate-scripts] [MediaService] Transcription notice:`, err?.message || err)
+    if (diagnostics) {
+      diagnostics.mediaService = { ...(diagnostics.mediaService || {}), transcribeError: err?.message || String(err) }
+    }
+  }
+  return null
+}
+
+/**
  * Tier 1: Fetch official creator or automated closed captions directly from YouTube player, plus metadata and duration.
  */
 async function fetchYouTubeData(videoId: string, diagnostics?: any): Promise<{ 
@@ -395,92 +534,7 @@ async function fetchTikTokMedia(rawUrl: string): Promise<{ audioUrl: string | nu
   return { audioUrl: null }
 }
 
-/**
- * Managed Social Video Downloader via RapidAPI (supports TikTok, Instagram Reels, Facebook Reels, YouTube).
- */
-async function fetchRapidAPIMedia(rawUrl: string, diagnostics?: any): Promise<{ audioUrl: string | null; title?: string; creator?: string; durationSeconds?: number }> {
-  const rapidApiKey = Deno.env.get("RAPIDAPI_KEY")?.trim().replace(/^["']|["']$/g, "")
-  if (!rapidApiKey) {
-    if (diagnostics) diagnostics.rapidApi = { status: "missing_key" }
-    return { audioUrl: null }
-  }
 
-  console.log(`[generate-scripts] Querying RapidAPI Downloader for: ${rawUrl}`)
-  const hosts = [
-    "all-in-one-media-downloader-api.p.rapidapi.com"
-  ]
-
-  for (const host of hosts) {
-    try {
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 9000)
-
-      const endpoint = `https://${host}/download?url=${encodeURIComponent(rawUrl)}`
-      const resp = await fetch(endpoint, {
-        signal: controller.signal,
-        headers: {
-          "X-RapidAPI-Key": rapidApiKey,
-          "X-RapidAPI-Host": host
-        }
-      })
-      clearTimeout(timeoutId)
-
-      if (diagnostics) {
-        diagnostics.rapidApi = {
-          host,
-          status: resp.status,
-          statusText: resp.statusText
-        }
-      }
-
-      if (resp.ok) {
-        const json = await resp.json()
-        if (diagnostics) {
-          diagnostics.rapidApiResponse = JSON.stringify(json).substring(0, 500)
-        }
-        let audioUrl: string | null = null
-
-        // Support both json.data.medias (dYOY / EaseAPI) and json.medias / json.result
-        const mediaList = Array.isArray(json.data?.medias) 
-          ? json.data.medias 
-          : (Array.isArray(json.medias) ? json.medias : [])
-
-        if (mediaList.length > 0) {
-          const audioMedia = mediaList.find((m: any) => 
-            m.type === 'audio' || 
-            m.type === 'music' || 
-            m.extension === 'mp3' || 
-            m.extension === 'm4a' ||
-            (typeof m.url === 'string' && (m.url.includes('/music/') || m.url.includes('.mp3')))
-          )
-          if (audioMedia?.url) audioUrl = audioMedia.url
-          if (!audioUrl) {
-            const videoMedia = mediaList.find((m: any) => m.type === 'video' || m.extension === 'mp4')
-            if (videoMedia?.url) audioUrl = videoMedia.url
-          }
-        } else if (json.data?.url || json.url || json.result?.url) {
-          audioUrl = json.data?.url || json.url || json.result?.url
-        }
-
-        const title = json.data?.title || json.title || json.result?.title || ""
-        const creator = json.data?.author || json.author || json.result?.author || ""
-        const durationSeconds = Number(json.data?.duration || json.duration) || 0
-        if (audioUrl) {
-          console.log(`[generate-scripts] RapidAPI ${host} returned media URL`)
-          return { audioUrl, title, creator, durationSeconds }
-        }
-      } else {
-        const errBody = await resp.text().catch(() => "")
-        console.warn(`[generate-scripts] RapidAPI ${host} returned status: ${resp.status}`, errBody)
-        if (diagnostics) diagnostics.rapidApi.errorBody = errBody.substring(0, 300)
-      }
-    } catch (e: any) {
-      console.warn(`[generate-scripts] RapidAPI ${host} error:`, e?.message || e)
-      if (diagnostics) diagnostics.rapidApi = { host, error: e?.message || String(e) }
-    }
-  }
-  return { audioUrl: null }
-}
 
 /**
  * Downloads audio stream and sends to Groq Whisper Large v3 Turbo (with OpenAI Whisper fallback).
@@ -681,7 +735,10 @@ serve(async (req) => {
 
       // Step A: Check DB Cache (Bypass if requested or if existing cache is only metadata and we now have extraction keys)
       const cached = (payload.bypassCache === true) ? null : await getCachedTranscript(urlHash)
-      const hasExtractionKeys = Boolean(Deno.env.get("RAPIDAPI_KEY") || Deno.env.get("GROQ_API_KEY"))
+      const hasExtractionKeys = Boolean(
+        Deno.env.get("MEDIA_SERVICE_URL") ||
+        Deno.env.get("GROQ_API_KEY")
+      )
 
       if (cached && (cached.transcriptType === 'whisper' || cached.transcriptType === 'closed_captions' || !hasExtractionKeys)) {
         finalTranscript = cached.transcript
@@ -698,22 +755,38 @@ serve(async (req) => {
         let durationSeconds: number = 0
         let platformCaptions: string | null = null
         let audioUrl: string | null = null
+        let mediaServiceMetadata: MediaServiceMetadata | null = null
 
-        // Step 1A: YouTube Specific Data (Captions, Metadata, Duration)
-        if (resolvedPlatform === "YouTube") {
+        // Step 1.0: Priority Self-Hosted MediaMetaData_Transcriber (bypasses Google CDN 403 & 429)
+        if (Deno.env.get("MEDIA_SERVICE_URL")) {
+          mediaServiceMetadata = await callMediaServiceMetadata(rawOriginalInput, payload.bypassCache === true, diagnostics)
+          if (mediaServiceMetadata) {
+            if (mediaServiceMetadata.title) videoTitle = mediaServiceMetadata.title
+            if (mediaServiceMetadata.creator || mediaServiceMetadata.uploader) {
+              creatorName = mediaServiceMetadata.creator || mediaServiceMetadata.uploader
+            }
+            if (mediaServiceMetadata.description) videoDescription = mediaServiceMetadata.description
+            if (mediaServiceMetadata.duration_seconds) durationSeconds = Number(mediaServiceMetadata.duration_seconds)
+            if (mediaServiceMetadata.platform) resolvedPlatform = mediaServiceMetadata.platform
+            if (diagnostics) diagnostics.mediaService = { ...(diagnostics.mediaService || {}), resolved: true }
+          }
+        }
+
+        // Step 1A: YouTube Specific Data Fallback (Captions, Metadata, Duration)
+        if (resolvedPlatform === "YouTube" && (!videoTitle || durationSeconds === 0)) {
           const ytId = extractYouTubeVideoId(rawOriginalInput)
           if (ytId) {
             const ytData = await fetchYouTubeData(ytId, diagnostics)
-            videoTitle = ytData.title
-            creatorName = ytData.creator
-            videoDescription = ytData.description
-            durationSeconds = ytData.durationSeconds
+            if (ytData.title && !videoTitle) videoTitle = ytData.title
+            if (ytData.creator && !creatorName) creatorName = ytData.creator
+            if (ytData.description && !videoDescription) videoDescription = ytData.description
+            if (ytData.durationSeconds && durationSeconds === 0) durationSeconds = ytData.durationSeconds
             platformCaptions = ytData.transcript
           }
         }
 
-        // Step 1B: TikTok Dedicated Data
-        if (resolvedPlatform === "TikTok") {
+        // Step 1B: TikTok Dedicated Data Fallback
+        if (resolvedPlatform === "TikTok" && (!videoTitle || durationSeconds === 0)) {
           const tikMedia = await fetchTikTokMedia(rawOriginalInput)
           if (tikMedia.title) videoTitle = tikMedia.title
           if (tikMedia.creator) creatorName = tikMedia.creator
@@ -721,16 +794,7 @@ serve(async (req) => {
           if (tikMedia.audioUrl) audioUrl = tikMedia.audioUrl
         }
 
-        // Step 1C: RapidAPI Downloader (for Instagram Reels, Facebook Reels, TikTok fallback, etc.)
-        if (!audioUrl || !videoTitle || durationSeconds === 0) {
-          const rapidMedia = await fetchRapidAPIMedia(rawOriginalInput, diagnostics)
-          if (rapidMedia.title && !videoTitle) videoTitle = rapidMedia.title
-          if (rapidMedia.creator && !creatorName) creatorName = rapidMedia.creator
-          if (rapidMedia.durationSeconds && durationSeconds === 0) durationSeconds = rapidMedia.durationSeconds
-          if (rapidMedia.audioUrl && !audioUrl) audioUrl = rapidMedia.audioUrl
-        }
-
-        // Step 1D: Universal OpenGraph fallback for missing title, author, or description
+        // Step 1C: Universal OpenGraph fallback for missing title, author, or description
         if (!videoTitle || !videoDescription) {
           const ogMeta = await fetchUniversalVideoMetadata(rawOriginalInput, resolvedPlatform)
           if (ogMeta.title && !videoTitle) videoTitle = ogMeta.title
@@ -740,7 +804,7 @@ serve(async (req) => {
         }
 
         // 2a. If OVER 20 minutes (1200 seconds): return metadata & generate AI response (no Whisper)
-        if (durationSeconds > MAX_AUDIO_EXTRACTION_DURATION_SECONDS) {
+        if (durationSeconds > MAX_AUDIO_EXTRACTION_DURATION_SECONDS || mediaServiceMetadata?.exceeds_duration_limit === true) {
           const durationStr = formatDuration(durationSeconds)
           console.log(`[generate-scripts] Video duration is ${durationStr} (> 20 min limit). Generating response from metadata.`)
           finalTranscript = buildMetadataDisplayText(
@@ -758,16 +822,32 @@ serve(async (req) => {
           }
         } else {
           // 2b. If UNDER 20 minutes:
-          // Check if platform transcript (e.g., closed captions) is available directly
-          if (platformCaptions) {
-            finalTranscript = platformCaptions
-            resolvedTranscriptType = "closed_captions"
-          } else if (audioUrl) {
-            // Transcript not available on platform -> send to Groq for transcription
-            const whisperText = await transcribeAudioWithWhisper(audioUrl, diagnostics)
-            if (whisperText) {
-              finalTranscript = whisperText
+          // Priority 2b.1: Transcribe via self-hosted MediaMetaData_Transcriber GPU pipeline
+          if (mediaServiceMetadata && mediaServiceMetadata.allowed_for_transcription !== false) {
+            const mediaTranscribeResult = await callMediaServiceTranscribe(rawOriginalInput, payload.bypassCache === true, diagnostics)
+            if (mediaTranscribeResult?.transcript?.text && mediaTranscribeResult.transcript.text.trim().length >= 25) {
+              finalTranscript = mediaTranscribeResult.transcript.text.trim()
               resolvedTranscriptType = "whisper"
+              if (mediaTranscribeResult.metadata?.title && !videoTitle) {
+                videoTitle = mediaTranscribeResult.metadata.title
+              }
+              await saveCachedTranscript(urlHash, rawOriginalInput, resolvedPlatform, finalTranscript, 'whisper', videoTitle, creatorName)
+            }
+          }
+
+          // Priority 2b.2: If MediaService didn't transcribe, check platform captions (e.g., closed captions)
+          if (resolvedTranscriptType !== "whisper") {
+            if (platformCaptions) {
+              finalTranscript = platformCaptions
+              resolvedTranscriptType = "closed_captions"
+            } else if (audioUrl) {
+              // Transcript not available on platform -> send to Groq for transcription
+              const whisperText = await transcribeAudioWithWhisper(audioUrl, diagnostics)
+              if (whisperText) {
+                finalTranscript = whisperText
+                resolvedTranscriptType = "whisper"
+                await saveCachedTranscript(urlHash, rawOriginalInput, resolvedPlatform, finalTranscript, 'whisper', videoTitle, creatorName)
+              }
             }
           }
 
