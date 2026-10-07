@@ -28,9 +28,9 @@ class ScriptApiService(
     private val deviceIdProvider: DeviceIdProvider,
     private val usageTracker: UsageTracker,
     private val client: OkHttpClient = OkHttpClient.Builder()
-        .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(60, TimeUnit.SECONDS)
-        .writeTimeout(30, TimeUnit.SECONDS)
+        .connectTimeout(45, TimeUnit.SECONDS)
+        .readTimeout(150, TimeUnit.SECONDS)
+        .writeTimeout(45, TimeUnit.SECONDS)
         .build()
 ) {
     private val json = Json {

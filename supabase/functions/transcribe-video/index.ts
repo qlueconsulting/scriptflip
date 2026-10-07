@@ -43,7 +43,9 @@ serve(async (req) => {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 120000) // 120s timeout for GPU inference
 
-    const resp = await fetch(`${mediaServiceUrl}/api/transcribe`, {
+    const effectiveBypassCache = bypass_cache !== undefined ? bypass_cache : true
+
+    let resp = await fetch(`${mediaServiceUrl}/api/transcribe`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -54,21 +56,42 @@ serve(async (req) => {
         language,
         word_timestamps,
         speed_profile,
-        bypass_cache,
+        bypass_cache: effectiveBypassCache,
         max_duration_minutes
       }),
       signal: controller.signal
     })
+
+    if (!resp.ok && resp.status >= 500 && !effectiveBypassCache) {
+      console.warn(`[transcribe-video] Retrying with bypass_cache: true due to ${resp.status}`)
+      resp = await fetch(`${mediaServiceUrl}/api/transcribe`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(mediaServiceKey ? { "X-API-Key": mediaServiceKey } : {})
+        },
+        body: JSON.stringify({
+          url,
+          language,
+          word_timestamps,
+          speed_profile,
+          bypass_cache: true,
+          max_duration_minutes
+        }),
+        signal: controller.signal
+      })
+    }
     clearTimeout(timeoutId)
 
-    const data = await resp.json()
     if (!resp.ok) {
-      return new Response(JSON.stringify(data), {
+      const errText = await resp.text().catch(() => "Unknown error")
+      return new Response(JSON.stringify({ error: errText, status: resp.status }), {
         status: resp.status,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       })
     }
 
+    const data = await resp.json()
     return new Response(JSON.stringify(data), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" }

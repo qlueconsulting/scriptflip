@@ -59,6 +59,17 @@ async function getCachedTranscript(urlHash: string): Promise<{ transcript: strin
 async function saveCachedTranscript(urlHash: string, sourceUrl: string, platform: string, transcript: string, transcriptType: string, title?: string, creator?: string) {
   if (!supabase || !transcript || transcript.length < 20) return
   try {
+    if (transcriptType === 'metadata') {
+      const { data: existing } = await supabase
+        .from('video_transcripts')
+        .select('transcript_type')
+        .eq('url_hash', urlHash)
+        .maybeSingle()
+      if (existing && (existing.transcript_type === 'whisper' || existing.transcript_type === 'closed_captions')) {
+        console.log(`[generate-scripts] Skipping cache save: keeping existing high-fidelity ${existing.transcript_type} record`)
+        return
+      }
+    }
     await supabase
       .from('video_transcripts')
       .upsert({
@@ -241,7 +252,9 @@ async function callMediaServiceTranscribe(url: string, bypassCache: boolean = fa
     const normalizedUrl = baseUrl.replace(/\/+$/, '')
     console.log(`[generate-scripts] [MediaService] Requesting transcription for: ${url} via ${normalizedUrl}`)
 
-    const resp = await fetch(`${normalizedUrl}/api/transcribe`, {
+    // We pass bypass_cache: true because Supabase edge Postgres ('video_transcripts') already handles
+    // application-tier caching, and the microservice's internal disk-cache retrieval raises HTTP 500 on cached jobs.
+    let resp = await fetch(`${normalizedUrl}/api/transcribe`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -250,7 +263,7 @@ async function callMediaServiceTranscribe(url: string, bypassCache: boolean = fa
       body: JSON.stringify({
         url,
         speed_profile: "adaptive",
-        bypass_cache: bypassCache,
+        bypass_cache: true,
         max_duration_minutes: 20
       }),
       signal: controller.signal
@@ -276,6 +289,9 @@ async function callMediaServiceTranscribe(url: string, bypassCache: boolean = fa
     } else {
       const errText = await resp.text().catch(() => "")
       console.warn(`[generate-scripts] [MediaService] Transcription returned HTTP ${resp.status}:`, errText)
+      if (diagnostics) {
+        diagnostics.mediaService.transcribeError = errText
+      }
     }
   } catch (err: any) {
     console.warn(`[generate-scripts] [MediaService] Transcription notice:`, err?.message || err)
@@ -823,7 +839,7 @@ serve(async (req) => {
         } else {
           // 2b. If UNDER 20 minutes:
           // Priority 2b.1: Transcribe via self-hosted MediaMetaData_Transcriber GPU pipeline
-          if (mediaServiceMetadata && mediaServiceMetadata.allowed_for_transcription !== false) {
+          if ((!mediaServiceMetadata || mediaServiceMetadata.allowed_for_transcription !== false) && Deno.env.get("MEDIA_SERVICE_URL")) {
             const mediaTranscribeResult = await callMediaServiceTranscribe(rawOriginalInput, payload.bypassCache === true, diagnostics)
             if (mediaTranscribeResult?.transcript?.text && mediaTranscribeResult.transcript.text.trim().length >= 25) {
               finalTranscript = mediaTranscribeResult.transcript.text.trim()
