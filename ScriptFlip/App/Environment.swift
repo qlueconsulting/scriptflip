@@ -39,6 +39,12 @@ public enum AppEnvironment {
         let base = supabaseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         return "\(base)/functions/v1/generate-scripts"
     }
+
+    /// Supabase Edge Function live URL for video metadata resolution
+    public static var getVideoMetadataEndpoint: String {
+        let base = supabaseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        return "\(base)/functions/v1/get-video-metadata"
+    }
     
     // MARK: - Validation & Sanitization Helpers
     

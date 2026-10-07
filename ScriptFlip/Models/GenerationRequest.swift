@@ -197,3 +197,60 @@ public struct GenerationResponse: Codable, Sendable {
         return data ?? scripts
     }
 }
+
+/// Request payload for Supabase Edge Function `/functions/v1/get-video-metadata`.
+public struct VideoMetadataRequest: Codable, Sendable {
+    public let url: String
+    public let bypassCache: Bool
+    public let maxDurationMinutes: Int
+
+    enum CodingKeys: String, CodingKey {
+        case url
+        case bypassCache = "bypass_cache"
+        case maxDurationMinutes = "max_duration_minutes"
+    }
+
+    public init(url: String, bypassCache: Bool = false, maxDurationMinutes: Int = 20) {
+        self.url = url
+        self.bypassCache = bypassCache
+        self.maxDurationMinutes = maxDurationMinutes
+    }
+}
+
+/// Response payload for Supabase Edge Function `/functions/v1/get-video-metadata`.
+public struct VideoMetadataResponse: Codable, Sendable {
+    public let title: String?
+    public let creator: String?
+    public let uploader: String?
+    public let platform: String?
+    public let durationSeconds: Double?
+    public let durationFormatted: String?
+    public let thumbnail: String?
+    public let exceedsDurationLimit: Bool?
+    public let allowedForTranscription: Bool?
+    public let warning: String?
+    public let error: String?
+
+    enum CodingKeys: String, CodingKey {
+        case title
+        case creator
+        case uploader
+        case platform
+        case durationSeconds = "duration_seconds"
+        case durationFormatted = "duration_formatted"
+        case thumbnail
+        case exceedsDurationLimit = "exceeds_duration_limit"
+        case allowedForTranscription = "allowed_for_transcription"
+        case warning
+        case error
+    }
+
+    public var displayCreator: String? {
+        creator ?? uploader
+    }
+
+    public var formattedPlatform: String {
+        Script.formatPlatformName(platform ?? "Video")
+    }
+}
+

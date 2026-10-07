@@ -1,11 +1,39 @@
 import Foundation
 import Observation
 
+/// Video metadata UI state for live preview card.
+public struct VideoMetadataState: Sendable {
+    public var isLoading: Bool = false
+    public var metadata: VideoMetadataResponse? = nil
+    public var error: String? = nil
+    
+    public init(isLoading: Bool = false, metadata: VideoMetadataResponse? = nil, error: String? = nil) {
+        self.isLoading = isLoading
+        self.metadata = metadata
+        self.error = error
+    }
+}
+
 /// Main view model powering `ScriptGeneratorView`.
 @Observable
 @MainActor
 public final class ScriptGeneratorViewModel {
-    public var inputMode: InputMode = .url
+    public var inputMode: InputMode = .url {
+        didSet {
+            if inputMode != oldValue {
+                metadataTask?.cancel()
+                if inputMode != .url {
+                    metadataState = nil
+                } else if !inputText.isEmpty {
+                    if let url = extractUrl(from: inputText) {
+                        metadataTask = Task { @MainActor in
+                            await fetchMetadataForUrl(url)
+                        }
+                    }
+                }
+            }
+        }
+    }
     public var inputText: String = ""
     public var selectedStyle: ScriptStyle = .casual
     public var targetDurationMinutes: Double = 3.0 // 1 to 5 minutes duration slider
@@ -15,6 +43,10 @@ public final class ScriptGeneratorViewModel {
     public var loadingProgress: Double = 0.0
     public var elapsedSeconds: Int = 0
     private var progressTask: Task<Void, Never>? = nil
+    
+    public var metadataState: VideoMetadataState? = nil
+    private var lastQueriedUrl: String? = nil
+    private var metadataTask: Task<Void, Never>? = nil
     
     public var errorMessage: String? = nil
     public var showErrorAlert: Bool = false
@@ -90,6 +122,70 @@ public final class ScriptGeneratorViewModel {
     
     public var canGenerateFree: Bool {
         !userUsage.isLimitReached(for: subscriptionManager.activeTier)
+    }
+
+    public func updateInputText(_ text: String) {
+        self.inputText = text
+        self.errorMessage = nil
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            metadataTask?.cancel()
+            self.metadataState = nil
+            self.lastQueriedUrl = nil
+        } else if inputMode == .url {
+            let url = extractUrl(from: text)
+            if let url = url, url != lastQueriedUrl {
+                metadataTask?.cancel()
+                metadataTask = Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: 700_000_000)
+                    guard !Task.isCancelled else { return }
+                    await fetchMetadataForUrl(url)
+                }
+            }
+        }
+    }
+
+    public func onInputFocusLost() {
+        guard inputMode == .url else { return }
+        guard let url = extractUrl(from: inputText) else { return }
+        if url == lastQueriedUrl && metadataState?.metadata != nil {
+            return
+        }
+        metadataTask?.cancel()
+        Task { @MainActor in
+            await fetchMetadataForUrl(url)
+        }
+    }
+
+    private func extractUrl(from raw: String) -> String? {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let regex = try? NSRegularExpression(pattern: "https?://[^\\s]+", options: .caseInsensitive),
+           let match = regex.firstMatch(in: trimmed, range: NSRange(trimmed.startIndex..., in: trimmed)),
+           let range = Range(match.range, in: trimmed) {
+            let url = String(trimmed[range])
+            if url.count >= 10 { return url }
+        }
+        
+        let domainPattern = "(?:www\\.)?(?:youtube\\.com|youtu\\.be|tiktok\\.com|instagram\\.com|facebook\\.com|fb\\.watch)[^\\s]*"
+        if let regex = try? NSRegularExpression(pattern: domainPattern, options: .caseInsensitive),
+           let match = regex.firstMatch(in: trimmed, range: NSRange(trimmed.startIndex..., in: trimmed)),
+           let range = Range(match.range, in: trimmed) {
+            let domain = String(trimmed[range])
+            if domain.count >= 8 { return "https://\(domain)" }
+        }
+        return nil
+    }
+
+    private func fetchMetadataForUrl(_ url: String) async {
+        self.lastQueriedUrl = url
+        self.metadataState = VideoMetadataState(isLoading: true)
+        
+        do {
+            let meta = try await apiService.getVideoMetadata(url: url)
+            self.metadataState = VideoMetadataState(isLoading: false, metadata: meta)
+        } catch {
+            self.metadataState = VideoMetadataState(isLoading: false, error: error.localizedDescription)
+        }
     }
     
     public func generateScripts() async {

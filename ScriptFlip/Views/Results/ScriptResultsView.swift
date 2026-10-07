@@ -106,6 +106,18 @@ public struct ScriptResultsView: View {
                         .font(.headline)
                         .foregroundStyle(.white)
                 }
+
+                ToolbarItem(placement: .topBarTrailing) {
+                    if let platform = firstScript?.platform, !platform.isEmpty {
+                        Text(platform)
+                            .font(.caption2.bold())
+                            .foregroundStyle(.cyan)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.cyan.opacity(0.15))
+                            .cornerRadius(6)
+                    }
+                }
             }
             .onAppear {
                 for script in scripts {
@@ -119,52 +131,64 @@ public struct ScriptResultsView: View {
     @ViewBuilder
     private var transcriptView: some View {
         VStack(alignment: .leading, spacing: 16) {
-            // Badges row
-            HStack(spacing: 8) {
-                if let platform = firstScript?.platform, !platform.isEmpty {
-                    Text(platform)
-                        .font(.caption.bold())
+            // Source Info & Badge Card
+            VStack(alignment: .leading, spacing: 8) {
+                // Header: Source Video Content / Source Input
+                HStack(spacing: 8) {
+                    Image(systemName: "doc.text.fill")
+                        .font(.subheadline)
+                        .foregroundStyle(.cyan)
+                    Text((firstScript?.isTranscript ?? false) ? "Source Video Content" : "Source Input")
+                        .font(.headline.bold())
                         .foregroundStyle(.white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.white.opacity(0.12))
-                        .cornerRadius(6)
                 }
                 
+                // Smaller Badge, one line directly under "Source Video Content"
                 Text(badgeTitle)
-                    .font(.caption.bold())
+                    .font(.caption2.bold())
                     .foregroundStyle(badgeColor)
                     .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
+                    .padding(.vertical, 3)
                     .background(badgeColor.opacity(0.15))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(badgeColor.opacity(0.35), lineWidth: 1)
+                    )
                     .cornerRadius(6)
                 
-                Spacer()
-            }
-            
-            // Over-20-min / Metadata Notice
-            if firstScript?.transcriptType == "metadata" {
-                let isDurationExceeded = firstScript?.sourceText.contains("exceeds the 20-minute audio limit") ?? false
-                let noticeText = isDurationExceeded
-                    ? "Notice: Video duration exceeds the 20-minute audio limit. AI response generated from video metadata & summary."
-                    : "Notice: Platform captions and direct audio extraction were unavailable for this video. AI response generated from video metadata & summary."
-                HStack(alignment: .top, spacing: 10) {
-                    Image(systemName: "info.circle.fill")
-                        .foregroundStyle(.orange)
-                        .font(.body)
-                    Text(noticeText)
-                        .font(.caption)
-                        .foregroundStyle(.white.opacity(0.9))
+                // Over-20-min / Metadata Notice
+                if firstScript?.transcriptType == "metadata" {
+                    let isDurationExceeded = firstScript?.sourceText.contains("exceeds the 20-minute audio limit") ?? false
+                    let noticeText = isDurationExceeded
+                        ? "Notice: Video duration exceeds the 20-minute audio limit. AI response generated from video metadata & summary."
+                        : "Notice: Platform captions and direct audio extraction were unavailable for this video. AI response generated from video metadata & summary."
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: "info.circle.fill")
+                            .foregroundStyle(.orange)
+                            .font(.body)
+                        Text(noticeText)
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.9))
+                    }
+                    .padding(10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.orange.opacity(0.12))
+                    .cornerRadius(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.orange.opacity(0.3), lineWidth: 1)
+                    )
+                    .padding(.top, 4)
                 }
-                .padding(12)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.orange.opacity(0.12))
-                .cornerRadius(10)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.orange.opacity(0.3), lineWidth: 1)
-                )
             }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.white.opacity(0.05))
+            .cornerRadius(14)
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
+            )
             
             // Full Transcript Text Box
             VStack(alignment: .leading, spacing: 12) {

@@ -18,17 +18,15 @@ public struct TranscriptSheetView: View {
     
     private var badgeTitle: String {
         switch script.transcriptType {
-        case "whisper": return "AI Whisper Audio Transcription"
-        case "closed_captions": return "Official Closed Captions"
-        case "metadata": return "Post Metadata & Summary"
-        default: return script.isTranscript ? "Video Source" : "User Input Notes"
+        case "whisper", "closed_captions": return "AI Audio Transcription"
+        case "metadata": return "Metadata"
+        default: return "Text Entered"
         }
     }
     
     private var badgeColor: Color {
         switch script.transcriptType {
-        case "whisper": return .cyan
-        case "closed_captions": return .green
+        case "whisper", "closed_captions": return .cyan
         case "metadata": return .orange
         default: return .purple
         }
@@ -40,28 +38,61 @@ public struct TranscriptSheetView: View {
                 Color(red: 0.05, green: 0.05, blue: 0.07).ignoresSafeArea()
                 
                 VStack(alignment: .leading, spacing: 16) {
-                    // Header badges
-                    HStack(spacing: 8) {
-                        if let platform = script.platform, !platform.isEmpty {
-                            Text(platform)
-                                .font(.caption.bold())
+                    // Header card
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "doc.text.fill")
+                                .font(.subheadline)
+                                .foregroundStyle(.cyan)
+                            Text(script.isTranscript ? "Source Video Content" : "Source Input")
+                                .font(.headline.bold())
                                 .foregroundStyle(.white)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Color.white.opacity(0.12))
-                                .cornerRadius(6)
+                            
+                            Spacer()
+                            
+                            if let platform = script.platform, !platform.isEmpty {
+                                Text(Script.formatPlatformName(platform))
+                                    .font(.caption2.bold())
+                                    .foregroundStyle(.cyan)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(Color.cyan.opacity(0.15))
+                                    .cornerRadius(6)
+                            }
                         }
                         
                         Text(badgeTitle)
-                            .font(.caption.bold())
+                            .font(.caption2.bold())
                             .foregroundStyle(badgeColor)
                             .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
+                            .padding(.vertical, 3)
                             .background(badgeColor.opacity(0.15))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(badgeColor.opacity(0.35), lineWidth: 1)
+                            )
                             .cornerRadius(6)
                         
-                        Spacer()
+                        if script.transcriptType == "metadata" {
+                            HStack(alignment: .top, spacing: 6) {
+                                Image(systemName: "info.circle.fill")
+                                    .font(.caption2)
+                                    .foregroundStyle(.orange)
+                                Text("This video was over 20 minutes (or speech was unavailable), so video title, metadata, and description were used to generate this script.")
+                                    .font(.caption2)
+                                    .foregroundStyle(.white.opacity(0.75))
+                                    .lineSpacing(2)
+                            }
+                            .padding(.top, 2)
+                        }
                     }
+                    .padding(16)
+                    .background(Color.white.opacity(0.04))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                    )
+                    .cornerRadius(14)
                     .padding(.horizontal, 20)
                     .padding(.top, 12)
                     

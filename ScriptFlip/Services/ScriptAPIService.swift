@@ -106,6 +106,7 @@ public struct NetworkDiagnosticInfo: Sendable {
 /// Service protocol for network interaction and mock testing.
 public protocol ScriptAPIServiceProtocol: Sendable {
     func generateScripts(request: GenerationRequest) async throws -> [Script]
+    func getVideoMetadata(url: String) async throws -> VideoMetadataResponse
     func getDiagnostics() -> NetworkDiagnosticInfo
 }
 
@@ -514,5 +515,35 @@ public final class ScriptAPIService: ScriptAPIServiceProtocol, @unchecked Sendab
         ]
         
         return Array(allOptions.prefix(count))
+    }
+
+    public func getVideoMetadata(url: String) async throws -> VideoMetadataResponse {
+        let endpointString = AppEnvironment.getVideoMetadataEndpoint
+        guard let endpointURL = URL(string: endpointString) else {
+            throw ScriptAPIError.invalidURL(endpointString)
+        }
+        
+        var request = URLRequest(url: endpointURL)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(supabaseAnonKey)", forHTTPHeaderField: "Authorization")
+        request.timeoutInterval = 30.0
+        
+        let payload = VideoMetadataRequest(url: url)
+        request.httpBody = try JSONEncoder().encode(payload)
+        
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw ScriptAPIError.unknown("Invalid HTTP response")
+        }
+        
+        guard (200...299).contains(httpResponse.statusCode) else {
+            let errorBody = String(data: data, encoding: .utf8) ?? ""
+            throw ScriptAPIError.serverError(statusCode: httpResponse.statusCode, responseBody: errorBody)
+        }
+        
+        let decoder = JSONDecoder()
+        return try decoder.decode(VideoMetadataResponse.self, from: data)
     }
 }

@@ -6,6 +6,7 @@ public struct ScriptGeneratorView: View {
     @State private var viewModel: ScriptGeneratorViewModel
     @State private var subscriptionManager: SubscriptionManager
     @State private var activePrompterScript: Script? = nil
+    @FocusState private var isInputFocused: Bool
     
     public init(
         viewModel: ScriptGeneratorViewModel? = nil,
@@ -92,10 +93,11 @@ public struct ScriptGeneratorView: View {
     
     private var scrollContent: some View {
         ScrollView {
-            VStack(spacing: 28) {
+            VStack(spacing: 24) {
                 headerBanner
                 inputTypePicker
                 inputCard
+                metadataPreviewCard
                 durationSliderSection
                 stylePickerSection
                 errorBanner
@@ -103,6 +105,10 @@ public struct ScriptGeneratorView: View {
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 40)
+        }
+        .scrollDismissesKeyboard(.interactively)
+        .onTapGesture {
+            isInputFocused = false
         }
     }
     
@@ -286,6 +292,7 @@ public struct ScriptGeneratorView: View {
         HStack(spacing: 8) {
             ForEach(ScriptGeneratorViewModel.InputMode.allCases) { mode in
                 Button(action: { 
+                    isInputFocused = false
                     DebugLogService.shared.log("[View] Switched input mode to \(mode.rawValue).")
                     viewModel.inputMode = mode 
                 }) {
@@ -336,7 +343,7 @@ public struct ScriptGeneratorView: View {
                 Spacer()
                 if !viewModel.inputText.isEmpty {
                     Button("Clear") {
-                        viewModel.inputText = ""
+                        viewModel.updateInputText("")
                     }
                     .font(.caption)
                     .foregroundStyle(.cyan)
@@ -344,28 +351,127 @@ public struct ScriptGeneratorView: View {
             }
             
             if viewModel.inputMode == .url {
-                TextField("Paste TikTok, Instagram Reel, YouTube, or video URL...", text: $viewModel.inputText)
-                    .textFieldStyle(.plain)
-                    .padding(14)
-                    .background(Color.white.opacity(0.05))
-                    .cornerRadius(12)
-                    .foregroundStyle(.white)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.white.opacity(0.15), lineWidth: 1)
-                    )
+                TextField("Paste TikTok, Instagram Reel, YouTube, or video URL...", text: Binding(
+                    get: { viewModel.inputText },
+                    set: { viewModel.updateInputText($0) }
+                ))
+                .textFieldStyle(.plain)
+                .focused($isInputFocused)
+                .submitLabel(.done)
+                .onSubmit {
+                    isInputFocused = false
+                    viewModel.onInputFocusLost()
+                }
+                .onChange(of: isInputFocused) { wasFocused, isFocused in
+                    if wasFocused && !isFocused {
+                        viewModel.onInputFocusLost()
+                    }
+                }
+                .padding(14)
+                .background(Color.white.opacity(0.05))
+                .cornerRadius(12)
+                .foregroundStyle(.white)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                )
             } else {
-                TextEditor(text: $viewModel.inputText)
-                    .frame(height: 140)
-                    .padding(8)
-                    .scrollContentBackground(.hidden)
-                    .background(Color.white.opacity(0.05))
-                    .cornerRadius(12)
-                    .foregroundStyle(.white)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.white.opacity(0.15), lineWidth: 1)
-                    )
+                TextEditor(text: Binding(
+                    get: { viewModel.inputText },
+                    set: { viewModel.updateInputText($0) }
+                ))
+                .focused($isInputFocused)
+                .frame(height: 140)
+                .padding(8)
+                .scrollContentBackground(.hidden)
+                .background(Color.white.opacity(0.05))
+                .cornerRadius(12)
+                .foregroundStyle(.white)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                )
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var metadataPreviewCard: some View {
+        if viewModel.inputMode == .url, let state = viewModel.metadataState {
+            if state.isLoading {
+                HStack(spacing: 10) {
+                    ProgressView()
+                        .tint(.cyan)
+                        .controlSize(.small)
+                    Text("Checking video link...")
+                        .font(.caption)
+                        .foregroundStyle(.gray)
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.white.opacity(0.05))
+                .cornerRadius(12)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                )
+            } else if let meta = state.metadata {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        HStack(spacing: 6) {
+                            Text(meta.formattedPlatform)
+                                .font(.caption2.bold())
+                                .foregroundStyle(.cyan)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(Color.cyan.opacity(0.15))
+                                .cornerRadius(6)
+                            
+                            if let dur = meta.durationFormatted, !dur.isEmpty {
+                                Text(dur)
+                                    .font(.caption2.monospacedDigit())
+                                    .foregroundStyle(.gray)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 3)
+                                    .background(Color.white.opacity(0.08))
+                                    .cornerRadius(6)
+                            }
+                        }
+                        
+                        Spacer()
+                        
+                        if meta.allowedForTranscription ?? true {
+                            Text("Audio Ready")
+                                .font(.caption2.bold())
+                                .foregroundStyle(.green)
+                        } else {
+                            Text("Duration Limit Exceeded")
+                                .font(.caption2.bold())
+                                .foregroundStyle(.orange)
+                        }
+                    }
+                    
+                    if let title = meta.title, !title.isEmpty {
+                        Text(title)
+                            .font(.subheadline.bold())
+                            .foregroundStyle(.white)
+                            .lineLimit(2)
+                    }
+                    
+                    if let creator = meta.displayCreator, !creator.isEmpty {
+                        Text("by \(creator)")
+                            .font(.caption)
+                            .foregroundStyle(.gray)
+                    }
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.white.opacity(0.05))
+                .cornerRadius(12)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                )
             }
         }
     }
@@ -429,6 +535,7 @@ public struct ScriptGeneratorView: View {
             VStack(spacing: 10) {
                 ForEach(ScriptStyle.allCases) { style in
                     Button(action: { 
+                        isInputFocused = false
                         DebugLogService.shared.log("[View] Selected script style: \(style.rawValue).")
                         viewModel.selectedStyle = style 
                     }) {
