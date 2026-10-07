@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Main results view featuring tabbed workflow: Transcript tab shown first by default,
 /// followed by AI Generated Response tab with Teleprompter CTA positioned at the bottom.
