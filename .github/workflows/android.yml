@@ -3,10 +3,14 @@ name: Android CI
 on:
   workflow_dispatch:
   push:
+    branches:
+      - develop_android_app
     paths:
       - 'android/**'
       - '.github/workflows/android.yml'
   pull_request:
+    branches:
+      - develop_android_app
     paths:
       - 'android/**'
       - '.github/workflows/android.yml'
