@@ -110,6 +110,12 @@ public protocol ScriptAPIServiceProtocol: Sendable {
     func getDiagnostics() -> NetworkDiagnosticInfo
 }
 
+extension ScriptAPIServiceProtocol {
+    public func getVideoMetadata(url: String) async throws -> VideoMetadataResponse {
+        throw ScriptAPIError.unknown("getVideoMetadata not implemented in mock")
+    }
+}
+
 /// Network layer service interfacing with Supabase Edge Function `POST /functions/v1/generate-scripts`.
 public final class ScriptAPIService: ScriptAPIServiceProtocol, @unchecked Sendable {
     private let baseURL: String

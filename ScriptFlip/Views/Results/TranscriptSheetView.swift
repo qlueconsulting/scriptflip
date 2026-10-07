@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Modern modal sheet displaying extracted video transcript or source user text
 public struct TranscriptSheetView: View {

@@ -273,6 +273,9 @@ final class ScriptFlipTests: XCTestCase {
             func generateScripts(request: GenerationRequest) async throws -> [Script] {
                 throw ScriptAPIError.badRequest(statusCode: 400, responseBody: "{\"error\":\"No captions found for this YouTube video. Please paste the transcript or summary text manually.\"}")
             }
+            func getVideoMetadata(url: String) async throws -> VideoMetadataResponse {
+                throw ScriptAPIError.badRequest(statusCode: 400, responseBody: "{\"error\":\"No metadata found\"}")
+            }
             func getDiagnostics() -> NetworkDiagnosticInfo {
                 NetworkDiagnosticInfo()
             }
