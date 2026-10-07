@@ -106,7 +106,7 @@ data class Script(
 
             val isRealTranscript = !dto.transcript.isNullOrBlank() || (!dto.sourceText.isNullOrBlank() && !dto.sourceText.startsWith("http"))
             val resolvedType = dto.transcriptType ?: if (originalInput.startsWith("http")) "metadata" else "user_input"
-            val resolvedPlatform = dto.platform ?: when {
+            val rawPlatform = dto.platform?.takeIf { it.isNotBlank() } ?: when {
                 originalInput.contains("youtube", ignoreCase = true) || originalInput.contains("youtu.be", ignoreCase = true) -> "YouTube"
                 originalInput.contains("tiktok", ignoreCase = true) -> "TikTok"
                 originalInput.contains("instagram", ignoreCase = true) -> "Instagram"
@@ -114,6 +114,7 @@ data class Script(
                 originalInput.startsWith("http", ignoreCase = true) -> "Web Link"
                 else -> "User Input"
             }
+            val resolvedPlatform = formatPlatformName(rawPlatform)
 
             return Script(
                 title = dto.title?.takeIf { it.isNotBlank() } ?: "Universal Script: ${style.displayName} Angle",
@@ -129,6 +130,22 @@ data class Script(
                 transcriptType = resolvedType,
                 platform = resolvedPlatform
             )
+        }
+
+        fun formatPlatformName(platform: String?): String {
+            if (platform.isNullOrBlank()) return "User Input"
+            val lower = platform.trim().lowercase()
+            return when {
+                lower.contains("youtube") || lower.contains("youtu.be") -> "YouTube"
+                lower.contains("tiktok") -> "TikTok"
+                lower.contains("instagram") -> "Instagram"
+                lower.contains("facebook") || lower.contains("fb.watch") -> "Facebook"
+                lower.contains("vimeo") -> "Vimeo"
+                lower.contains("twitter") || lower.contains("x.com") -> "X"
+                lower.contains("web") -> "Web Link"
+                lower == "user input" || lower == "user_input" -> "User Input"
+                else -> platform.trim().replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+            }
         }
     }
 }

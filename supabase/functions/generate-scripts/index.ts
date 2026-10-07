@@ -144,6 +144,19 @@ function detectVideoPlatform(input: string): { platform: string; isVideoUrl: boo
   return { platform: "Generic", isVideoUrl: input.startsWith("http://") || input.startsWith("https://") }
 }
 
+function formatPlatformName(platform?: string): string {
+  if (!platform) return "User Input"
+  const lower = platform.toLowerCase()
+  if (lower.includes("youtube") || lower.includes("youtu.be")) return "YouTube"
+  if (lower.includes("tiktok")) return "TikTok"
+  if (lower.includes("instagram")) return "Instagram"
+  if (lower.includes("facebook") || lower.includes("fb.watch")) return "Facebook"
+  if (lower.includes("vimeo")) return "Vimeo"
+  if (lower.includes("twitter") || lower.includes("x.com")) return "X"
+  if (lower.includes("web")) return "Web Link"
+  return platform.charAt(0).toUpperCase() + platform.slice(1)
+}
+
 const MAX_AUDIO_EXTRACTION_DURATION_SECONDS = 20 * 60 // 20 minutes (1200 seconds)
 
 function formatDuration(seconds: number): string {
@@ -783,7 +796,7 @@ serve(async (req) => {
             }
             if (mediaServiceMetadata.description) videoDescription = mediaServiceMetadata.description
             if (mediaServiceMetadata.duration_seconds) durationSeconds = Number(mediaServiceMetadata.duration_seconds)
-            if (mediaServiceMetadata.platform) resolvedPlatform = mediaServiceMetadata.platform
+            if (mediaServiceMetadata.platform) resolvedPlatform = formatPlatformName(mediaServiceMetadata.platform)
             if (diagnostics) diagnostics.mediaService = { ...(diagnostics.mediaService || {}), resolved: true }
           }
         }
@@ -1041,7 +1054,7 @@ Output ONLY valid JSON matching this exact structure (no markdown fences, no bac
       transcript: finalTranscript,
       sourceText: finalTranscript,
       transcriptType: resolvedTranscriptType,
-      platform: resolvedPlatform
+      platform: formatPlatformName(resolvedPlatform)
     }
 
     // 9. Record generation audit and increment quota

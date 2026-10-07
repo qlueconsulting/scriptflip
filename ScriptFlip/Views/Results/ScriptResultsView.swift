@@ -33,20 +33,18 @@ public struct ScriptResultsView: View {
     }
     
     private var badgeTitle: String {
-        guard let script = firstScript else { return "Source Content" }
+        guard let script = firstScript else { return "Text Entered" }
         switch script.transcriptType {
-        case "whisper": return "AI Whisper Audio Transcription"
-        case "closed_captions": return "Official Closed Captions"
-        case "metadata": return "Post Metadata & Summary"
-        default: return script.isTranscript ? "Video Source" : "User Input Notes"
+        case "whisper", "closed_captions": return "AI Audio Transcription"
+        case "metadata": return "Metadata"
+        default: return "Text Entered"
         }
     }
     
     private var badgeColor: Color {
         guard let script = firstScript else { return .purple }
         switch script.transcriptType {
-        case "whisper": return .cyan
-        case "closed_captions": return .green
+        case "whisper", "closed_captions": return .cyan
         case "metadata": return .orange
         default: return .purple
         }

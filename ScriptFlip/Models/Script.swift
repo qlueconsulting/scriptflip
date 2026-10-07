@@ -159,21 +159,39 @@ public struct Script: Codable, Identifiable, Hashable, Sendable {
         self.isTranscript = isRealTranscript
         self.transcriptType = dto.transcriptType ?? (originalInput.starts(with: "http") ? "metadata" : "user_input")
         
+        let rawPlatform: String
         if let explicitPlatform = dto.platform, !explicitPlatform.isEmpty {
-            self.platform = explicitPlatform
+            rawPlatform = explicitPlatform
         } else if originalInput.localizedCaseInsensitiveContains("youtube") || originalInput.localizedCaseInsensitiveContains("youtu.be") {
-            self.platform = "YouTube"
+            rawPlatform = "YouTube"
         } else if originalInput.localizedCaseInsensitiveContains("tiktok") {
-            self.platform = "TikTok"
+            rawPlatform = "TikTok"
         } else if originalInput.localizedCaseInsensitiveContains("instagram") {
-            self.platform = "Instagram"
+            rawPlatform = "Instagram"
         } else if originalInput.localizedCaseInsensitiveContains("facebook") || originalInput.localizedCaseInsensitiveContains("fb.watch") {
-            self.platform = "Facebook"
+            rawPlatform = "Facebook"
         } else if originalInput.starts(with: "http") {
-            self.platform = "Web Link"
+            rawPlatform = "Web Link"
         } else {
-            self.platform = "User Input"
+            rawPlatform = "User Input"
         }
+        self.platform = Script.formatPlatformName(rawPlatform)
+    }
+
+    public static func formatPlatformName(_ platform: String?) -> String {
+        guard let platform = platform?.trimmingCharacters(in: .whitespacesAndNewlines), !platform.isEmpty else {
+            return "User Input"
+        }
+        let lower = platform.lowercased()
+        if lower.contains("youtube") || lower.contains("youtu.be") { return "YouTube" }
+        if lower.contains("tiktok") { return "TikTok" }
+        if lower.contains("instagram") { return "Instagram" }
+        if lower.contains("facebook") || lower.contains("fb.watch") { return "Facebook" }
+        if lower.contains("vimeo") { return "Vimeo" }
+        if lower.contains("twitter") || lower.contains("x.com") { return "X" }
+        if lower.contains("web") { return "Web Link" }
+        if lower == "user input" || lower == "user_input" { return "User Input" }
+        return platform.prefix(1).uppercased() + platform.dropFirst()
     }
     
     /// Initialize full `Script` model from legacy `GeneratedScriptDTO`

@@ -56,3 +56,31 @@ data class UniversalScriptDTO(
             return visualCue ?: "Direct camera eye-contact and vibrant text overlays"
         }
 }
+
+@Serializable
+data class VideoMetadataRequest(
+    val url: String,
+    @SerialName("bypass_cache") val bypassCache: Boolean = false,
+    @SerialName("max_duration_minutes") val maxDurationMinutes: Int = 20
+)
+
+@Serializable
+data class VideoMetadataResponse(
+    val title: String? = null,
+    val creator: String? = null,
+    val uploader: String? = null,
+    val platform: String? = null,
+    @SerialName("duration_seconds") val durationSeconds: Double? = null,
+    @SerialName("duration_formatted") val durationFormatted: String? = null,
+    val thumbnail: String? = null,
+    @SerialName("exceeds_duration_limit") val exceedsDurationLimit: Boolean = false,
+    @SerialName("allowed_for_transcription") val allowedForTranscription: Boolean = true,
+    val warning: String? = null,
+    val error: String? = null
+) {
+    val displayCreator: String?
+        get() = creator ?: uploader
+
+    val formattedPlatform: String
+        get() = Script.formatPlatformName(platform ?: "Video")
+}

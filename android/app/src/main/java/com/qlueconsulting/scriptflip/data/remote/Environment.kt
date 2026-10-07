@@ -21,4 +21,10 @@ object AppEnvironment {
             val base = supabaseUrl.trimEnd('/')
             return "$base/functions/v1/generate-scripts"
         }
+
+    val getVideoMetadataEndpoint: String
+        get() {
+            val base = supabaseUrl.trimEnd('/')
+            return "$base/functions/v1/get-video-metadata"
+        }
 }

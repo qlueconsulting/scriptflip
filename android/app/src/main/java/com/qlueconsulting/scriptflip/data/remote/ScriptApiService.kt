@@ -7,6 +7,8 @@ import com.qlueconsulting.scriptflip.data.model.GenerationResponse
 import com.qlueconsulting.scriptflip.data.model.Script
 import com.qlueconsulting.scriptflip.data.model.ScriptStyle
 import com.qlueconsulting.scriptflip.data.model.UniversalScriptDTO
+import com.qlueconsulting.scriptflip.data.model.VideoMetadataRequest
+import com.qlueconsulting.scriptflip.data.model.VideoMetadataResponse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
@@ -95,6 +97,41 @@ class ScriptApiService(
             throw ScriptApiException.NetworkException("Connection failed: ${e.localizedMessage}")
         } catch (e: Exception) {
             throw ScriptApiException.NetworkException("Unexpected error: ${e.localizedMessage}")
+        }
+    }
+
+    suspend fun getVideoMetadata(url: String): VideoMetadataResponse = withContext(Dispatchers.IO) {
+        val endpoint = AppEnvironment.getVideoMetadataEndpoint
+        val anonKey = AppEnvironment.supabaseAnonKey
+
+        val requestPayload = VideoMetadataRequest(url = url)
+        val bodyJson = json.encodeToString(requestPayload)
+        val mediaType = "application/json; charset=utf-8".toMediaType()
+        val requestBody = bodyJson.toRequestBody(mediaType)
+
+        val request = Request.Builder()
+            .url(endpoint)
+            .post(requestBody)
+            .addHeader("apikey", anonKey)
+            .addHeader("Authorization", "Bearer $anonKey")
+            .addHeader("Content-Type", "application/json")
+            .build()
+
+        try {
+            val response = client.newCall(request).execute()
+            val rawBody = response.body?.string() ?: ""
+
+            if (!response.isSuccessful) {
+                throw ScriptApiException.ServerException(response.code, rawBody)
+            }
+
+            json.decodeFromString<VideoMetadataResponse>(rawBody)
+        } catch (e: ScriptApiException) {
+            throw e
+        } catch (e: IOException) {
+            throw ScriptApiException.NetworkException("Metadata lookup failed: ${e.localizedMessage}")
+        } catch (e: Exception) {
+            throw ScriptApiException.NetworkException("Metadata error: ${e.localizedMessage}")
         }
     }
 

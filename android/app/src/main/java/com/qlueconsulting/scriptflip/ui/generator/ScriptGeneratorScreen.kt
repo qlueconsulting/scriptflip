@@ -17,12 +17,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Button
@@ -39,20 +45,26 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.qlueconsulting.scriptflip.R
 import com.qlueconsulting.scriptflip.data.model.Script
 import com.qlueconsulting.scriptflip.data.model.ScriptStyle
 import com.qlueconsulting.scriptflip.ui.theme.AccentCyan
+import com.qlueconsulting.scriptflip.ui.theme.AccentGreen
 import com.qlueconsulting.scriptflip.ui.theme.AccentOrange
 import com.qlueconsulting.scriptflip.ui.theme.BgDark
 import com.qlueconsulting.scriptflip.ui.theme.CardBorder
@@ -84,6 +96,8 @@ fun ScriptGeneratorScreen(
         viewModel.dismissPaywall()
         onNavigateToPaywall()
     }
+
+    val focusManager = LocalFocusManager.current
 
     Scaffold(
         containerColor = BgDark,
@@ -158,17 +172,31 @@ fun ScriptGeneratorScreen(
             }
         }
     ) { padding ->
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .padding(horizontal = 16.dp)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) {
+                    focusManager.clearFocus()
+                }
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
             // Header card
             Card(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) {
+                        focusManager.clearFocus()
+                    },
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = SurfaceDark),
                 border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder)
@@ -189,13 +217,34 @@ fun ScriptGeneratorScreen(
                 }
             }
 
+            var wasFocused by remember { mutableStateOf(false) }
+
             // Input TextField
             OutlinedTextField(
                 value = inputText,
                 onValueChange = { viewModel.setInputText(it) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(160.dp),
+                    .height(160.dp)
+                    .onFocusChanged { focusState ->
+                        if (wasFocused && !focusState.isFocused) {
+                            viewModel.onInputFocusLost()
+                        }
+                        wasFocused = focusState.isFocused
+                    },
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+                trailingIcon = {
+                    if (inputText.isNotEmpty()) {
+                        IconButton(onClick = { viewModel.setInputText("") }) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Clear input",
+                                tint = TextSecondary
+                            )
+                        }
+                    }
+                },
                 placeholder = {
                     Text(
                         text = "e.g. https://www.tiktok.com/@creator/video/123456\nor paste talking points & raw notes...",
@@ -213,6 +262,120 @@ fun ScriptGeneratorScreen(
                     unfocusedTextColor = TextPrimary
                 )
             )
+
+            // Video Metadata Preview Card (Live lookup on focus lost)
+            val metaState by viewModel.metadataState.collectAsState()
+            metaState?.let { state ->
+                if (state.isLoading) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                color = AccentCyan,
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = "Checking video link...",
+                                fontSize = 13.sp,
+                                color = TextSecondary
+                            )
+                        }
+                    }
+                } else if (state.metadata != null) {
+                    val meta = state.metadata
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder)
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(AccentCyan.copy(alpha = 0.15f))
+                                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                                    ) {
+                                        Text(
+                                            text = meta.formattedPlatform,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = AccentCyan
+                                        )
+                                    }
+                                    meta.durationFormatted?.takeIf { it.isNotBlank() }?.let { dur ->
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(6.dp))
+                                                .background(Color.White.copy(alpha = 0.08f))
+                                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        ) {
+                                            Text(
+                                                text = dur,
+                                                fontSize = 11.sp,
+                                                color = TextSecondary
+                                            )
+                                        }
+                                    }
+                                }
+
+                                if (meta.allowedForTranscription) {
+                                    Text(
+                                        text = "Audio Ready",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = AccentGreen
+                                    )
+                                } else if (meta.exceedsDurationLimit) {
+                                    Text(
+                                        text = "Exceeds 20m Limit",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = AccentOrange
+                                    )
+                                }
+                            }
+
+                            meta.title?.takeIf { it.isNotBlank() }?.let { title ->
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = title,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+
+                            meta.displayCreator?.takeIf { it.isNotBlank() }?.let { creator ->
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "by $creator",
+                                    fontSize = 12.sp,
+                                    color = TextMuted
+                                )
+                            }
+                        }
+                    }
+                }
+            }
 
             // Style Selector Header
             Text(
@@ -232,7 +395,10 @@ fun ScriptGeneratorScreen(
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { viewModel.setSelectedStyle(style) },
+                            .clickable {
+                                focusManager.clearFocus()
+                                viewModel.setSelectedStyle(style)
+                            },
                         shape = RoundedCornerShape(14.dp),
                         colors = CardDefaults.cardColors(
                             containerColor = if (isSelected) SurfaceVariantDark else SurfaceDark

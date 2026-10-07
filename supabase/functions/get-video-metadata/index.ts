@@ -63,8 +63,21 @@ serve(async (req) => {
     const durationSeconds = Number(data.duration_seconds) || 0
     const exceedsLimit = data.exceeds_duration_limit ?? (durationSeconds > MAX_DURATION_SECONDS)
 
+function formatPlatformName(platform?: string, url?: string): string {
+  const target = (platform || url || "").toLowerCase()
+  if (target.includes("youtube") || target.includes("youtu.be")) return "YouTube"
+  if (target.includes("tiktok")) return "TikTok"
+  if (target.includes("instagram")) return "Instagram"
+  if (target.includes("facebook") || target.includes("fb.watch")) return "Facebook"
+  if (target.includes("vimeo")) return "Vimeo"
+  if (target.includes("twitter") || target.includes("x.com")) return "X"
+  if (platform) return platform.charAt(0).toUpperCase() + platform.slice(1)
+  return "Video"
+}
+
     return new Response(JSON.stringify({
       ...data,
+      platform: formatPlatformName(data.platform, url),
       exceeds_duration_limit: exceedsLimit,
       allowed_for_transcription: !exceedsLimit
     }), {

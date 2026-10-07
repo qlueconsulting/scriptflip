@@ -127,7 +127,7 @@ fun ScriptResultsScreen(
                                 .padding(horizontal = 10.dp, vertical = 4.dp)
                         ) {
                             Text(
-                                text = current.platform,
+                                text = Script.formatPlatformName(current.platform),
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = AccentCyan
@@ -262,10 +262,10 @@ private fun TranscriptTabContent(
     val transcriptText = if (script.sourceText.isNotBlank()) script.sourceText else fallbackInputText
 
     val (badgeLabel, badgeColor) = when (script.transcriptType) {
-        "whisper" -> "AI Whisper Audio Transcription" to AccentCyan
-        "closed_captions" -> "Official Closed Captions" to AccentGreen
-        "metadata" -> "Post Metadata & Summary" to AccentOrange
-        else -> (if (script.isTranscript) "Source Content" else "User Input Notes") to PrimaryPurple
+        "whisper" -> "AI Audio Transcription" to AccentCyan
+        "closed_captions" -> "AI Audio Transcription" to AccentCyan
+        "metadata" -> "Metadata" to AccentOrange
+        else -> "Text Entered" to PrimaryPurple
     }
 
     Column(
@@ -283,41 +283,39 @@ private fun TranscriptTabContent(
             border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.Article,
-                            contentDescription = null,
-                            tint = AccentCyan,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = if (script.isTranscript) "Source Video Content" else "Source Input",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary
-                        )
-                    }
+                // Header: Source Video Content / Source Input
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Article,
+                        contentDescription = null,
+                        tint = AccentCyan,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = if (script.isTranscript) "Source Video Content" else "Source Input",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                }
 
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(badgeColor.copy(alpha = 0.15f))
-                            .border(1.dp, badgeColor.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = badgeLabel,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = badgeColor
-                        )
-                    }
+                // Smaller Badge, one line directly under "Source Video Content"
+                Spacer(modifier = Modifier.height(6.dp))
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(badgeColor.copy(alpha = 0.15f))
+                        .border(1.dp, badgeColor.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                ) {
+                    Text(
+                        text = badgeLabel,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = badgeColor,
+                        maxLines = 1
+                    )
                 }
 
                 if (script.transcriptType == "metadata") {
