@@ -9,12 +9,19 @@ android {
     namespace = "com.qlueconsulting.scriptflip"
     compileSdk = 36
 
+    val resolvedVersionCode = providers.environmentVariable("VERSION_CODE").orNull?.toIntOrNull()
+        ?: providers.gradleProperty("versionCode").orNull?.toIntOrNull()
+        ?: 1
+    val resolvedVersionName = providers.environmentVariable("VERSION_NAME").orNull
+        ?: providers.gradleProperty("versionName").orNull
+        ?: "1.0.0"
+
     defaultConfig {
         applicationId = "com.qlueconsulting.scriptflip"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = resolvedVersionCode
+        versionName = resolvedVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -26,9 +33,23 @@ android {
         buildConfigField("String", "REVENUECAT_API_KEY", "\"goog_pcnOuyAgmkrXhYeYebsKaeqhlaF\"")
     }
 
+    signingConfigs {
+        create("release") {
+            val keystorePath = System.getenv("KEYSTORE_PATH")
+            if (!keystorePath.isNullOrBlank() && file(keystorePath).exists()) {
+                storeFile = file(keystorePath)
+                storePassword = System.getenv("KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("KEY_ALIAS")
+                keyPassword = System.getenv("KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.findByName("release")?.takeIf { it.storeFile != null }
+                ?: signingConfigs.getByName("debug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
