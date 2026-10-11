@@ -36,11 +36,21 @@ android {
     signingConfigs {
         create("release") {
             val keystorePath = System.getenv("KEYSTORE_PATH")
-            if (!keystorePath.isNullOrBlank() && file(keystorePath).exists()) {
-                storeFile = file(keystorePath)
-                storePassword = System.getenv("KEYSTORE_PASSWORD")
-                keyAlias = System.getenv("KEY_ALIAS")
-                keyPassword = System.getenv("KEY_PASSWORD")
+            if (!keystorePath.isNullOrBlank()) {
+                val ksFile = listOf(
+                    file(keystorePath),
+                    rootProject.file(keystorePath),
+                    File(keystorePath)
+                ).firstOrNull { it.exists() }
+
+                if (ksFile != null) {
+                    storeFile = ksFile
+                    storePassword = System.getenv("KEYSTORE_PASSWORD")
+                    keyAlias = System.getenv("KEY_ALIAS")
+                    keyPassword = System.getenv("KEY_PASSWORD")
+                } else if (System.getenv("CI") == "true") {
+                    throw GradleException("Keystore file '$keystorePath' specified in KEYSTORE_PATH was not found in project or root directories!")
+                }
             }
         }
     }
