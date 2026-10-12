@@ -9,6 +9,8 @@ supabase/.temp/
 
 # Android & Gradle
 android/.gradle/
+android/.kotlin/
+**/.kotlin/
 android/build/
 android/*/build/
 android/local.properties
