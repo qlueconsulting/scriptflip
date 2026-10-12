@@ -37,9 +37,9 @@ jobs:
         working-directory: ./android
         run: chmod +x gradlew || true
 
-      - name: Build Debug APK & Run Unit Tests
+      - name: Build Debug APK, Release Bundle & Run Unit Tests
         working-directory: ./android
-        run: ./gradlew assembleDebug testDebugUnitTest --stacktrace
+        run: ./gradlew assembleDebug bundleRelease testDebugUnitTest --stacktrace
 
       - name: Upload Debug APK
         if: always()
@@ -47,4 +47,12 @@ jobs:
         with:
           name: app-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: ignore
+
+      - name: Upload Release AAB Bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-aab
+          path: android/app/build/outputs/bundle/release/app-release.aab
           if-no-files-found: ignore
