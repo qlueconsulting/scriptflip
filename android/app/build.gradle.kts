@@ -57,7 +57,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             signingConfig = signingConfigs.findByName("release")?.takeIf { it.storeFile != null }
                 ?: signingConfigs.getByName("debug")
             proguardFiles(
